@@ -21,23 +21,21 @@ A comprehensive hyphenation library for the Georgian language, supporting multip
 ## Installation / ინსტალაცია
 
 ### Python
+```
+# Install from PyPI
+pip install georgian-hyphenation
 
-```bash
-pip install georgian-hyphenation  # Coming soon
-# Or clone this repository
+# Or install from source
 git clone https://github.com/guramzhgamadze/georgian-hyphenation.git
 cd georgian-hyphenation
-python setup.py install
+pip install -e .
 ```
 
 ### JavaScript
-
-```bash
-npm install georgian-hyphenation  # Coming soon
-# Or include directly in HTML
-<script src="georgian-hyphenation.js"></script>
 ```
-
+npm install georgian-hyphenation  # Coming soon to NPM
+# For now, use directly from source
+```
 ## Usage / გამოყენება
 
 ### Python
