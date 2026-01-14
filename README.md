@@ -3,6 +3,10 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.7+](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
 [![JavaScript](https://img.shields.io/badge/javascript-ES6+-yellow.svg)](https://www.ecma-international.org/)
+[![GitHub](https://img.shields.io/github/license/guramzhgamadze/georgian-hyphenation)](LICENSE.txt)
+[![Python](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/)
+[![JavaScript](https://img.shields.io/badge/javascript-ES6+-yellow.svg)](https://www.ecma-international.org/)
+[![GitHub stars](https://img.shields.io/github/stars/guramzhgamadze/georgian-hyphenation?style=social)](https://github.com/guramzhgamadze/georgian-hyphenation)
 
 A comprehensive hyphenation library for the Georgian language, supporting multiple output formats including TeX, Hunspell, and web standards.
 
