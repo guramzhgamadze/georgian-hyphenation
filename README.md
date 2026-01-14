@@ -48,20 +48,22 @@ hyphenator = GeorgianHyphenator()
 
 # Hyphenate a word
 word = "საქართველო"
-result = hyphenator.hyphenate_word(word)
+result = hyphenator.hyphenate(word)
 print(result)  # სა­ქარ­თვე­ლო (with U+00AD soft hyphens)
 
 # Get syllables as a list
-syllables = hyphenator.get_syllables(word)
+syllables = hyphenator.getSyllables(word)
 print(syllables)  # ['სა', 'ქარ', 'თვე', 'ლო']
 
 # Use visible hyphens for display
 visible = GeorgianHyphenator('-')
-print(visible.hyphenate_word(word))  # სა-ქარ-თვე-ლო
+print(visible.hyphenate(word))  # სა-ქარ-თვე-ლო
 
-# Hyphenate entire text
+# Hyphenate entire text (if you add this method)
 text = "საქართველო არის ლამაზი ქვეყანა"
-print(hyphenator.hyphenate_text(text))
+words = text.split()
+hyphenated = ' '.join([hyphenator.hyphenate(w) for w in words])
+print(hyphenated)
 ```
 
 ### JavaScript
