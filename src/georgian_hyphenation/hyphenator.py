@@ -40,7 +40,7 @@ class GeorgianHyphenator:
         vowel_counts = [word.count(x) for x in "აეიოუ"]
         return reduce(lambda x, y: x + y, vowel_counts, 0)
     
-    def hyphenate_word(self, word: str) -> str:
+    def hyphenate(self, word: str) -> str:
         """
         Hyphenate a single Georgian word
         
@@ -131,7 +131,7 @@ class GeorgianHyphenator:
         Returns:
             List of syllables
         """
-        hyphenated = self.hyphenate_word(word)
+        hyphenated = self.hyphenate(word)
         return hyphenated.split(self.hyphen_char)
     
     def hyphenate_text(self, text: str) -> str:
@@ -145,7 +145,7 @@ class GeorgianHyphenator:
             Hyphenated text
         """
         words = text.split(' ')
-        hyphenated_words = [self.hyphenate_word(w) for w in words]
+        hyphenated_words = [self.hyphenate(w) for w in words]
         return ' '.join(hyphenated_words)
 
 
@@ -234,7 +234,7 @@ class HyphenationExporter:
         for word in words:
             data[word] = {
                 "syllables": self.hyphenator.get_syllables(word),
-                "hyphenated": self.hyphenator.hyphenate_word(word)
+                "hyphenated": self.hyphenator.hyphenate(word)
             }
         
         with open(output_file, 'w', encoding='utf-8') as f:
@@ -286,7 +286,7 @@ if __name__ == "__main__":
     visible_hyphenator = GeorgianHyphenator('-')
     for word in test_words:
         syllables = visible_hyphenator.get_syllables(word)
-        hyphenated = visible_hyphenator.hyphenate_word(word)
+        hyphenated = visible_hyphenator.hyphenate(word)
         print(f"{word:20} → {hyphenated:25} [{len(syllables)} syllables]")
     
     print("\n" + "=" * 60)
