@@ -11,7 +11,7 @@ from .hyphenator import (
     HyphenationExporter
 )
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 __author__ = "Guram Zhgamadze"
 __all__ = [
     'GeorgianHyphenator',
