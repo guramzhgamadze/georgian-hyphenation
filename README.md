@@ -24,7 +24,7 @@ A comprehensive hyphenation library for the Georgian language, supporting multip
 ```bash
 pip install georgian-hyphenation  # Coming soon
 # Or clone this repository
-git clone https://github.com/yourusername/georgian-hyphenation.git
+git clone https://github.com/guramzhgamadze/georgian-hyphenation.git
 cd georgian-hyphenation
 python setup.py install
 ```
@@ -300,8 +300,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Contact / კონტაქტი
 
-- GitHub Issues: [Report bugs or request features](https://github.com/yourusername/georgian-hyphenation/issues)
-- Email: your.email@example.com
+- GitHub Issues: [Report bugs or request features](https://github.com/guramzhgamadze/georgian-hyphenation/issues)
+- Email: guramzhgamadze@gmail.com
 
 ## References / ლიტერატურა
 
