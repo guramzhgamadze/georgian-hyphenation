@@ -1,0 +1,40 @@
+{
+  "name": "georgian-hyphenation",
+  "version": "1.0.1",
+  "description": "Georgian Language Hyphenation Library - ქართული ენის დამარცვლის ბიბლიოთეკა",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node build.js",
+    "test": "node test.js",
+    "prepublishOnly": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/guramzhgamadze/georgian-hyphenation.git"
+  },
+  "keywords": [
+    "georgian",
+    "kartuli",
+    "ქართული",
+    "hyphenation",
+    "syllabification",
+    "nlp",
+    "natural-language-processing",
+    "linguistics",
+    "text-processing",
+    "i18n",
+    "localization"
+  ],
+  "author": "Guram Zhgamadze <guramzhgamadze@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/guramzhgamadze/georgian-hyphenation/issues"
+  },
+  "homepage": "https://github.com/guramzhgamadze/georgian-hyphenation#readme"
+}

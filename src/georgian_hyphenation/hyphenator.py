@@ -121,7 +121,7 @@ class GeorgianHyphenator:
         
         return t
     
-    def get_syllables(self, word: str) -> List[str]:
+    def getSyllables(self, word: str) -> List[str]:
         """
         Get list of syllables for a word
         
@@ -161,7 +161,7 @@ class TeXPatternGenerator:
         
         Example: საქართველო → .სა1ქარ1თვე1ლო
         """
-        syllables = self.hyphenator.get_syllables(word)
+        syllables = self.hyphenator.getSyllables(word)
         if len(syllables) <= 1:
             return f".{word}"
         return "." + "1".join(syllables)
@@ -200,7 +200,7 @@ class HunspellDictionaryGenerator:
         
         Example: საქართველო → სა=ქარ=თვე=ლო
         """
-        syllables = self.hyphenator.get_syllables(word)
+        syllables = self.hyphenator.getSyllables(word)
         return "=".join(syllables)
     
     def generate_dictionary(self, words: List[str], output_prefix: str):
@@ -233,7 +233,7 @@ class HyphenationExporter:
         data = {}
         for word in words:
             data[word] = {
-                "syllables": self.hyphenator.get_syllables(word),
+                "syllables": self.hyphenator.getSyllables(word),
                 "hyphenated": self.hyphenator.hyphenate(word)
             }
         
@@ -251,7 +251,7 @@ class HyphenationExporter:
             writer.writerow(['word', 'syllables', 'syllable_count'])
             
             for word in words:
-                syllables = self.hyphenator.get_syllables(word)
+                syllables = self.hyphenator.getSyllables(word)
                 writer.writerow([word, '-'.join(syllables), len(syllables)])
         
         print(f"CSV export saved to {output_file}")
@@ -285,7 +285,7 @@ if __name__ == "__main__":
     # Test basic hyphenation with visible hyphens
     visible_hyphenator = GeorgianHyphenator('-')
     for word in test_words:
-        syllables = visible_hyphenator.get_syllables(word)
+        syllables = visible_hyphenator.getSyllables(word)
         hyphenated = visible_hyphenator.hyphenate(word)
         print(f"{word:20} → {hyphenated:25} [{len(syllables)} syllables]")
     
