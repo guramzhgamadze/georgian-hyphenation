@@ -4,6 +4,9 @@
 [![Python 3.7+](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
 [![JavaScript](https://img.shields.io/badge/javascript-ES6+-yellow.svg)](https://www.ecma-international.org/)
 [![GitHub stars](https://img.shields.io/github/stars/guramzhgamadze/georgian-hyphenation?style=social)](https://github.com/guramzhgamadze/georgian-hyphenation)
+[![PyPI version](https://badge.fury.io/py/georgian-hyphenation.svg)](https://badge.fury.io/py/georgian-hyphenation)
+[![npm version](https://badge.fury.io/js/georgian-hyphenation.svg)](https://badge.fury.io/js/georgian-hyphenation)
+[![Downloads](https://pepy.tech/badge/georgian-hyphenation)](https://pepy.tech/project/georgian-hyphenation)
 
 A comprehensive hyphenation library for the Georgian language, supporting multiple output formats including TeX, Hunspell, and web standards.
 
@@ -33,8 +36,7 @@ pip install -e .
 
 ### JavaScript
 ```
-npm install georgian-hyphenation  # Coming soon to NPM
-# For now, use directly from source
+npm install georgian-hyphenation
 ```
 ## Usage / გამოყენება
 
@@ -212,18 +214,29 @@ Where:
 
 ## Testing / ტესტირება
 
+### Run Tests
 ```bash
-# Python tests
-python -m pytest tests/
-
-# JavaScript tests
-npm test
-
-# Run demo
-python georgian_hyphenation.py
-# or open demo.html in browser
+python -m pytest tests/    # Python tests
+npm test                    # JavaScript tests
 ```
 
+### Try the Demo
+
+**🌐 Online:** [https://guramzhgamadze.github.io/georgian-hyphenation/](https://guramzhgamadze.github.io/georgian-hyphenation/)
+
+**💻 Local:** Open `examples/demo.html` in your browser
+
+**🐍 Python:**
+```python
+from georgian_hyphenation import GeorgianHyphenator
+print(GeorgianHyphenator('-').hyphenate("საქართველო"))
+```
+
+**📦 Node.js:**
+```javascript
+const { GeorgianHyphenator } = require('georgian-hyphenation');
+console.log(new GeorgianHyphenator('-').hyphenate("საქართველო"));
+```
 ## Contributing / წვლილის შეტანა
 
 Contributions are welcome! Please feel free to submit a Pull Request.
@@ -279,8 +292,8 @@ p {
 
 ## Roadmap / სამომავლო გეგმები
 
-- [ ] PyPI package release
-- [ ] NPM package release
+- [x] PyPI package release ✅
+- [x] NPM package release ✅
 - [ ] Browser extension (Chrome, Firefox)
 - [ ] InDesign plugin
 - [ ] MS Word add-in
