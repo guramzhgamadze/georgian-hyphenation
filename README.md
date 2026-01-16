@@ -1,4 +1,4 @@
-# Georgian Language Hyphenation / ქართული ენის დამარცვლა
+# Georgian Language Hyphenation / ქარ­თუ­ლი ენის და­მარ­ცვლა
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.7+](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
@@ -10,9 +10,9 @@
 
 A comprehensive hyphenation library for the Georgian language, supporting multiple output formats including TeX, Hunspell, and web standards.
 
-ქართული ენის სრული დამარცვლის ბიბლიოთეკა, რომელიც მხარს უჭერს მრავალ ფორმატს: TeX, Hunspell და ვებ სტანდარტები.
+ქარ­თუ­ლი ენის სრუ­ლი და­მარ­ცვლის ბიბ­ლიო­თე­კა, რო­მე­ლიც მხარს უჭე­რს მრა­ვალ ფორ­მატს: TeX, Hunspell და ვებ სტან­დარ­ტე­ბი.
 
-## Features / ფუნქციები
+## Features / ფუნ­ქციე­ბი
 
 - ✅ **Accurate syllabification** based on Georgian phonological rules
 - ✅ **Multiple output formats**: Soft hyphens (U+00AD), TeX patterns, Hunspell dictionary
@@ -21,7 +21,7 @@ A comprehensive hyphenation library for the Georgian language, supporting multip
 - ✅ **Export capabilities**: JSON, CSV, TeX, Hunspell
 - ✅ **Well-tested** with comprehensive Georgian word corpus
 
-## Installation / ინსტალაცია
+## Installation / ინ­სტა­ლა­ცია
 
 ### Python
 ```
@@ -38,14 +38,13 @@ pip install -e .
 ```
 npm install georgian-hyphenation
 ```
-## Browser Extension / ბრაუზერის გაფართოება
+## Browser Extension / ბრა­უზე­რის გა­ფარ­თოე­ბა
 
 ### Chrome/Edge
 🌐 **[Install from Chrome Web Store](#)** *(Coming soon)*
 
 Or install manually:
-1. Download [latest release](https://github.com/guramzhgamadze/georgian-hyphenation/releases)
-2. Extract `browser-extension.zip`
+1. Download [latest release](https://github.com/guramzhgamadze/georgian-hyphenation/tree/main/browser-extension)
 3. Chrome → `chrome://extensions/`
 4. Enable "Developer mode"
 5. Click "Load unpacked"
@@ -65,7 +64,7 @@ Or install manually:
 - ✅ Toggle on/off per site
 - ✅ Real-time statistics
 
-## Usage / გამოყენება
+## Usage / გა­მო­ყე­ნე­ბა
 
 ### Python
 
@@ -76,7 +75,7 @@ from georgian_hyphenation import GeorgianHyphenator
 hyphenator = GeorgianHyphenator()
 
 # Hyphenate a word
-word = "საქართველო"
+word = "სა­ქარ­თვე­ლო"
 result = hyphenator.hyphenate(word)
 print(result)  # სა­ქარ­თვე­ლო (with U+00AD soft hyphens)
 
@@ -102,7 +101,7 @@ print(hyphenated)
 const hyphenator = new GeorgianHyphenator();
 
 // Hyphenate a word
-const word = "საქართველო";
+const word = "სა­ქარ­თვე­ლო";
 const result = hyphenator.hyphenate(word);
 console.log(result);  // სა­ქარ­თვე­ლო (with U+00AD)
 
@@ -115,7 +114,7 @@ const visible = new GeorgianHyphenator('-');
 console.log(visible.hyphenate(word));  // სა-ქარ-თვე-ლო
 
 // Hyphenate text
-const text = "საქართველო არის ლამაზი ქვეყანა";
+const text = "სა­ქარ­თვე­ლო არის ლა­მა­ზი ქვე­ყა­ნა";
 console.log(hyphenator.hyphenateText(text));
 ```
 
