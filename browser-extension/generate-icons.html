@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Generate Icons</title>
+</head>
+<body>
+  <h1>Georgian Hyphenation Icons Generator</h1>
+  <p>Icons will be generated below. Right-click and "Save image as..."</p>
+  
+  <div id="icons"></div>
+
+  <script>
+    const sizes = [16, 32, 48, 128];
+    const container = document.getElementById('icons');
+
+    sizes.forEach(size => {
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      
+      const ctx = canvas.getContext('2d');
+      
+      // Background gradient
+      const gradient = ctx.createLinearGradient(0, 0, size, size);
+      gradient.addColorStop(0, '#667eea');
+      gradient.addColorStop(1, '#764ba2');
+      ctx.fillStyle = gradient;
+      
+      // Rounded rectangle
+      const radius = size * 0.2;
+      ctx.beginPath();
+      ctx.moveTo(radius, 0);
+      ctx.lineTo(size - radius, 0);
+      ctx.quadraticCurveTo(size, 0, size, radius);
+      ctx.lineTo(size, size - radius);
+      ctx.quadraticCurveTo(size, size, size - radius, size);
+      ctx.lineTo(radius, size);
+      ctx.quadraticCurveTo(0, size, 0, size - radius);
+      ctx.lineTo(0, radius);
+      ctx.quadraticCurveTo(0, 0, radius, 0);
+      ctx.closePath();
+      ctx.fill();
+      
+      // Text
+      ctx.fillStyle = 'white';
+      ctx.font = `bold ${size * 0.6}px Arial, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('ჰ', size / 2, size / 2);
+      
+      // Add to page
+      const wrapper = document.createElement('div');
+      wrapper.style.marginBottom = '20px';
+      
+      const label = document.createElement('h3');
+      label.textContent = `icon${size}.png (${size}x${size})`;
+      
+      const link = document.createElement('a');
+      link.href = canvas.toDataURL('image/png');
+      link.download = `icon${size}.png`;
+      link.textContent = 'Download';
+      link.style.display = 'block';
+      link.style.marginTop = '10px';
+      link.style.padding = '10px 20px';
+      link.style.background = '#667eea';
+      link.style.color = 'white';
+      link.style.textDecoration = 'none';
+      link.style.borderRadius = '5px';
+      link.style.width = 'fit-content';
+      
+      wrapper.appendChild(label);
+      wrapper.appendChild(canvas);
+      wrapper.appendChild(link);
+      container.appendChild(wrapper);
+    });
+  </script>
+</body>
+</html>
