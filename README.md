@@ -44,20 +44,14 @@ npm install georgian-hyphenation
 🌐 **[Install from Chrome Web Store](#)** *(Coming soon)*
 
 Or install manually:
-1. Download [latest release](https://github.com/guramzhgamadze/georgian-hyphenation/tree/main/browser-extension)
-3. Chrome → `chrome://extensions/`
-4. Enable "Developer mode"
-5. Click "Load unpacked"
-6. Select `browser-extension` folder
+1. Download npx degit guramzhgamadze/georgian-hyphenation/browser-extension browser-extension
+2. Chrome → `chrome://extensions/`
+3. Enable "Developer mode"
+4. Click "Load unpacked"
+5. Select `browser-extension` folder
 
 ### Firefox
 🦊 **[Install from Firefox Add-ons](#)** *(Coming soon)*
-
-Or install manually:
-1. Download [latest release](https://github.com/guramzhgamadze/georgian-hyphenation/releases)
-2. Firefox → `about:debugging#/runtime/this-firefox`
-3. Click "Load Temporary Add-on"
-4. Select `manifest.json` from `browser-extension` folder
 
 ### Features
 - ✅ Automatic hyphenation on all Georgian websites
@@ -88,7 +82,7 @@ visible = GeorgianHyphenator('-')
 print(visible.hyphenate(word))  # სა-ქარ-თვე-ლო
 
 # Hyphenate entire text (if you add this method)
-text = "საქართველო არის ლამაზი ქვეყანა"
+text = "სა­ქარ­თვე­ლო არის ლა­მა­ზი ქვე­ყა­ნა"
 words = text.split()
 hyphenated = ' '.join([hyphenator.hyphenate(w) for w in words])
 print(hyphenated)
