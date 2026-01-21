@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Georgian Hyphenation - ქართული დამარცვლა",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "description": "Automatic hyphenation for Georgian text on any website. ავტომატური დამარცვლა ქართული ტექსტისთვის ნებისმიერ ვებსაიტზე.",
   "permissions": [
     "activeTab",

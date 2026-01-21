@@ -1,11 +1,8 @@
 /**
- * Georgian Language Hyphenation Library (JavaScript)
+ * Georgian Language Hyphenation Library (v2.0 - Academic Logic)
  * ქართული ენის დამარცვლის ბიბლიოთეკა
- * 
- * Usage:
- *   const hyphenator = new GeorgianHyphenator();
- *   const result = hyphenator.hyphenate("საქართველო");
- *   // Result: "სა\u00ADქარ\u00ADთვე\u00ADლო"
+ * * Logic: Phonological distance analysis & Anti-Orphan protection.
+ * Author: Guram Zhgamadze
  */
 
 class GeorgianHyphenator {
@@ -15,85 +12,7 @@ class GeorgianHyphenator {
    */
   constructor(hyphenChar = '\u00AD') {
     this.hyphenChar = hyphenChar;
-    this.C = '[ბგდვზთკლმნპჟრსტფქღყშჩცძწჭხჯჰ]';  // Consonants
-    this.V = '[აეიოუ]';                          // Vowels
-    this.char = '[ა-ჰ]';                         // All Georgian letters
-  }
-
-  /**
-   * Count vowels in a word
-   * @param {string} word - Georgian word
-   * @returns {number} Number of vowels
-   */
-  countVowels(word) {
-    const vowels = 'აეიოუ';
-    let count = 0;
-    for (let v of vowels) {
-      count += (word.match(new RegExp(v, 'g')) || []).length;
-    }
-    return count;
-  }
-
-  /**
-   * Apply hyphenation rules with specified boundary markers
-   * @private
-   */
-  _applyRules(w, softhpn, startchar, endchar) {
-    const C = this.C;
-    const V = this.V;
-    const char = this.char;
-    
-    let t = w;
-    
-    // Rule 1: V+C+C++V → VC|CV
-    t = t.replace(new RegExp(`(${V})(${C})(${C}+)(${V})`, 'gu'), 
-                  `$1$2${softhpn}$3$4`);
-    
-    // Rule 2: V+C+V+C+V → VCV|CV
-    t = t.replace(new RegExp(`(${V})(${C})(${V})(${C})(${V})`, 'gu'), 
-                  `$1$2$3${softhpn}$4$5`);
-    
-    // Rule 3: C+V+C+V → CV|CV
-    t = t.replace(new RegExp(`(${C})(${V})(${C})(${V})`, 'gu'), 
-                  `$1$2${softhpn}$3$4`);
-    
-    // Rule 4: V+V+V → VV|V
-    t = t.replace(new RegExp(`(${V})(${V})(${V})`, 'gu'), 
-                  `$1$2${softhpn}$3`);
-    
-    // Rule 5: Word start - ^VCVCV
-    t = t.replace(new RegExp(`${startchar}(${V})(${C})(${V})(${C})(${V})`, 'gu'), 
-                  `$1$2$3${softhpn}$4$5`);
-    
-    // Rule 6: Word start - ^VCVCchar
-    t = t.replace(new RegExp(`${startchar}(${V})(${C})(${V})(${C})(${char})`, 'gu'), 
-                  `$1$2$3${softhpn}$4$5`);
-    
-    // Rule 7: Word start - ^C++CVCV
-    t = t.replace(new RegExp(`${startchar}(${C}+)(${V})(${C})(${V})`, 'gu'), 
-                  `$1$2${softhpn}$3$4`);
-    
-    // Rule 8: Word start - ^C++VVchar
-    t = t.replace(new RegExp(`${startchar}(${C}+)(${V})(${V})(${char})`, 'gu'), 
-                  `$1$2${softhpn}$3$4`);
-    
-    // Rule 9: Word end - charVVC++$
-    t = t.replace(new RegExp(`(${char})(${V})(${V})(${C}+)${endchar}`, 'gu'), 
-                  `$1$2${softhpn}$3$4`);
-    
-    // Rule 10: Word end - charVCV$
-    t = t.replace(new RegExp(`(${char})(${V})(${C})(${V})${endchar}`, 'gu'), 
-                  `$1$2${softhpn}$3$4`);
-    
-    // Rule 11: Word end - VCC++VC++$
-    t = t.replace(new RegExp(`(${V})(${C})(${C}+)(${V})(${C}+)${endchar}`, 'gu'), 
-                  `$1$2${softhpn}$3$4$5`);
-    
-    // Rule 12: Word end - charVCVC++$
-    t = t.replace(new RegExp(`(${char})(${V})(${C})(${V}+)(${C}+)${endchar}`, 'gu'), 
-                  `$1$2${softhpn}$3$4$5`);
-    
-    return t;
+    this.vowels = 'აეიოუ';
   }
 
   /**
@@ -102,24 +21,63 @@ class GeorgianHyphenator {
    * @returns {string} Word with hyphenation points
    */
   hyphenate(word) {
-    // Don't hyphenate words with 0-1 vowels
-    if (this.countVowels(word) <= 1) {
-      return word;
+    // 1. Safety Rule: Words shorter than 4 chars are never hyphenated
+    // (Prevents: "a-ra", "i-gi", "e-na")
+    if (word.length < 4) return word;
+
+    // 2. Find all vowel indices
+    let vowelIndices = [];
+    for (let i = 0; i < word.length; i++) {
+      if (this.vowels.includes(word[i])) {
+        vowelIndices.push(i);
+      }
     }
 
-    const softhpn = this.hyphenChar;
-    
-    // Apply hyphenation rules with different boundary markers
-    let result = this._applyRules(word, softhpn, '^', '$');
-    result = this._applyRules(result, softhpn, '^', this._escapeRegex(softhpn));
-    result = this._applyRules(result, this._escapeRegex(softhpn), '$');
-    result = this._applyRules(result, this._escapeRegex(softhpn), this._escapeRegex(softhpn));
-    
-    // Remove duplicate hyphens
-    const escapedHyphen = this._escapeRegex(softhpn);
-    result = result.replace(new RegExp(`${escapedHyphen}+`, 'gu'), softhpn);
-    
-    return result;
+    // 3. If less than 2 vowels, cannot be hyphenated (e.g. "mcvrtnls")
+    if (vowelIndices.length < 2) return word;
+
+    let insertPoints = [];
+
+    // 4. Core Logic: Analyze distance between vowels
+    for (let i = 0; i < vowelIndices.length - 1; i++) {
+      let v1 = vowelIndices[i];
+      let v2 = vowelIndices[i + 1];
+      let distance = v2 - v1 - 1; // Number of consonants between vowels
+      let betweenSubstring = word.substring(v1 + 1, v2);
+
+      let candidatePos = -1;
+
+      if (distance === 0) {
+        // Case V-V (Hiatus): Split between vowels (ga-a-a-na-li-za)
+        candidatePos = v1 + 1;
+      } else if (distance === 1) {
+        // Case V-C-V: Split before consonant (ga-da)
+        candidatePos = v1 + 1;
+      } else {
+        // Case V-CC...-V: Cluster handling
+        // 'R' Rule: If cluster starts with 'r', keep it left (bar-bi)
+        // Otherwise, split after first consonant (saq-me) for balance
+        if (betweenSubstring[0] === 'რ') {
+          candidatePos = v1 + 2;
+        } else {
+          candidatePos = v1 + 2;
+        }
+      }
+
+      // 5. Critical Filter (Anti-Orphan / Anti-Widow)
+      // Ensure at least 2 characters remain on both sides of the hyphen
+      if (candidatePos >= 2 && (word.length - candidatePos) >= 2) {
+        insertPoints.push(candidatePos);
+      }
+    }
+
+    // 6. Reconstruct the word
+    let result = word.split('');
+    for (let i = insertPoints.length - 1; i >= 0; i--) {
+      result.splice(insertPoints[i], 0, this.hyphenChar);
+    }
+
+    return result.join('');
   }
 
   /**
@@ -128,48 +86,47 @@ class GeorgianHyphenator {
    * @returns {string[]} Array of syllables
    */
   getSyllables(word) {
-    const hyphenated = this.hyphenate(word);
-    return hyphenated.split(this.hyphenChar);
+    // Use a temporary hyphenator with a safe delimiter to split
+    const tempHyphenator = new GeorgianHyphenator('-');
+    return tempHyphenator.hyphenate(word).split('-');
   }
 
   /**
-   * Hyphenate entire text
+   * Hyphenate entire text (preserves punctuation)
    * @param {string} text - Georgian text
    * @returns {string} Hyphenated text
    */
   hyphenateText(text) {
-    const words = text.split(' ');
-    const hyphenatedWords = words.map(w => this.hyphenate(w));
-    return hyphenatedWords.join(' ');
-  }
-
-  /**
-   * Escape special regex characters
-   * @private
-   */
-  _escapeRegex(str) {
-    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // Improved Tokenizer: Splits by non-Georgian chars to protect punctuation
+    const parts = text.split(/([^ა-ჰ]+)/);
+    
+    return parts.map(part => {
+      // Process only Georgian words with length >= 4
+      if (/[ა-ჰ]{4,}/.test(part)) {
+        return this.hyphenate(part);
+      }
+      return part;
+    }).join('');
   }
 }
 
 /**
- * Convert word to TeX pattern format
- * @param {string} word - Georgian word
- * @returns {string} TeX pattern
+ * Convert word to TeX pattern format (e.g., .გ1ა1ა1ნ1ა1ლ1ი1ზ1ა.)
+ * Useful for LaTeX or TeX engines
  */
 function toTeXPattern(word) {
   const hyphenator = new GeorgianHyphenator();
   const syllables = hyphenator.getSyllables(word);
   if (syllables.length <= 1) {
-    return `.${word}`;
+    return `.${word}.`;
   }
-  return '.' + syllables.join('1');
+  // TeX hyphenation patterns usually use odd numbers (1, 3, 5) to indicate hyphens
+  // Here we simply join syllables with '1'
+  return '.' + syllables.join('1') + '.';
 }
 
 /**
- * Convert word to Hunspell format
- * @param {string} word - Georgian word
- * @returns {string} Hunspell format
+ * Convert word to Hunspell format (syllable=syllable)
  */
 function toHunspellFormat(word) {
   const hyphenator = new GeorgianHyphenator();
@@ -177,7 +134,7 @@ function toHunspellFormat(word) {
   return syllables.join('=');
 }
 
-// Export for use in Node.js or browser
+// Export for Node.js
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     GeorgianHyphenator,
@@ -186,14 +143,9 @@ if (typeof module !== 'undefined' && module.exports) {
   };
 }
 
-// Demo usage
+// Export for Browser
 if (typeof window !== 'undefined') {
   window.GeorgianHyphenator = GeorgianHyphenator;
   window.toTeXPattern = toTeXPattern;
   window.toHunspellFormat = toHunspellFormat;
 }
-
-// Example usage:
-// const hyphenator = new GeorgianHyphenator('-'); // visible hyphens
-// console.log(hyphenator.hyphenate("საქართველო")); // "სა-ქარ-თვე-ლო"
-// console.log(hyphenator.getSyllables("საქართველო")); // ["სა", "ქარ", "თვე", "ლო"]
