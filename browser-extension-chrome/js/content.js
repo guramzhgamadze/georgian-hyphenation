@@ -1,4 +1,4 @@
-// Content Script - Final Version with Inline Links Support
+// Content Script - Final Version with Facebook Chat Fix
 (function() {
   'use strict';
 
@@ -32,7 +32,7 @@
     processedNodes = new WeakSet();
   }
 
-  // Process text nodes (with inline links support)
+  // Process text nodes (with Facebook chat fix)
   function processTextNode(node) {
     if (!isEnabled) return;
     if (!node.textContent || !node.textContent.trim()) return;
@@ -60,6 +60,12 @@
         return;
       }
       
+      // NEW: Skip editable elements (Facebook chat, inputs)
+      if (currentElement.isContentEditable || 
+          currentElement.contentEditable === 'true') {
+        return;
+      }
+      
       // Check if in navigation context
       if (tagName === 'nav' || tagName === 'header' || tagName === 'footer') {
         isInNavigation = true;
@@ -71,14 +77,18 @@
         return;
       }
       
+      // NEW: Skip textbox/input roles (Facebook chat)
+      if (role === 'textbox' || role === 'searchbox' || role === 'combobox') {
+        return;
+      }
+      
       // Skip by aria-level (heading level)
       if (currentElement.hasAttribute('aria-level')) {
         return;
       }
       
-            // Skip if className suggests heading, title, or slider
+      // Skip if className suggests heading, title, slider, or chat
       try {
-        // Handle different className types
         let classStr = '';
         if (typeof currentElement.className === 'string') {
           classStr = currentElement.className;
@@ -92,7 +102,11 @@
             classStr.includes('title') ||
             classStr.includes('header') ||
             classStr.includes('slider') ||
-            classStr.includes('carousel')) {
+            classStr.includes('carousel') ||
+            classStr.includes('chat') ||          // Facebook chat
+            classStr.includes('composer') ||      // Facebook composer
+            classStr.includes('message-input') || // Message input
+            classStr.includes('textbox')) {       // Generic textbox
           return;
         }
       } catch (e) {
@@ -104,7 +118,6 @@
         const computedStyle = window.getComputedStyle(currentElement);
         const fontSize = parseFloat(computedStyle.fontSize);
         
-        // Skip if font-size > 18px (likely heading/title)
         if (fontSize > 18) {
           return;
         }
@@ -131,7 +144,6 @@
         const computedStyle = window.getComputedStyle(parent);
         const fontSize = parseFloat(computedStyle.fontSize);
         
-        // Skip if large font (heading/title)
         if (fontSize > 18) {
           return;
         }
@@ -148,7 +160,6 @@
       let hasChanges = false;
       
       const processedWords = words.map(word => {
-        // Skip whitespace and short words
         if (!word.trim() || word.length < 4) return word;
         if (!isGeorgianText(word)) return word;
         if (word.includes('\u00AD')) return word;
@@ -183,7 +194,6 @@
     if (!isEnabled) return;
     if (depth > 30) return;
 
-    // Skip problematic elements
     if (node.nodeType === Node.ELEMENT_NODE) {
       const tagName = node.tagName.toLowerCase();
       const skipTags = ['script', 'style', 'noscript', 'iframe', 'object', 
@@ -198,7 +208,6 @@
     if (node.nodeType === Node.TEXT_NODE) {
       processTextNode(node);
     } else if (node.nodeType === Node.ELEMENT_NODE) {
-      // Limit children to process
       const children = Array.from(node.childNodes).slice(0, 100);
       for (let child of children) {
         processNode(child, depth + 1);
@@ -240,65 +249,56 @@
     }
   }
 
-// Aggressive Mutation Observer (Facebook-optimized)
-let mutationTimeout;
+  // Aggressive Mutation Observer (Facebook-optimized)
+  let mutationTimeout;
+  const isFacebook = window.location.hostname.includes('facebook.com');
 
-// Facebook-specific detection
-const isFacebook = window.location.hostname.includes('facebook.com');
-
-const observer = new MutationObserver((mutations) => {
-  if (!isEnabled || isProcessing) return;
-  
-  clearTimeout(mutationTimeout);
-  
-  // Faster debounce for Facebook
-  const debounceTime = isFacebook ? 200 : 500;
-  
-  mutationTimeout = setTimeout(() => {
-    for (let mutation of mutations) {
-      // Process added nodes
-      for (let node of mutation.addedNodes) {
-        if (!processedNodes.has(node)) {
-          if (node.nodeType === Node.ELEMENT_NODE || node.nodeType === Node.TEXT_NODE) {
-            processNode(node);
+  const observer = new MutationObserver((mutations) => {
+    if (!isEnabled || isProcessing) return;
+    
+    clearTimeout(mutationTimeout);
+    
+    const debounceTime = isFacebook ? 200 : 500;
+    
+    mutationTimeout = setTimeout(() => {
+      for (let mutation of mutations) {
+        for (let node of mutation.addedNodes) {
+          if (!processedNodes.has(node)) {
+            if (node.nodeType === Node.ELEMENT_NODE || node.nodeType === Node.TEXT_NODE) {
+              processNode(node);
+            }
+          }
+        }
+        
+        if (isFacebook && mutation.type === 'characterData') {
+          const textNode = mutation.target;
+          if (textNode.nodeType === Node.TEXT_NODE) {
+            processedNodes.delete(textNode);
+            processTextNode(textNode);
           }
         }
       }
-      
-      // NEW: Also process when text content changes (React updates)
-      if (isFacebook && mutation.type === 'characterData') {
-        const textNode = mutation.target;
-        if (textNode.nodeType === Node.TEXT_NODE) {
-          // Remove from processed set to allow re-processing
-          processedNodes.delete(textNode);
-          processTextNode(textNode);
-        }
-      }
+    }, debounceTime);
+  });
+
+  function startObserving() {
+    if (!document.body) return;
+    
+    const observeConfig = {
+      childList: true,
+      subtree: true
+    };
+    
+    if (isFacebook) {
+      observeConfig.characterData = true;
+      observeConfig.characterDataOldValue = false;
     }
-  }, debounceTime);
-});
-
-function startObserving() {
-  if (!document.body) return;
-  
-  // Enhanced observation for Facebook
-  const observeConfig = {
-    childList: true,
-    subtree: true
-  };
-  
-  // On Facebook, also watch for text changes
-  if (isFacebook) {
-    observeConfig.characterData = true;
-    observeConfig.characterDataOldValue = false;
+    
+    observer.observe(document.body, observeConfig);
+    
+    console.log('Georgian Hyphenation: Observer started', isFacebook ? '(Facebook mode)' : '');
   }
-  
-  observer.observe(document.body, observeConfig);
-  
-  console.log('Georgian Hyphenation: Observer started', isFacebook ? '(Facebook mode)' : '');
-}
 
-  // Stop observing
   function stopObserving() {
     observer.disconnect();
   }
@@ -309,7 +309,6 @@ function startObserving() {
       isEnabled = result.enabled !== false;
       
       if (isEnabled) {
-        // Add CSS
         const style = document.createElement('style');
         style.textContent = `
           body {
@@ -320,40 +319,33 @@ function startObserving() {
             hyphens: manual !important;
             -webkit-hyphens: manual !important;
           }
-          span {
-            font-feature-settings: "liga" 0 !important;
-            text-rendering: optimizeSpeed !important;
-          }
         `;
         document.head.appendChild(style);
 
-     // Process page when ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    if (isFacebook) {
-      // Facebook needs extra delay for content to load
-      setTimeout(() => {
-        processPage();
-        startObserving();
-      }, 2000); // 2 second delay
-    } else {
-      processPage();
-      startObserving();
-  }
-  });
-} else {
-  if (isFacebook) {
-    // Facebook: delay initial processing
-    setTimeout(() => {
-      processPage();
-      startObserving();
-    }, 2000);
-  } else {
-    processPage();
-    startObserving();
-	  }
-	  }
-	  }
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', () => {
+            if (isFacebook) {
+              setTimeout(() => {
+                processPage();
+                startObserving();
+              }, 2000);
+            } else {
+              processPage();
+              startObserving();
+            }
+          });
+        } else {
+          if (isFacebook) {
+            setTimeout(() => {
+              processPage();
+              startObserving();
+            }, 2000);
+          } else {
+            processPage();
+            startObserving();
+          }
+        }
+      }
     });
   }
 
@@ -388,10 +380,8 @@ if (document.readyState === 'loading') {
       lastUrl = currentUrl;
       console.log('Georgian Hyphenation: URL changed to', currentUrl);
       
-      // Reset processed nodes
       resetProcessedNodes();
       
-      // Wait for new content to load
       setTimeout(() => {
         processPage();
       }, 500);
