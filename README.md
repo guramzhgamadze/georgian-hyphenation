@@ -40,25 +40,21 @@ npm install georgian-hyphenation
 ```
 ## Browser Extension / ბრაუზერის გაფართოება
 
-### Chrome/Edge
-🌐 **[Install from Chrome Web Store](#)** *(Coming soon)*
+### Firefox 🦊
+[![Firefox Add-ons](https://img.shields.io/amo/v/georgian-hyphenation?label=Firefox&logo=firefox)](https://addons.mozilla.org/firefox/addon/georgian-hyphenation/)
+
+**[Install from Firefox Add-ons](https://addons.mozilla.org/firefox/addon/georgian-hyphenation/)** ✅
+
+### Chrome/Edge 🌐
+**Chrome Web Store** *(Coming soon)*
 
 Or install manually:
 1. Download [latest release](https://github.com/guramzhgamadze/georgian-hyphenation/releases)
-2. Extract `browser-extension.zip`
+2. Extract `browser-extension-chrome.zip`
 3. Chrome → `chrome://extensions/`
 4. Enable "Developer mode"
 5. Click "Load unpacked"
-6. Select `browser-extension` folder
-
-### Firefox
-🦊 **[Install from Firefox Add-ons](#)** *(Coming soon)*
-
-Or install manually:
-1. Download [latest release](https://github.com/guramzhgamadze/georgian-hyphenation/releases)
-2. Firefox → `about:debugging#/runtime/this-firefox`
-3. Click "Load Temporary Add-on"
-4. Select `manifest.json` from `browser-extension` folder
+6. Select `browser-extension-chrome` folder
 
 ### Features
 - ✅ Automatic hyphenation on all Georgian websites
