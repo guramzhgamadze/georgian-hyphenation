@@ -1,312 +1,143 @@
 # -*- coding: utf-8 -*-
 """
-Georgian Language Hyphenation Library
+Georgian Language Hyphenation Library (v2.0 - Academic Logic)
 ქართული ენის დამარცვლის ბიბლიოთეკა
-
-Supports multiple output formats:
-- Soft hyphens for web/documents
-- TeX hyphenation patterns
-- Hunspell dictionary format
-- Plain syllable lists
+Logic: Phonological distance analysis & Anti-Orphan protection
+Author: Guram Zhgamadze
 """
-
-import re
-from functools import reduce
-from typing import List, Dict, Optional
-import json
-
 
 class GeorgianHyphenator:
     """
-    Main hyphenation class for Georgian language
-    ქართული ენის დამარცვლის ძირითადი კლასი
+    Georgian word hyphenation based on phonological distance analysis
     """
     
-    def __init__(self, hyphen_char: str = '\u00AD'):
+    def __init__(self, hyphen_char='\u00AD'):
         """
-        Initialize hyphenator with specified hyphen character
+        Initialize hyphenator
         
         Args:
-            hyphen_char: Character to use for hyphenation points
-                        Default is soft hyphen (U+00AD)
+            hyphen_char (str): Character to use for hyphenation (default: soft hyphen U+00AD)
         """
         self.hyphen_char = hyphen_char
-        self.C = '[ბგდვზთკლმნპჟრსტფქღყშჩცძწჭხჯჰ]'  # Consonants
-        self.V = '[აეიოუ]'                          # Vowels
-        self.char = '[ა-ჰ]'                         # All Georgian letters
+        self.vowels = 'აეიოუ'
     
-    def count_vowels(self, word: str) -> int:
-        """Count vowels in a word"""
-        vowel_counts = [word.count(x) for x in "აეიოუ"]
-        return reduce(lambda x, y: x + y, vowel_counts, 0)
-    
-    def hyphenate(self, word: str) -> str:
+    def hyphenate(self, word):
         """
         Hyphenate a single Georgian word
         
         Args:
-            word: Georgian word to hyphenate
+            word (str): Georgian word to hyphenate
             
         Returns:
-            Word with hyphenation points inserted
+            str: Word with hyphenation points inserted
         """
-        # Don't hyphenate words with 0-1 vowels
-        if self.count_vowels(word) <= 1:
+        # Rule 1: Words shorter than 4 chars are never hyphenated
+        if len(word) < 4:
             return word
         
-        softhpn = self.hyphen_char
+        # Find all vowel indices
+        vowel_indices = [i for i, char in enumerate(word) if char in self.vowels]
         
-        # Apply hyphenation rules with different boundary markers
-        result = self._apply_rules(word, softhpn, '^', '$')
-        result = self._apply_rules(result, softhpn, '^', softhpn)
-        result = self._apply_rules(result, softhpn, softhpn, '$')
-        result = self._apply_rules(result, softhpn, softhpn, softhpn)
+        # Rule 2: Need at least 2 vowels to hyphenate
+        if len(vowel_indices) < 2:
+            return word
         
-        # Remove duplicate hyphens
-        result = re.sub(f"{re.escape(softhpn)}+", softhpn, result, flags=re.U)
+        insert_points = []
         
-        return result
+        # Analyze distance between consecutive vowels
+        for i in range(len(vowel_indices) - 1):
+            v1 = vowel_indices[i]
+            v2 = vowel_indices[i + 1]
+            distance = v2 - v1 - 1  # Number of consonants between vowels
+            between_substring = word[v1 + 1:v2]
+            
+            candidate_pos = -1
+            
+            if distance == 0:
+                # Case V-V: Split between vowels (hiatus)
+                candidate_pos = v1 + 1
+            elif distance == 1:
+                # Case V-C-V: Split before consonant
+                candidate_pos = v1 + 1
+            else:
+                # Case V-CC...-V: Cluster handling
+                # 'R' Rule: If cluster starts with 'რ', keep it left
+                if between_substring[0] == 'რ':
+                    candidate_pos = v1 + 2
+                else:
+                    candidate_pos = v1 + 2
+            
+            # Anti-Orphan Filter: Ensure at least 2 chars on both sides
+            if candidate_pos >= 2 and (len(word) - candidate_pos) >= 2:
+                insert_points.append(candidate_pos)
+        
+        # Reconstruct word with hyphens
+        result = list(word)
+        for pos in reversed(insert_points):
+            result.insert(pos, self.hyphen_char)
+        
+        return ''.join(result)
     
-    def _apply_rules(self, w: str, softhpn: str, startchar: str, endchar: str) -> str:
-        """Apply hyphenation regex rules"""
-        C, V, char = self.C, self.V, self.char
-        
-        # Rule 1: V+C+C++V → VC|CV
-        t = re.sub(f"({V})({C})({C}+)({V})", 
-                   rf"\1\2{softhpn}\3\4", w, flags=re.U)
-        
-        # Rule 2: V+C+V+C+V → VCV|CV
-        t = re.sub(f"({V})({C})({V})({C})({V})", 
-                   rf"\1\2\3{softhpn}\4\5", t, flags=re.U)
-        
-        # Rule 3: C+V+C+V → CV|CV
-        t = re.sub(f"({C})({V})({C})({V})", 
-                   rf"\1\2{softhpn}\3\4", t, flags=re.U)
-        
-        # Rule 4: V+V+V → VV|V
-        t = re.sub(f"({V})({V})({V})", 
-                   rf"\1\2{softhpn}\3", t, flags=re.U)
-        
-        # Rule 5: Word start - ^VCVCV
-        t = re.sub(f"{startchar}({V})({C})({V})({C})({V})", 
-                   rf"\1\2\3{softhpn}\4\5", t, flags=re.U)
-        
-        # Rule 6: Word start - ^VCVCchar
-        t = re.sub(f"{startchar}({V})({C})({V})({C})({char})", 
-                   rf"\1\2\3{softhpn}\4\5", t, flags=re.U)
-        
-        # Rule 7: Word start - ^C++CVCV
-        t = re.sub(f"{startchar}({C}+)({V})({C})({V})", 
-                   rf"\1\2{softhpn}\3\4", t, flags=re.U)
-        
-        # Rule 8: Word start - ^C++VVchar
-        t = re.sub(f"{startchar}({C}+)({V})({V})({char})", 
-                   rf"\1\2{softhpn}\3\4", t, flags=re.U)
-        
-        # Rule 9: Word end - charVVC++$
-        t = re.sub(f"({char})({V})({V})({C}+){endchar}", 
-                   rf"\1\2{softhpn}\3\4", t, flags=re.U)
-        
-        # Rule 10: Word end - charVCV$
-        t = re.sub(f"({char})({V})({C})({V}){endchar}", 
-                   rf"\1\2{softhpn}\3\4", t, flags=re.U)
-        
-        # Rule 11: Word end - VCC++VC++$
-        t = re.sub(f"({V})({C})({C}+)({V})({C}+){endchar}", 
-                   rf"\1\2{softhpn}\3\4\5", t, flags=re.U)
-        
-        # Rule 12: Word end - charVCVC++$
-        t = re.sub(f"({char})({V})({C})({V}+)({C}+){endchar}", 
-                   rf"\1\2{softhpn}\3\4\5", t, flags=re.U)
-        
-        return t
-    
-    def getSyllables(self, word: str) -> List[str]:
+    def get_syllables(self, word):
         """
-        Get list of syllables for a word
+        Get array of syllables for a word
         
         Args:
-            word: Georgian word
+            word (str): Georgian word
             
         Returns:
-            List of syllables
+            list: List of syllables
         """
-        hyphenated = self.hyphenate(word)
-        return hyphenated.split(self.hyphen_char)
+        temp_hyphenator = GeorgianHyphenator('-')
+        return temp_hyphenator.hyphenate(word).split('-')
     
-    def hyphenate_text(self, text: str) -> str:
+    def hyphenate_text(self, text):
         """
-        Hyphenate entire text
+        Hyphenate entire text (preserves punctuation)
         
         Args:
-            text: Georgian text
+            text (str): Georgian text
             
         Returns:
-            Hyphenated text
+            str: Hyphenated text
         """
-        words = text.split(' ')
-        hyphenated_words = [self.hyphenate(w) for w in words]
-        return ' '.join(hyphenated_words)
+        import re
+        # Split by non-Georgian characters to preserve punctuation
+        parts = re.split(r'([^ა-ჰ]+)', text)
+        
+        return ''.join(
+            self.hyphenate(part) if re.search(r'[ა-ჰ]{4,}', part) else part
+            for part in parts
+        )
 
 
-class TeXPatternGenerator:
-    """Generate TeX hyphenation patterns"""
+def to_tex_pattern(word):
+    """
+    Convert word to TeX pattern format
     
-    def __init__(self, hyphenator: GeorgianHyphenator):
-        self.hyphenator = hyphenator
-    
-    def word_to_pattern(self, word: str) -> str:
-        """
-        Convert a word to TeX pattern format
+    Args:
+        word (str): Georgian word
         
-        Example: საქართველო → .სა1ქარ1თვე1ლო
-        """
-        syllables = self.hyphenator.getSyllables(word)
-        if len(syllables) <= 1:
-            return f".{word}"
-        return "." + "1".join(syllables)
-    
-    def generate_patterns_file(self, words: List[str], output_file: str):
-        """
-        Generate complete TeX patterns file
-        
-        Args:
-            words: List of Georgian words
-            output_file: Path to output .tex file
-        """
-        patterns = [self.word_to_pattern(w) for w in words]
-        
-        with open(output_file, 'w', encoding='utf-8') as f:
-            f.write("% Georgian hyphenation patterns\n")
-            f.write("% ქართული დამარცვლის პატერნები\n")
-            f.write("% Generated automatically\n\n")
-            f.write("\\patterns{\n")
-            for pattern in sorted(set(patterns)):
-                f.write(f"  {pattern}\n")
-            f.write("}\n")
-        
-        print(f"TeX patterns saved to {output_file}")
-
-
-class HunspellDictionaryGenerator:
-    """Generate Hunspell dictionary format"""
-    
-    def __init__(self, hyphenator: GeorgianHyphenator):
-        self.hyphenator = hyphenator
-    
-    def word_to_hunspell(self, word: str) -> str:
-        """
-        Convert word to Hunspell format
-        
-        Example: საქართველო → სა=ქარ=თვე=ლო
-        """
-        syllables = self.hyphenator.getSyllables(word)
-        return "=".join(syllables)
-    
-    def generate_dictionary(self, words: List[str], output_prefix: str):
-        """
-        Generate Hunspell .dic file
-        
-        Args:
-            words: List of Georgian words
-            output_prefix: Prefix for output files (e.g., 'hyph_ka_GE')
-        """
-        dic_file = f"{output_prefix}.dic"
-        
-        with open(dic_file, 'w', encoding='utf-8') as f:
-            # Header with word count
-            f.write(f"UTF-8\n{len(words)}\n")
-            for word in words:
-                f.write(self.word_to_hunspell(word) + "\n")
-        
-        print(f"Hunspell dictionary saved to {dic_file}")
-
-
-class HyphenationExporter:
-    """Export hyphenation data in various formats"""
-    
-    def __init__(self, hyphenator: GeorgianHyphenator):
-        self.hyphenator = hyphenator
-    
-    def export_json(self, words: List[str], output_file: str):
-        """Export as JSON for JavaScript usage"""
-        data = {}
-        for word in words:
-            data[word] = {
-                "syllables": self.hyphenator.getSyllables(word),
-                "hyphenated": self.hyphenator.hyphenate(word)
-            }
-        
-        with open(output_file, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-        
-        print(f"JSON export saved to {output_file}")
-    
-    def export_csv(self, words: List[str], output_file: str):
-        """Export as CSV"""
-        import csv
-        
-        with open(output_file, 'w', encoding='utf-8', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow(['word', 'syllables', 'syllable_count'])
-            
-            for word in words:
-                syllables = self.hyphenator.getSyllables(word)
-                writer.writerow([word, '-'.join(syllables), len(syllables)])
-        
-        print(f"CSV export saved to {output_file}")
-
-
-# Test and demonstration
-if __name__ == "__main__":
-    # Initialize hyphenator
+    Returns:
+        str: TeX pattern (e.g., .გ1ა1ნ1ა1თ1ლე1ბა.)
+    """
     hyphenator = GeorgianHyphenator()
+    syllables = hyphenator.get_syllables(word)
+    if len(syllables) <= 1:
+        return f'.{word}.'
+    return '.' + '1'.join(syllables) + '.'
+
+
+def to_hunspell_format(word):
+    """
+    Convert word to Hunspell dictionary format
     
-    # Test words
-    test_words = [
-        "საქართველო",
-        "მთავრობა",
-        "დედაქალაქი",
-        "ტელევიზორი",
-        "კომპიუტერი",
-        "უნივერსიტეტი",
-        "პარლამენტი",
-        "დამოუკიდებლობა",
-        "განათლება",
-        "ეკონომიკა"
-    ]
-    
-    print("=" * 60)
-    print("Georgian Hyphenation Examples")
-    print("ქართული დამარცვლის მაგალითები")
-    print("=" * 60)
-    print()
-    
-    # Test basic hyphenation with visible hyphens
-    visible_hyphenator = GeorgianHyphenator('-')
-    for word in test_words:
-        syllables = visible_hyphenator.getSyllables(word)
-        hyphenated = visible_hyphenator.hyphenate(word)
-        print(f"{word:20} → {hyphenated:25} [{len(syllables)} syllables]")
-    
-    print("\n" + "=" * 60)
-    print("Generating export files...")
-    print("=" * 60)
-    print()
-    
-    # Generate TeX patterns
-    tex_gen = TeXPatternGenerator(hyphenator)
-    tex_gen.generate_patterns_file(test_words, "hyph-ka.tex")
-    
-    # Generate Hunspell dictionary
-    hunspell_gen = HunspellDictionaryGenerator(hyphenator)
-    hunspell_gen.generate_dictionary(test_words, "hyph_ka_GE")
-    
-    # Generate exports
-    exporter = HyphenationExporter(hyphenator)
-    exporter.export_json(test_words, "georgian_hyphenation.json")
-    exporter.export_csv(test_words, "georgian_hyphenation.csv")
-    
-    print("\n" + "=" * 60)
-    print("All files generated successfully!")
-    print("=" * 60)
+    Args:
+        word (str): Georgian word
+        
+    Returns:
+        str: Hunspell format (syllable=syllable)
+    """
+    hyphenator = GeorgianHyphenator()
+    syllables = hyphenator.get_syllables(word)
+    return '='.join(syllables)
