@@ -1,18 +1,16 @@
 {
   "name": "georgian-hyphenation",
-  "version": "1.0.1",
-  "description": "Georgian Language Hyphenation Library - ქართული ენის დამარცვლის ბიბლიოთეკა",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "version": "2.0.1",
+  "description": "Georgian Language Hyphenation Library v2.0 - Academic Logic with Phonological Distance Analysis",
+  "main": "src/javascript/index.js",
+  "types": "src/javascript/index.d.ts",
   "files": [
-    "dist",
-    "README.md",
+    "src/javascript",
+    "README-NPM.md",
     "LICENSE"
   ],
   "scripts": {
-    "build": "node build.js",
-    "test": "node test.js",
-    "prepublishOnly": "npm run build"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
