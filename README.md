@@ -1,3 +1,10 @@
+ბოდიშს გიხდი გაუგებრობისთვის. ახლა ზუსტად მივხვდი.
+
+შენ გინდა **სრული, განახლებული `README.md**`, სადაც **WordPress-ის სექციაც** განახლებულია (ახალი მენიუთი და სვიჩებით) და **Changelog**-იც ჩამატებულია, ოღონდ ეს ყველაფერი **ერთ მთლიან კოდში**, რომ პირდაპირ დააკოპირო.
+
+აი, სრული ფაილი:
+
+```markdown
 # Georgian Language Hyphenation / ქართული ენის დამარცვლა
 
 [![PyPI version](https://img.shields.io/pypi/v/georgian-hyphenation.svg)](https://pypi.org/project/georgian-hyphenation/)
@@ -7,7 +14,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Firefox Add-on](https://img.shields.io/amo/v/georgian-hyphenation?label=Firefox)](https://addons.mozilla.org/firefox/addon/georgian-hyphenation/)
 
-**Version 2.0.1** - Academic Logic with Phonological Distance Analysis
+**Version 2.0.1** (Library) / **2.0.8** (WordPress Plugin)
 
 A comprehensive hyphenation library for the Georgian language, using advanced linguistic algorithms for accurate syllabification.
 
@@ -26,7 +33,7 @@ A comprehensive hyphenation library for the Georgian language, using advanced li
 
 ### 🚀 Core Features
 - ✅ **Accurate syllabification** based on Georgian phonological rules
-- ✅ **Multiple platforms**: Python, JavaScript (Node.js & Browser), Browser Extensions
+- ✅ **Multiple platforms**: Python, JavaScript (Node.js & Browser), Browser Extensions, WordPress
 - ✅ **Multiple output formats**: Soft hyphens (U+00AD), visible hyphens, TeX patterns, Hunspell
 - ✅ **Zero dependencies**: Lightweight and fast
 - ✅ **Open source**: MIT License
@@ -78,16 +85,20 @@ The v2.0 algorithm uses **phonological distance analysis** instead of pattern ma
 ### Python
 ```bash
 pip install georgian-hyphenation
+
 ```
 
 ### JavaScript (NPM)
+
 ```bash
 npm install georgian-hyphenation
+
 ```
 
 ### Browser Extension
 
-**🦊 Firefox:** [Install from Firefox Add-ons](https://addons.mozilla.org/firefox/addon/georgian-hyphenation/)  
+**🦊 Firefox:** [Install from Firefox Add-ons](https://addons.mozilla.org/firefox/addon/georgian-hyphenation/)
+
 **🌐 Chrome:** *Coming soon to Chrome Web Store*
 
 ---
@@ -95,6 +106,7 @@ npm install georgian-hyphenation
 ## 📖 Quick Start / სწრაფი დაწყება
 
 ### Python
+
 ```python
 from georgian_hyphenation import GeorgianHyphenator
 
@@ -108,9 +120,11 @@ print(hyphenator.hyphenate('საქართველო'))
 # Get syllables
 print(hyphenator.get_syllables('საქართველო'))
 # Output: ['სა', 'ქარ', 'თვე', 'ლო']
+
 ```
 
 ### JavaScript
+
 ```javascript
 const { GeorgianHyphenator } = require('georgian-hyphenation');
 
@@ -124,6 +138,7 @@ console.log(hyphenator.hyphenate('საქართველო'));
 // Get syllables
 console.log(hyphenator.getSyllables('საქართველო'));
 // Output: ['სა', 'ქარ', 'თვე', 'ლო']
+
 ```
 
 ---
@@ -131,6 +146,7 @@ console.log(hyphenator.getSyllables('საქართველო'));
 ## 📚 Documentation / დოკუმენტაცია
 
 ### Python API
+
 ```python
 from georgian_hyphenation import GeorgianHyphenator
 
@@ -154,9 +170,11 @@ print(visible.hyphenate(word))  # სა-ქარ-თვე-ლო
 text = "საქართველო არის ლამაზი ქვეყანა."
 print(hyphenator.hyphenate_text(text))
 # Output: სა­ქარ­თვე­ლო არის ლა­მა­ზი ქვე­ყა­ნა.
+
 ```
 
 ### JavaScript API
+
 ```javascript
 const { GeorgianHyphenator } = require('georgian-hyphenation');
 
@@ -179,9 +197,11 @@ console.log(visible.hyphenate(word));  // სა-ქარ-თვე-ლო
 // Hyphenate entire text
 const text = "საქართველო არის ლამაზი ქვეყანა";
 console.log(hyphenator.hyphenateText(text));
+
 ```
 
 ### Browser Usage
+
 ```html
 <!DOCTYPE html>
 <html lang="ka">
@@ -197,7 +217,7 @@ console.log(hyphenator.hyphenateText(text));
 <body>
     <p class="hyphenated" id="text"></p>
     
-    <script src="https://cdn.jsdelivr.net/npm/georgian-hyphenation@2/src/javascript/index.js"></script>
+    <script src="[https://cdn.jsdelivr.net/npm/georgian-hyphenation@2/src/javascript/index.js](https://cdn.jsdelivr.net/npm/georgian-hyphenation@2/src/javascript/index.js)"></script>
     <script>
         const hyphenator = new GeorgianHyphenator('\u00AD');
         const text = "საქართველო არის ძალიან ლამაზი ქვეყანა";
@@ -206,6 +226,7 @@ console.log(hyphenator.hyphenateText(text));
     </script>
 </body>
 </html>
+
 ```
 
 ---
@@ -213,14 +234,17 @@ console.log(hyphenator.hyphenateText(text));
 ## 🎨 Export Formats / ექსპორტის ფორმატები
 
 ### TeX Patterns
+
 ```python
 from georgian_hyphenation import to_tex_pattern
 
 print(to_tex_pattern('საქართველო'))
 # Output: .სა1ქარ1თვე1ლო.
+
 ```
 
 Use in LaTeX:
+
 ```latex
 \documentclass{article}
 \usepackage{polyglossia}
@@ -230,14 +254,17 @@ Use in LaTeX:
 \begin{document}
 საქართველო არის ძალიან ლამაზი ქვეყანა
 \end{document}
+
 ```
 
 ### Hunspell Dictionary
+
 ```python
 from georgian_hyphenation import to_hunspell_format
 
 print(to_hunspell_format('საქართველო'))
 # Output: სა=ქარ=თვე=ლო
+
 ```
 
 ---
@@ -245,22 +272,25 @@ print(to_hunspell_format('საქართველო'))
 ## 🌐 Browser Extension / ბრაუზერის გაფართოება
 
 ### Features:
-- ✅ Automatic hyphenation on all Georgian websites
-- ✅ Works on Facebook, Twitter, Wikipedia, News sites
-- ✅ Toggle on/off per site
-- ✅ Real-time statistics
-- ✅ Zero performance impact
-- ✅ Supports dynamic content (React, Vue, Angular)
-- ✅ Respects editable fields (no interference with typing)
+
+* ✅ Automatic hyphenation on all Georgian websites
+* ✅ Works on Facebook, Twitter, Wikipedia, News sites
+* ✅ Toggle on/off per site
+* ✅ Real-time statistics
+* ✅ Zero performance impact
+* ✅ Supports dynamic content (React, Vue, Angular)
+* ✅ Respects editable fields (no interference with typing)
 
 ### Installation:
 
 **Firefox:**
+
 1. Visit [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/georgian-hyphenation/)
 2. Click "Add to Firefox"
 3. Done! ✅
 
 **Chrome (Manual):**
+
 1. Download
 2. Extract `browser-extension-chrome.zip`
 3. Chrome → `chrome://extensions/`
@@ -271,93 +301,100 @@ print(to_hunspell_format('საქართველო'))
 
 ## 🔌 WordPress Plugin
 
+**Current Version: v2.0.8**
+
 ### Features:
-- ✅ Full Elementor support with individual widget controls
-- ✅ 7 separate toggles for Elementor widgets (Text Editor, Heading, Icon Box, etc.)
-- ✅ Custom CSS selectors for themes and custom elements
-- ✅ Auto-justify option
-- ✅ Real-time configuration preview
-- ✅ Debug console logging
-- ✅ MutationObserver for dynamic content (AJAX, Load More)
-- ✅ Zero performance impact
+
+* ✅ **Full Elementor support** with individual widget controls
+* ✅ **Modern UI** with Red/Green switches
+* ✅ **Smart Fallback** (automatically finds content)
+* ✅ **Custom CSS selectors** with helper guide
+* ✅ **Auto-justify option**
+* ✅ **Real-time configuration preview**
+* ✅ **Debug console logging**
+* ✅ **MutationObserver** for dynamic content (AJAX, Load More)
+* ✅ **Zero performance impact**
 
 ### Installation:
 
 **From WordPress.org:** *(Coming soon)*
 
 **Manual Installation:**
-1. Download georgian-hyphenation-wp-2.0.8.zip
+
+1. Download **`georgian-hyphenation-wp-2.0.8.zip`**
 2. WordPress Admin → Plugins → Add New → Upload Plugin
 3. Choose ZIP file and click "Install Now"
 4. Activate the plugin
-5. Go to Settings → Georgian Hyphenation
-6. Configure options and Save
+5. Go to **"Geo Hyphenation"** in the main left sidebar menu.
 
 ### Configuration:
 
-**Settings → Georgian Hyphenation**
+**Admin Menu → Geo Hyphenation**
 
 1. **Enable Hyphenation** - Main on/off toggle
-
 2. **Elementor Widgets** - Individual controls:
-   - Text Editor Widget (`.elementor-text-editor, .elementor-widget-container p`)
-   - Heading Widget (`.elementor-heading-title`)
-   - Icon Box Widget (`.elementor-icon-box-description, .elementor-icon-box-title`)
-   - Testimonial Widget (`.elementor-testimonial-content`)
-   - Accordion Widget (`.elementor-accordion-content, .elementor-tab-title`)
-   - Tabs Widget (`.elementor-tab-content`)
-   - Toggle Widget (`.elementor-toggle-content, .elementor-toggle-title`)
+* Text Editor Widget (`.elementor-text-editor`, `.elementor-widget-container p`)
+* Heading Widget (`.elementor-heading-title`)
+* Icon Box Widget (`.elementor-icon-box-description`)
+* Testimonial Widget (`.elementor-testimonial-content`)
+* Accordion/Tabs/Toggle (`.elementor-accordion-content`, etc.)
+
 
 3. **Additional CSS Selectors** - Add custom selectors:
 ```
-   article p, .entry-content p, .my-custom-class
+article p, .entry-content p, .my-custom-class
+
 ```
+
 
 4. **Auto Justify Text** - Apply `text-align: justify` for better effect
 
 ### Screenshots:
 
-**Settings Page:**
-![WordPress Settings](docs/screenshots/wp-settings.png)
-
-**Before & After:**
-![Hyphenation Effect](docs/screenshots/wp-before-after.png)
+* **Settings Page:** New modern UI with switches.
+* **Before & After:** Visual comparison.
 
 ### Requirements:
-- WordPress 5.0+
-- PHP 7.0+
-- Works with or without Elementor
+
+* WordPress 5.0+
+* PHP 7.0+
+* Works with or without Elementor
 
 ### Compatibility:
-- ✅ Elementor Free & Pro
-- ✅ All WordPress themes
-- ✅ Page builders (Elementor, Gutenberg)
-- ✅ Classic Editor
-- ✅ WooCommerce
-- ✅ Multisite
+
+* ✅ Elementor Free & Pro
+* ✅ All WordPress themes
+* ✅ Page builders (Elementor, Gutenberg)
+* ✅ Classic Editor
+* ✅ WooCommerce
+* ✅ Multisite
 
 ### Debugging:
 
 Open browser console (F12) to see detailed logs:
+
+```log
+🇬🇪 GH: 🎯 Georgian Hyphenation Plugin v2.0.8: Starting...
+🇬🇪 GH: ✅ GeorgianHyphenator library loaded!
+🇬🇪 GH: 📋 CSS Selectors: .elementor-text-editor...
+🇬🇪 GH: 🎯 Found elements: 12
+🇬🇪 GH: ✅ Georgian Hyphenation Complete! Processed 12 elements.
+
 ```
-🎯 Georgian Hyphenation Plugin v2.0.3: Starting...
-✅ GeorgianHyphenator library loaded!
-📋 CSS Selectors: .elementor-text-editor, ...
-🎯 Found elements: 12
-📝 Processing element 1: elementor-text-editor
-✅ Georgian Hyphenation Complete! Processed 12 elements.
-```
+
+---
 
 ## 🎨 Live Demo
 
 **Interactive Demo:** https://guramzhgamadze.github.io/georgian-hyphenation/
 
 Try it yourself:
-- Test with your own Georgian text
-- See before/after comparison
-- Adjust browser width to see automatic line breaking
-- View syllable breakdown
-- Compare different output formats
+
+* Test with your own Georgian text
+* See before/after comparison
+* Adjust browser width to see automatic line breaking
+* View syllable breakdown
+* Compare different output formats
 
 ---
 
@@ -377,20 +414,23 @@ Try it yourself:
 ---
 
 ## 🧪 Testing / ტესტირება
+
 ```bash
 # Python tests
 python test_v2.py
 
 # JavaScript tests
 npm test
+
 ```
 
 **Test Coverage:**
-- ✅ 10,000+ Georgian words validated
-- ✅ Edge cases (V-V, consonant clusters, short words)
-- ✅ Unicode handling
-- ✅ Punctuation preservation
-- ✅ Performance benchmarks
+
+* ✅ 10,000+ Georgian words validated
+* ✅ Edge cases (V-V, consonant clusters, short words)
+* ✅ Unicode handling
+* ✅ Punctuation preservation
+* ✅ Performance benchmarks
 
 ---
 
@@ -410,66 +450,67 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## 📝 Changelog
 
+### Version 2.0.8 (WordPress Plugin) (2025-01-23)
+
+* 🔌 **WordPress Plugin Update**:
+* Moved settings to Top-Level Menu with icon
+* Added modern Red/Green UI switches
+* Added smart fallback selectors
+* Added detailed helper text for custom CSS selectors
+
+
+
 ### Version 2.0.1 (2025-01-22)
-- 📦 NPM package published with dedicated README
-- 📝 Documentation improvements
-- 🐛 Minor bug fixes
+
+* 📦 NPM package published with dedicated README
+* 📝 Documentation improvements
+* 🐛 Minor bug fixes
 
 ### Version 2.0.0 (2025-01-21) 🎉
 
 **Major Rewrite: Academic Logic**
 
-- ✅ **Complete algorithm rewrite** - Phonological distance analysis
-- ✅ **Anti-Orphan protection** - Minimum 2 characters on each side
-- ✅ **'R' Rule implementation** - Special handling for 'რ' consonant clusters
-- ✅ **Hiatus detection** - Proper V-V split handling
-- ✅ **Improved accuracy** - 95% → 98%+ on test corpus
-- ✅ **Cleaner codebase** - 60 lines vs 100+ lines (v1.0)
-- ✅ **Modern packaging** - `pyproject.toml` support
-
-**Breaking Changes:**
-- Method renamed: `getSyllables()` → `get_syllables()` (Python only)
-- Minimum word length: 4 characters (was 3)
-
-### Version 1.0.1
-- Bug fixes
-- Browser extension improvements
-- Facebook chat cursor fix
-
-### Version 1.0.0
-- Initial release
-- 12-rule regex-based system
+* ✅ **Complete algorithm rewrite** - Phonological distance analysis
+* ✅ **Anti-Orphan protection** - Minimum 2 characters on each side
+* ✅ **'R' Rule implementation** - Special handling for 'რ' consonant clusters
+* ✅ **Hiatus detection** - Proper V-V split handling
+* ✅ **Improved accuracy** - 95% → 98%+ on test corpus
+* ✅ **Cleaner codebase** - 60 lines vs 100+ lines (v1.0)
+* ✅ **Modern packaging** - `pyproject.toml` support
 
 ---
 
 ## 🗺️ Roadmap / სამომავლო გეგმები
 
 ### Short-term (2025 Q4)
-- ✅ v2.0 Academic Logic - **DONE**
-- ✅ PyPI v2.0.1 release - **DONE**
-- ✅ NPM v2.0.1 release - **DONE**
-- ✅ Firefox Extension v2.0.1 - **DONE**
-- 🔄 Chrome Web Store submission
-- 📱 Mobile app (React Native)
+
+* ✅ v2.0 Academic Logic - **DONE**
+* ✅ PyPI v2.0.1 release - **DONE**
+* ✅ NPM v2.0.1 release - **DONE**
+* ✅ Firefox Extension v2.0.1 - **DONE**
+* ✅ WordPress Plugin v2.0.8 - **DONE**
+* 🔄 Chrome Web Store submission
+* 📱 Mobile app (React Native)
 
 ### Mid-term (2026 Q3-Q4)
-- 📄 Submit to TeX Live hyphenation database
-- 📚 Academic paper publication
-- 🔌 WordPress plugin with Elementor support
-- 🎨 Adobe InDesign plugin
-- 📊 Microsoft Word add-in
+
+* 📄 Submit to TeX Live hyphenation database
+* 📚 Academic paper publication
+* 🎨 Adobe InDesign plugin
+* 📊 Microsoft Word add-in
 
 ### Long-term (2027+)
-- 🌍 Unicode CLDR proposal
-- 🏛️ Official endorsement (Georgian Language Institute)
-- 🤖 Integration into major OS (Windows, macOS, iOS, Android)
-- 🌐 Browser native support proposal
+
+* 🌍 Unicode CLDR proposal
+* 🏛️ Official endorsement (Georgian Language Institute)
+* 🤖 Integration into major OS (Windows, macOS, iOS, Android)
+* 🌐 Browser native support proposal
 
 ---
 
 ## 📄 License / ლიცენზია
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE.txt) file for details.
+This project is licensed under the MIT License - see the [LICENSE](https://www.google.com/search?q=LICENSE.txt) file for details.
 
 ---
 
@@ -477,38 +518,38 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE.txt) 
 
 **Guram Zhgamadze**
 
-- 🐙 GitHub: [@guramzhgamadze](https://github.com/guramzhgamadze)
-- 📧 Email: guramzhgamadze@gmail.com
-- 🐛 Issues: [Report bugs or request features](https://github.com/guramzhgamadze/georgian-hyphenation/issues)
+* 🐙 GitHub: [@guramzhgamadze](https://github.com/guramzhgamadze)
+* 📧 Email: guramzhgamadze@gmail.com
+* 🐛 Issues: [Report bugs or request features](https://github.com/guramzhgamadze/georgian-hyphenation/issues)
 
 ---
 
 ## 🙏 Acknowledgments / მადლობა
 
-- Based on Georgian phonological research
-- Inspired by TeX hyphenation algorithms (Liang, 1983)
-- Thanks to the Georgian linguistic community
-- Special thanks to early testers and contributors
+* Based on Georgian phonological research
+* Inspired by TeX hyphenation algorithms (Liang, 1983)
+* Thanks to the Georgian linguistic community
+* Special thanks to early testers and contributors
 
 ---
 
 ## 📚 References / ლიტერატურა
 
-- Georgian Language Phonology and Syllable Structure
-- TeX Hyphenation Algorithm (Liang, Franklin Mark. 1983)
-- Hunspell Hyphenation Documentation
-- Unicode Standard for Georgian Script (U+10A0–U+10FF)
-- CLDR Language Data
+* Georgian Language Phonology and Syllable Structure
+* TeX Hyphenation Algorithm (Liang, Franklin Mark. 1983)
+* Hunspell Hyphenation Documentation
+* Unicode Standard for Georgian Script (U+10A0–U+10FF)
+* CLDR Language Data
 
 ---
 
 ## 🔗 Links / ლინკები
 
-- 🐍 **PyPI:** https://pypi.org/project/georgian-hyphenation/
-- 📦 **NPM:** https://www.npmjs.com/package/georgian-hyphenation
-- 🦊 **Firefox:** https://addons.mozilla.org/firefox/addon/georgian-hyphenation/
-- 🎨 **Demo:** https://guramzhgamadze.github.io/georgian-hyphenation/
-- 📖 **Documentation:** [GitHub Wiki](https://github.com/guramzhgamadze/georgian-hyphenation/wiki)
+* 🐍 **PyPI:** https://pypi.org/project/georgian-hyphenation/
+* 📦 **NPM:** https://www.npmjs.com/package/georgian-hyphenation
+* 🦊 **Firefox:** https://addons.mozilla.org/firefox/addon/georgian-hyphenation/
+* 🎨 **Demo:** https://guramzhgamadze.github.io/georgian-hyphenation/
+* 📖 **Documentation:** [GitHub Wiki](https://github.com/guramzhgamadze/georgian-hyphenation/wiki)
 
 ---
 
@@ -517,3 +558,7 @@ Made with ❤️ for the Georgian language community
 შექმნილია ❤️-ით ქართული ენის საზოგადოებისთვის
 
 🇬🇪 **საქართველო** 🇬🇪
+
+```
+
+```
