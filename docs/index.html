@@ -97,19 +97,25 @@
             font-size: 16px;
             white-space: pre-wrap; 
         }
-        /* სტილი Soft Hyphen დემოსთვის */
         .resizable-content {
             background: white;
             padding: 20px;
             border-radius: 10px;
             font-size: 16px;
-            text-align: justify; /* მნიშვნელოვანია ეფექტის დასანახად */
-            hyphens: manual;     /* ბრაუზერს ვეუბნებით გამოიყენოს ჩვენი ტირეები */
-            resize: horizontal;  /* ჰორიზონტალურად ზომის შეცვლა */
-            overflow: auto;      /* საჭიროა resize-ისთვის */
+            text-align: justify;
+            hyphens: manual;
+            resize: horizontal;
+            overflow: auto;
             border: 2px dashed #38b2ac;
             width: 100%;
             max-width: 100%;
+        }
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
         }
         footer {
             background: #333;
@@ -127,18 +133,18 @@
     <div class="container">
         <header class="academic-header">
             <h1>🇬🇪 ქართული დამარცვლა</h1>
-            <p class="subtitle">Georgian Language Hyphenation - ლინგვისტური ალგორითმი</p>
+            <p class="subtitle">Georgian Language Hyphenation v2.0 - ლინგვისტური ალგორითმი</p>
             <p class="author">გურამ ჟღამაძე | Guram Zhgamadze</p>
         </header>
 
         <section class="about-section">
-            <h2>📖 ალგორითმის ლოგიკა</h2>
-            <p>სკრიპტი იყენებს მორფოლოგიურ და ტიპოგრაფიულ პრინციპებს, რათა ტექსტი ვიზუალურად გაწონასწორებული და ადვილად წასაკითხი იყოს:</p>
+            <h2>📖 ალგორითმის ლოგიკა (v2.0 Academic Logic)</h2>
+            <p>ალგორითმი იყენებს <strong>ფონოლოგიურ დისტანციის ანალიზს</strong> ქართული ენის მორფოლოგიური და ტიპოგრაფიული პრინციპების დასაცავად:</p>
             
             <div class="rule-card">
                 <strong>1. ხმოვანთა შეჯახება (V-V):</strong><br>
                 თუ ორი ხმოვანი გვერდიგვერდაა, გაყოფა ხდება მათ შორის.<br>
-                <em style="color:#555;">მაგ: გა-ა-ა-ნა-ლი-ზა, სა-ა-თი, ოკე-ა-ნე</em>
+                <em style="color:#555;">მაგ: გა-ა-ნა-ლი-ზა, სა-ა-თი, ო-კე-ა-ნე</em>
             </div>
 
             <div class="rule-card">
@@ -149,23 +155,27 @@
 
             <div class="rule-card">
                 <strong>3. "რ" სწორი დასმა (The 'R' Rule):</strong><br>
-                თუ თანხმოვანთა ჯგუფი იწყება „რ“-თი, ის ყოველთვის რჩება მარცხენა მხარეს.<br>
+                თუ თანხმოვანთა ჯგუფი იწყება „რ"-ით, ის ყოველთვის რჩება მარცხენა მხარეს.<br>
                 <em style="color:#555;">მაგ: ბარ-ბი, კარ-გი, ურ-თი-ერ-თო-ბა</em>
             </div>
 
             <div class="rule-card">
                 <strong>4. უსაფრთხოების ფილტრი (Anti-Orphan):</strong><br>
-                აკრძალულია 1 ასოს მოჭრა სიტყვის თავსა ან ბოლოში.<br>
+                აკრძალულია 1 ასოს მოჭრა სიტყვის თავსა ან ბოლოში (მინიმუმ 2 სიმბოლო).<br>
                 <em style="color:#555;">მაგ: არა (და არა ა-რა), იგი (და არა ი-გი)</em>
+            </div>
+
+            <div class="warning-box">
+                ⚠️ <strong>ავტომატური გასუფთავება:</strong> სისტემა ავტომატურად შლის ტექსტში არსებულ ძველ soft hyphens და ამატებს v2.0 ალგორითმით დაანგარიშებულ ახალს.
             </div>
         </section>
 
         <section class="demo-section">
             <h2>📊 ინტერაქტიული დემო</h2>
-            <label for="input-text">შეიყვანეთ ქართული ტექსტი:</label>
+            <label for="input-text">შეიყვანეთ ქართული ტექსტი (დაშვებულია ძველი soft hyphens-ებით):</label>
             <textarea id="input-text" placeholder="მაგ: საქართველო არის ძალიან ლამაზი ქვეყანა"></textarea>
             
-            <button onclick="hyphenateText()">დამარცვლა</button>
+            <button onclick="hyphenateText()">დამარცვლა (v2.0)</button>
             <button onclick="loadExample()">მაგალითი</button>
             <button onclick="clearAll()">გასუფთავება</button>
 
@@ -177,9 +187,9 @@
                 </div>
 
                 <div class="soft-result-box">
-                    <h3>✨ ვებისთვის მზა ტექსტი (Soft Hyphen)</h3>
+                    <h3>✨ ვებისთვის მზა ტექსტი (Soft Hyphen - U+00AD)</h3>
                     <p style="font-size: 0.9em; color: #666; margin-bottom: 10px;">
-                        აქ გამოყენებულია უხილავი სიმბოლო (<code>&amp;shy;</code>). 
+                        აქ გამოყენებულია უხილავი Unicode სიმბოლო <code>U+00AD</code> (soft hyphen). 
                         <strong>შეცვალეთ ამ ყუთის ზომა (კუთხიდან)</strong>, რომ ნახოთ როგორ გადადის სიტყვები ავტომატურად.
                     </p>
                     <div class="resizable-content" id="soft-result-display"></div>
@@ -191,7 +201,19 @@
             <h2>🎯 გამოყენების სფეროები</h2>
             <div class="rule-card"><strong>📰 მედია:</strong> გაზეთები, ჟურნალები, ონლაინ პუბლიკაციები</div>
             <div class="rule-card"><strong>📚 გამომცემლობა:</strong> წიგნები, სახელმძღვანელოები</div>
-            <div class="rule-card"><strong>🌐 ვებსაიტები:</strong> ავტომატური ტექსტის გადატანა</div>
+            <div class="rule-card"><strong>🌐 ვებსაიტები:</strong> ავტომატური ტექსტის გადატანა (WordPress, Elementor)</div>
+            <div class="rule-card"><strong>🧪 აკადემიური:</strong> ლინგვისტური კვლევები, სასწავლო მასალები</div>
+        </section>
+
+        <section class="about-section">
+            <h2>📦 პროდუქტები</h2>
+            <p>Georgian Hyphenation ხელმისაწვდომია რამდენიმე პლატფორმაზე:</p>
+            <ul style="margin-left: 30px; margin-top: 15px; line-height: 2;">
+                <li>🐍 <strong>Python:</strong> <code>pip install georgian-hyphenation</code></li>
+                <li>📦 <strong>JavaScript (NPM):</strong> <code>npm install georgian-hyphenation</code></li>
+                <li>🦊 <strong>Firefox Extension:</strong> <a href="https://addons.mozilla.org/firefox/addon/georgian-hyphenation/" target="_blank">Firefox Add-ons</a></li>
+                <li>🔌 <strong>WordPress Plugin:</strong> v2.0.8 (Full Elementor Support)</li>
+            </ul>
         </section>
 
         <section class="about-section">
@@ -199,13 +221,14 @@
             <p>კითხვების, თანამშრომლობის ან აკადემიური კვლევისთვის:</p>
             <ul style="margin-left: 30px; margin-top: 15px;">
                 <li>📧 Email: guramzhgamadze@gmail.com</li>
-                <li>🐙 GitHub: github.com/guramzhgamadze</li>
+                <li>🐙 GitHub: <a href="https://github.com/guramzhgamadze/georgian-hyphenation" target="_blank">github.com/guramzhgamadze</a></li>
+                <li>📦 NPM: <a href="https://www.npmjs.com/package/georgian-hyphenation" target="_blank">npmjs.com/package/georgian-hyphenation</a></li>
             </ul>
         </section>
 
         <footer>
             <p>© 2025 Guram Zhgamadze | MIT License | Open Source</p>
-            <p>🇬🇪 Made for Georgian Language Community</p>
+            <p>🇬🇪 Made with ❤️ for Georgian Language Community</p>
         </footer>
     </div>
 
@@ -269,11 +292,15 @@
         // --- ფუნქციები ---
 
         function hyphenateText() {
-            const text = document.getElementById('input-text').value.trim();
+            let text = document.getElementById('input-text').value.trim();
             if (!text) {
                 alert('გთხოვთ შეიყვანოთ ტექსტი');
                 return;
             }
+
+            // ⚠️ CRITICAL: ავტომატურად ვშლით ძველ soft hyphens (U+00AD)
+            text = text.replace(/\u00AD/g, '');
+            console.log('🧹 Cleaned old soft hyphens');
 
             // 1. ხილული ტირეებით
             const hardHyphenator = new GeorgianHyphenator('-');
@@ -299,6 +326,8 @@
             document.getElementById('soft-result-display').textContent = resultSoft;
             
             document.getElementById('results').style.display = 'block';
+
+            console.log('✅ Hyphenation complete (v2.0 Academic Logic)');
         }
 
         function loadExample() {
@@ -313,7 +342,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            console.log("Hyphenation Engine Loaded.");
+            console.log("🇬🇪 Georgian Hyphenation v2.0 - Demo Site Loaded");
         });
 
     </script>
