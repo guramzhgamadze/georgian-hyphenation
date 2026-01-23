@@ -269,6 +269,85 @@ print(to_hunspell_format('საქართველო'))
 
 ---
 
+## 🔌 WordPress Plugin
+
+### Features:
+- ✅ Full Elementor support with individual widget controls
+- ✅ 7 separate toggles for Elementor widgets (Text Editor, Heading, Icon Box, etc.)
+- ✅ Custom CSS selectors for themes and custom elements
+- ✅ Auto-justify option
+- ✅ Real-time configuration preview
+- ✅ Debug console logging
+- ✅ MutationObserver for dynamic content (AJAX, Load More)
+- ✅ Zero performance impact
+
+### Installation:
+
+**From WordPress.org:** *(Coming soon)*
+
+**Manual Installation:**
+1. Download [latest release](https://github.com/guramzhgamadze/georgian-hyphenation/releases) (`georgian-hyphenation-wp-2.0.3.zip`)
+2. WordPress Admin → Plugins → Add New → Upload Plugin
+3. Choose ZIP file and click "Install Now"
+4. Activate the plugin
+5. Go to Settings → Georgian Hyphenation
+6. Configure options and Save
+
+### Configuration:
+
+**Settings → Georgian Hyphenation**
+
+1. **Enable Hyphenation** - Main on/off toggle
+
+2. **Elementor Widgets** - Individual controls:
+   - Text Editor Widget (`.elementor-text-editor, .elementor-widget-container p`)
+   - Heading Widget (`.elementor-heading-title`)
+   - Icon Box Widget (`.elementor-icon-box-description, .elementor-icon-box-title`)
+   - Testimonial Widget (`.elementor-testimonial-content`)
+   - Accordion Widget (`.elementor-accordion-content, .elementor-tab-title`)
+   - Tabs Widget (`.elementor-tab-content`)
+   - Toggle Widget (`.elementor-toggle-content, .elementor-toggle-title`)
+
+3. **Additional CSS Selectors** - Add custom selectors:
+```
+   article p, .entry-content p, .my-custom-class
+```
+
+4. **Auto Justify Text** - Apply `text-align: justify` for better effect
+
+### Screenshots:
+
+**Settings Page:**
+![WordPress Settings](docs/screenshots/wp-settings.png)
+
+**Before & After:**
+![Hyphenation Effect](docs/screenshots/wp-before-after.png)
+
+### Requirements:
+- WordPress 5.0+
+- PHP 7.0+
+- Works with or without Elementor
+
+### Compatibility:
+- ✅ Elementor Free & Pro
+- ✅ All WordPress themes
+- ✅ Page builders (Elementor, Gutenberg)
+- ✅ Classic Editor
+- ✅ WooCommerce
+- ✅ Multisite
+
+### Debugging:
+
+Open browser console (F12) to see detailed logs:
+```
+🎯 Georgian Hyphenation Plugin v2.0.3: Starting...
+✅ GeorgianHyphenator library loaded!
+📋 CSS Selectors: .elementor-text-editor, ...
+🎯 Found elements: 12
+📝 Processing element 1: elementor-text-editor
+✅ Georgian Hyphenation Complete! Processed 12 elements.
+```
+
 ## 🎨 Live Demo
 
 **Interactive Demo:** https://guramzhgamadze.github.io/georgian-hyphenation/
@@ -365,7 +444,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## 🗺️ Roadmap / სამომავლო გეგმები
 
-### Short-term (2025 Q1-Q2)
+### Short-term (2025 Q4)
 - ✅ v2.0 Academic Logic - **DONE**
 - ✅ PyPI v2.0.1 release - **DONE**
 - ✅ NPM v2.0.1 release - **DONE**
@@ -373,14 +452,14 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 - 🔄 Chrome Web Store submission
 - 📱 Mobile app (React Native)
 
-### Mid-term (2025 Q3-Q4)
+### Mid-term (2026 Q3-Q4)
 - 📄 Submit to TeX Live hyphenation database
 - 📚 Academic paper publication
 - 🔌 WordPress plugin with Elementor support
 - 🎨 Adobe InDesign plugin
 - 📊 Microsoft Word add-in
 
-### Long-term (2026+)
+### Long-term (2027+)
 - 🌍 Unicode CLDR proposal
 - 🏛️ Official endorsement (Georgian Language Institute)
 - 🤖 Integration into major OS (Windows, macOS, iOS, Android)
