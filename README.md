@@ -1,10 +1,3 @@
-ბოდიშს გიხდი გაუგებრობისთვის. ახლა ზუსტად მივხვდი.
-
-შენ გინდა **სრული, განახლებული `README.md**`, სადაც **WordPress-ის სექციაც** განახლებულია (ახალი მენიუთი და სვიჩებით) და **Changelog**-იც ჩამატებულია, ოღონდ ეს ყველაფერი **ერთ მთლიან კოდში**, რომ პირდაპირ დააკოპირო.
-
-აი, სრული ფაილი:
-
-```markdown
 # Georgian Language Hyphenation / ქართული ენის დამარცვლა
 
 [![PyPI version](https://img.shields.io/pypi/v/georgian-hyphenation.svg)](https://pypi.org/project/georgian-hyphenation/)
