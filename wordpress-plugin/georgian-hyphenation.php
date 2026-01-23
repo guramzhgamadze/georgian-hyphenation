@@ -3,18 +3,17 @@
  * Plugin Name: Georgian Hyphenation
  * Plugin URI: https://github.com/guramzhgamadze/georgian-hyphenation
  * Description: Academic Georgian hyphenation with full Elementor support. Uses v2.0 Academic Logic with Phonological Distance Analysis.
- * Version: 2.0.3
+ * Version: 2.0.8
  * Author: Guram Zhgamadze
  * Author URI: https://github.com/guramzhgamadze
  * License: MIT
  * Text Domain: georgian-hyphenation
  * Requires at least: 5.0
  * Requires PHP: 7.0
- * 
- * Changelog:
- * 2.0.3 - Individual toggles for Elementor widgets, fixed auto-justify
- * 2.0.2 - Fixed unicode escaping, added debug logs
- * 2.0.1 - Initial release
+ * * Changelog:
+ * 2.0.8 - Moved to Top-Level Admin Menu with Icon
+ * 2.0.7 - Added detailed helper text for Custom Selectors
+ * 2.0.6 - Added modern UI switches
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
@@ -24,7 +23,7 @@ class GeorgianHyphenationWP {
     private $elementor_widgets = array(
         'text_editor' => array(
             'label' => 'Text Editor Widget',
-            'selector' => '.elementor-text-editor, .elementor-widget-container p'
+            'selector' => '.elementor-text-editor, .elementor-widget-text-editor'
         ),
         'heading' => array(
             'label' => 'Heading Widget',
@@ -32,23 +31,15 @@ class GeorgianHyphenationWP {
         ),
         'icon_box' => array(
             'label' => 'Icon Box Widget',
-            'selector' => '.elementor-icon-box-description, .elementor-icon-box-title'
+            'selector' => '.elementor-icon-box-description'
         ),
         'testimonial' => array(
             'label' => 'Testimonial Widget',
             'selector' => '.elementor-testimonial-content'
         ),
         'accordion' => array(
-            'label' => 'Accordion Widget',
-            'selector' => '.elementor-accordion-content, .elementor-tab-title'
-        ),
-        'tabs' => array(
-            'label' => 'Tabs Widget',
-            'selector' => '.elementor-tab-content'
-        ),
-        'toggle' => array(
-            'label' => 'Toggle Widget',
-            'selector' => '.elementor-toggle-content, .elementor-toggle-title'
+            'label' => 'Accordion/Toggle',
+            'selector' => '.elementor-accordion-content, .elementor-tab-content, .elementor-toggle-content'
         )
     );
 
@@ -59,406 +50,247 @@ class GeorgianHyphenationWP {
     }
 
     public function create_menu() {
-        add_options_page(
-            __('Georgian Hyphenation Settings', 'georgian-hyphenation'),
-            __('Georgian Hyphenation', 'georgian-hyphenation'),
-            'manage_options',
-            'georgian-hyphenation',
-            array($this, 'settings_page')
+        // შევცვალეთ add_options_page -> add_menu_page-ით
+        add_menu_page(
+            __('Georgian Hyphenation', 'georgian-hyphenation'), // გვერდის სათაური
+            __('Geo Hyphenation', 'georgian-hyphenation'),      // მენიუს სათაური (ცოტა მოკლე რომ ჩაეტიოს)
+            'manage_options',                                   // უფლებები
+            'georgian-hyphenation',                             // Slug
+            array($this, 'settings_page'),                      // ფუნქცია
+            'dashicons-editor-paragraph',                       // აიკონი (აბზაცის ნიშანი)
+            80                                                  // პოზიცია (Settings-ის ქვემოთ)
         );
     }
 
     public function register_settings() {
-        register_setting( 'gh-settings', 'gh_enabled', array(
-            'type' => 'boolean',
-            'default' => true
-        ));
+        register_setting( 'gh-settings', 'gh_enabled', array('type' => 'boolean', 'default' => true));
         
-        // Register each Elementor widget toggle
         foreach ($this->elementor_widgets as $key => $widget) {
-            register_setting( 'gh-settings', 'gh_elementor_' . $key, array(
-                'type' => 'boolean',
-                'default' => true
-            ));
+            register_setting( 'gh-settings', 'gh_elementor_' . $key, array('type' => 'boolean', 'default' => true));
         }
         
         register_setting( 'gh-settings', 'gh_additional_selectors', array(
             'type' => 'string',
             'sanitize_callback' => 'sanitize_text_field',
-            'default' => 'article p, .entry-content p, .site-content p'
+            'default' => 'article p, .entry-content p'
         ));
         
-        register_setting( 'gh-settings', 'gh_auto_justify', array(
-            'type' => 'boolean',
-            'default' => true
-        ));
+        register_setting( 'gh-settings', 'gh_auto_justify', array('type' => 'boolean', 'default' => true));
     }
 
     public function settings_page() {
-        if ( ! current_user_can( 'manage_options' ) ) {
-            return;
-        }
+        if ( ! current_user_can( 'manage_options' ) ) return;
         ?>
+        <style>
+            /* Switch Styles */
+            .gh-switch { position: relative; display: inline-block; width: 50px; height: 24px; vertical-align: middle; margin-right: 10px; }
+            .gh-switch input { opacity: 0; width: 0; height: 0; }
+            .gh-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ff4d4d; transition: .4s; border-radius: 34px; }
+            .gh-slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+            input:checked + .gh-slider { background-color: #4CAF50; }
+            input:focus + .gh-slider { box-shadow: 0 0 1px #4CAF50; }
+            input:checked + .gh-slider:before { transform: translateX(26px); }
+            .gh-label { vertical-align: middle; font-weight: 600; }
+            .gh-desc-code { display: block; margin-top: 5px; color: #666; font-size: 12px; }
+            
+            /* Helper Box Styles */
+            .gh-helper-box {
+                background: #f0f0f1;
+                border-left: 4px solid #72aee6;
+                padding: 15px;
+                margin-top: 10px;
+                border-radius: 0 4px 4px 0;
+            }
+            .gh-helper-list { margin: 0; padding-left: 20px; }
+            .gh-helper-list li { margin-bottom: 5px; font-size: 13px; color: #50575e; }
+            .gh-helper-list code { background: #fff; color: #d63638; padding: 2px 5px; }
+        </style>
+
         <div class="wrap">
-            <h1>🇬🇪 <?php echo esc_html( get_admin_page_title() ); ?></h1>
-            
-            <div class="notice notice-info">
-                <p><strong>Version 2.0.3</strong> - Academic Logic with Phonological Distance Analysis</p>
-                <p>
-                    📦 <a href="https://www.npmjs.com/package/georgian-hyphenation" target="_blank">NPM Package</a> | 
-                    🐍 <a href="https://pypi.org/project/georgian-hyphenation/" target="_blank">PyPI Package</a> | 
-                    🐙 <a href="https://github.com/guramzhgamadze/georgian-hyphenation" target="_blank">GitHub</a> | 
-                    🎨 <a href="https://guramzhgamadze.github.io/georgian-hyphenation/" target="_blank">Live Demo</a>
-                </p>
-            </div>
-            
+            <h1>🇬🇪 Georgian Hyphenation v2.0.8</h1>
             <form method="post" action="options.php">
                 <?php settings_fields( 'gh-settings' ); ?>
                 
                 <table class="form-table">
-                    <tr valign="top">
-                        <th scope="row">
-                            <label for="gh_enabled"><?php _e('Enable Hyphenation', 'georgian-hyphenation'); ?></label>
-                        </th>
+                    <tr>
+                        <th scope="row">მთავარი სტატუსი</th>
                         <td>
-                            <input type="checkbox" 
-                                   id="gh_enabled" 
-                                   name="gh_enabled" 
-                                   value="1" 
-                                   <?php checked(1, get_option('gh_enabled', 1)); ?> />
-                            <label for="gh_enabled"><strong>ქართული დამარცვლის ჩართვა</strong></label>
-                            <p class="description">მთავარი ჩართვა/გამორთვა</p>
+                            <label class="gh-switch">
+                                <input type="checkbox" name="gh_enabled" value="1" <?php checked(1, get_option('gh_enabled', 1)); ?> />
+                                <span class="gh-slider"></span>
+                            </label>
+                            <span class="gh-label">პლაგინის ჩართვა</span>
                         </td>
                     </tr>
                 </table>
-                
-                <hr style="margin: 30px 0;">
-                
-                <h2 style="margin-top: 0;">🎨 Elementor Widgets</h2>
-                <p class="description" style="margin-bottom: 20px;">აირჩიეთ რომელ Elementor ვიჯეტებზე გინდათ დამარცვლა:</p>
-                
+
+                <h3>Elementor ვიჯეტები</h3>
                 <table class="form-table">
                     <?php foreach ($this->elementor_widgets as $key => $widget): ?>
-                    <tr valign="top">
-                        <th scope="row">
-                            <label for="gh_elementor_<?php echo $key; ?>"><?php echo esc_html($widget['label']); ?></label>
-                        </th>
+                    <tr>
+                        <th scope="row"><?php echo esc_html($widget['label']); ?></th>
                         <td>
-                            <input type="checkbox" 
-                                   id="gh_elementor_<?php echo $key; ?>" 
-                                   name="gh_elementor_<?php echo $key; ?>" 
-                                   value="1" 
-                                   <?php checked(1, get_option('gh_elementor_' . $key, 1)); ?> />
-                            <label for="gh_elementor_<?php echo $key; ?>">ჩართვა</label>
-                            <p class="description">
-                                <code><?php echo esc_html($widget['selector']); ?></code>
-                            </p>
+                            <div style="display: flex; align-items: center;">
+                                <label class="gh-switch">
+                                    <input type="checkbox" name="gh_elementor_<?php echo $key; ?>" value="1" <?php checked(1, get_option('gh_elementor_' . $key, 1)); ?> />
+                                    <span class="gh-slider"></span>
+                                </label>
+                                <div>
+                                    <span class="gh-label">აქტივაცია</span>
+                                    <code class="gh-desc-code"><?php echo esc_html($widget['selector']); ?></code>
+                                </div>
+                            </div>
                         </td>
                     </tr>
                     <?php endforeach; ?>
                 </table>
-                
-                <hr style="margin: 30px 0;">
-                
-                <h2 style="margin-top: 0;">➕ Additional Selectors</h2>
-                
+
+                <h3>დამატებითი პარამეტრები</h3>
                 <table class="form-table">
-                    <tr valign="top">
-                        <th scope="row">
-                            <label for="gh_additional_selectors"><?php _e('Custom CSS Selectors', 'georgian-hyphenation'); ?></label>
-                        </th>
+                    <tr>
+                        <th scope="row">Custom CSS Selectors</th>
                         <td>
-                            <textarea id="gh_additional_selectors" 
-                                      name="gh_additional_selectors" 
-                                      rows="4" 
-                                      cols="50" 
-                                      class="large-text code"
-                                      placeholder="article p, .custom-class"><?php echo esc_textarea( get_option('gh_additional_selectors', 'article p, .entry-content p, .site-content p') ); ?></textarea>
-                            <p class="description">
-                                დამატებითი CSS selectors (მაგ: WordPress themes, custom elements)<br>
-                                <strong>მაგალითი:</strong> <code>.my-custom-content p, .post-body</code>
-                            </p>
+                            <textarea name="gh_additional_selectors" class="large-text code" rows="3" placeholder="მაგ: p, .my-custom-class"><?php echo esc_textarea( get_option('gh_additional_selectors', 'article p, .entry-content p') ); ?></textarea>
+                            
+                            <div class="gh-helper-box">
+                                <p style="margin-top: 0; font-weight: bold;">ℹ️ როგორ გამოვიყენოთ:</p>
+                                <p style="font-size: 13px;">ჩაწერეთ CSS კლასები მძიმით გამოყოფილი. ქვემოთ მოცემულია სტანდარტული კლასები:</p>
+                                <ul class="gh-helper-list" style="list-style-type: disc;">
+                                    <li><code>p</code> — ყველაზე უნივერსალური. დაამარცვლავს ყველა პარაგრაფს საიტზე.</li>
+                                    <li><code>.entry-content p</code> — სტანდარტული WordPress პოსტების/სტატიების შიგთავსი.</li>
+                                    <li><code>.elementor-widget-text-editor</code> — Elementor-ის ტექსტური ვიჯეტი (დაზღვევისთვის).</li>
+                                    <li><code>.custom-class</code> — თქვენი საკუთარი კლასი (თუ იყენებთ Custom HTML/CSS-ს).</li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Auto Justify</th>
+                        <td>
+                            <label class="gh-switch">
+                                <input type="checkbox" name="gh_auto_justify" value="1" <?php checked(1, get_option('gh_auto_justify', 1)); ?> />
+                                <span class="gh-slider"></span>
+                            </label>
+                            <span class="gh-label">ტექსტის გასწორება (Justify)</span>
                         </td>
                     </tr>
                 </table>
                 
-                <hr style="margin: 30px 0;">
-                
-                <h2 style="margin-top: 0;">⚙️ Options</h2>
-                
-                <table class="form-table">
-                    <tr valign="top">
-                        <th scope="row">
-                            <label for="gh_auto_justify"><?php _e('Auto Justify Text', 'georgian-hyphenation'); ?></label>
-                        </th>
-                        <td>
-                            <input type="checkbox" 
-                                   id="gh_auto_justify" 
-                                   name="gh_auto_justify" 
-                                   value="1" 
-                                   <?php checked(1, get_option('gh_auto_justify', 1)); ?> />
-                            <label for="gh_auto_justify"><?php _e('Apply text-align: justify', 'georgian-hyphenation'); ?></label>
-                            <p class="description">ტექსტის ორივე მხარეს გასწორება გადატანის უკეთესი ეფექტისთვის</p>
-                        </td>
-                    </tr>
-                </table>
-                
-                <?php submit_button('Save Settings', 'primary', 'submit', true, array('style' => 'font-size: 16px; padding: 10px 30px;')); ?>
+                <?php submit_button(); ?>
             </form>
             
-            <hr style="margin-top: 40px;">
-            
-            <h2>📋 <?php _e('Current Configuration', 'georgian-hyphenation'); ?></h2>
-            <div style="background: #f0f0f1; padding: 20px; border-radius: 5px;">
-                <h3>Active CSS Selectors:</h3>
-                <code style="display: block; background: white; padding: 15px; border-radius: 4px; white-space: pre-wrap; word-break: break-all;">
-                    <?php 
-                    $selectors_preview = $this->get_active_selectors();
-                    echo esc_html($selectors_preview ? $selectors_preview : 'No selectors active');
-                    ?>
-                </code>
-            </div>
-            
             <hr>
-            
-            <h2>📊 <?php _e('Test Preview', 'georgian-hyphenation'); ?></h2>
-            <p><?php _e('Narrow your browser window to see hyphenation in action:', 'georgian-hyphenation'); ?></p>
-            <div style="max-width: 400px; padding: 20px; background: #f0f0f1; border-radius: 5px; text-align: justify; hyphens: manual;">
-                <p>სა­ქარ­თვე­ლო არის ძა­ლი­ან ლა­მა­ზი ქვე­ყა­ნა კავ­კა­სი­ა­ში, რო­მე­ლიც გა­მო­ირ­ჩე­ვა თა­ვი­სი უნი­კა­ლუ­რი კულ­ტუ­რი­თა და ის­ტო­რი­ით.</p>
-            </div>
-            
-            <hr>
-            
-            <h2>🧠 <?php _e('Algorithm', 'georgian-hyphenation'); ?></h2>
-            <p><?php _e('This plugin uses v2.0 Academic Logic with:', 'georgian-hyphenation'); ?></p>
-            <ul style="list-style: disc; margin-left: 20px;">
-                <li><strong>Phonological Distance Analysis</strong> - Intelligent vowel-to-vowel distance calculation</li>
-                <li><strong>Anti-Orphan Protection</strong> - Prevents single-character splits</li>
-                <li><strong>'R' Rule</strong> - Special handling for Georgian 'რ' in consonant clusters</li>
-                <li><strong>98%+ Accuracy</strong> - Validated on 10,000+ Georgian words</li>
-            </ul>
-            
-            <hr>
-            
-            <h2>🐛 <?php _e('Debugging', 'georgian-hyphenation'); ?></h2>
-            <p>Open browser console (F12) to see detailed logs when plugin runs.</p>
-            <p><strong>Expected console output:</strong></p>
-            <ul style="list-style: disc; margin-left: 20px;">
-                <li>🎯 Georgian Hyphenation Plugin v2.0.3: Starting...</li>
-                <li>✅ GeorgianHyphenator library loaded!</li>
-                <li>📋 CSS Selectors: ...</li>
-                <li>🎯 Found elements: X</li>
-                <li>✅ Georgian Hyphenation Complete!</li>
-            </ul>
+            <h3>დიაგნოსტიკა</h3>
+            <p><strong>აქტიური სელექტორები:</strong></p>
+            <code style="display:block; background:#fff; padding:10px;"><?php echo esc_html($this->get_active_selectors()); ?></code>
         </div>
         <?php
     }
 
     private function get_active_selectors() {
-        $selectors_array = array();
+        $selectors = array();
         
-        // Add enabled Elementor widgets
+        // Elementor Selectors
         foreach ($this->elementor_widgets as $key => $widget) {
             if ( get_option('gh_elementor_' . $key, 1) ) {
-                $selectors_array[] = $widget['selector'];
+                $selectors[] = $widget['selector'];
             }
         }
         
-        // Add additional selectors if not empty
-        $additional_selectors = get_option('gh_additional_selectors', '');
-        if ( !empty($additional_selectors) ) {
-            $selectors_array[] = trim($additional_selectors);
+        // Custom Selectors
+        $custom = get_option('gh_additional_selectors', '');
+        if ( !empty($custom) ) {
+            $selectors[] = trim($custom);
         }
         
-        return implode(', ', $selectors_array);
+        // FALLBACK: თუ არაფერია მონიშნული, დავამატოთ უბრალო 'p'
+        if (empty($selectors)) {
+            $selectors[] = 'p';
+        }
+        
+        return implode(', ', $selectors);
     }
 
     public function enqueue_assets() {
-        // Check if enabled
-        if ( ! get_option('gh_enabled', 1) ) {
-            return;
-        }
-        
-        // Skip in Elementor editor mode
-        if ( did_action( 'elementor/loaded' ) ) {
-            if ( \Elementor\Plugin::$instance->editor->is_edit_mode() ) {
-                return;
-            }
-        }
+        if ( ! get_option('gh_enabled', 1) ) return;
+        if ( did_action( 'elementor/loaded' ) && \Elementor\Plugin::$instance->editor->is_edit_mode() ) return;
 
-        // Load georgian-hyphenation from jsDelivr CDN (NPM package)
-        wp_enqueue_script(
-            'georgian-hyphenation',
-            'https://cdn.jsdelivr.net/npm/georgian-hyphenation@2/src/javascript/index.js',
-            array(),
-            '2.0.3',
-            true
-        );
+        wp_enqueue_script('georgian-hyphenation', 'https://cdn.jsdelivr.net/npm/georgian-hyphenation@2/src/javascript/index.js', array(), '2.0.8', true);
 
-        // Get active selectors
-        $selectors = $this->get_active_selectors();
-        
-        // Get auto justify setting (properly handle checkbox)
-        $justify_option = get_option('gh_auto_justify', 1);
-        $justify = !empty($justify_option) ? 1 : 0;
-        
-        // Escape for JavaScript
-        $selectors_escaped = esc_js($selectors);
-        $justify_escaped = esc_js($justify);
+        $selectors_escaped = esc_js($this->get_active_selectors());
+        $auto_justify = get_option('gh_auto_justify', 1) ? 'true' : 'false';
 
-        // Use heredoc to avoid escaping issues
-        $init_js = <<<JAVASCRIPT
+        $script = <<<JS
 (function() {
     'use strict';
+    const DEBUG = true;
     
-    console.log('🎯 Georgian Hyphenation Plugin v2.0.3: Starting...');
-    
-    const runHyphenation = () => {
-        // Wait for library to load
+    function log(msg, ...args) {
+        if(DEBUG) console.log('🇬🇪 GH:', msg, ...args);
+    }
+
+    const run = () => {
         if (typeof window.GeorgianHyphenator === 'undefined') {
-            console.log('⏳ Waiting for GeorgianHyphenator library...');
-            setTimeout(runHyphenation, 100);
-            return;
+            return setTimeout(run, 200);
         }
-        
-        console.log('✅ GeorgianHyphenator library loaded!');
-        
-        const hyphenator = new window.GeorgianHyphenator('\u00AD');
+
         const selectors = '{$selectors_escaped}';
-        const autoJustify = '{$justify_escaped}' === '1';
-        
-        console.log('📋 CSS Selectors:', selectors);
-        console.log('🎨 Auto Justify:', autoJustify);
-        
-        if (!selectors) {
-            console.warn('⚠️ No selectors configured!');
-            return;
-        }
-        
         const elements = document.querySelectorAll(selectors);
         
-        console.log('🎯 Found elements:', elements.length);
-        
         if (elements.length === 0) {
-            console.warn('⚠️ No matching elements found for selectors:', selectors);
+            log('⚠️ მითითებული კლასებით ელემენტები ვერ მოიძებნა. ვცდილობ Fallback-ს: "p"');
+            const fallbackElements = document.querySelectorAll('p');
+            if (fallbackElements.length > 0) {
+                 log('✅ Fallback-მა იპოვა ' + fallbackElements.length + ' ელემენტი.');
+            }
             return;
         }
-        
-        let processedCount = 0;
-        
-        elements.forEach((el, index) => {
-            // Skip if already processed
-            if (el.dataset.ghProcessed === 'true') {
-                console.log('⏭️ Element ' + (index + 1) + ' already processed, skipping');
-                return;
-            }
+
+        const hyphenator = new window.GeorgianHyphenator('\\u00AD');
+        let count = 0;
+
+        elements.forEach(el => {
+            if (el.dataset.ghProcessed || el.isContentEditable) return;
             
-            // Skip editable elements
-            if (el.isContentEditable) {
-                console.log('⏭️ Element ' + (index + 1) + ' is contentEditable, skipping');
-                return;
-            }
+            const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null, false);
+            let node; 
+            let hasGeorgian = false;
             
-            console.log('📝 Processing element ' + (index + 1) + ':', el.className || el.tagName);
-            
-            // Process text nodes
-            const walker = document.createTreeWalker(
-                el,
-                NodeFilter.SHOW_TEXT,
-                {
-                    acceptNode: function(node) {
-                        // Only process nodes with Georgian text (4+ chars)
-                        return /[ა-ჰ]{4,}/.test(node.nodeValue) 
-                            ? NodeFilter.FILTER_ACCEPT 
-                            : NodeFilter.FILTER_SKIP;
-                    }
-                },
-                false
-            );
-            
-            let node;
-            const nodes = [];
             while (node = walker.nextNode()) {
-                nodes.push(node);
+                if (/[ა-ჰ]{4,}/.test(node.nodeValue)) {
+                    node.nodeValue = hyphenator.hyphenateText(node.nodeValue.replace(/\\u00AD/g, ''));
+                    hasGeorgian = true;
+                }
             }
-            
-            console.log('   📄 Found ' + nodes.length + ' text nodes with Georgian text');
-            
-            if (nodes.length === 0) {
-                console.log('   ⏭️ No Georgian text found in element ' + (index + 1));
-                return;
+
+            if (hasGeorgian) {
+                if ({$auto_justify}) {
+                    el.style.textAlign = 'justify';
+                    el.style.hyphens = 'manual';
+                }
+                el.dataset.ghProcessed = 'true';
+                count++;
             }
-            
-            nodes.forEach((textNode, i) => {
-                const original = textNode.nodeValue;
-                
-                // 1. Remove any existing soft hyphens first (clean slate)
-                let cleanText = textNode.nodeValue.replace(/\u00AD/g, '');
-                
-                // 2. Apply fresh hyphenation with v2.0 Academic Logic
-                textNode.nodeValue = hyphenator.hyphenateText(cleanText);
-                
-                const hyphensAdded = (textNode.nodeValue.match(/\u00AD/g) || []).length;
-                console.log('   ' + (i + 1) + '. Hyphenated: "' + original.substring(0, 30) + '..." → ' + hyphensAdded + ' hyphens');
-            });
-            
-            // Apply justify if enabled and text was processed
-            if (autoJustify && nodes.length > 0) {
-                el.style.textAlign = 'justify';
-                el.style.hyphens = 'manual';
-                el.style.webkitHyphens = 'manual';
-                console.log('   ✅ Applied justify to element ' + (index + 1));
-            }
-            
-            // Mark as processed
-            el.dataset.ghProcessed = 'true';
-            processedCount++;
         });
         
-        console.log('✅ Georgian Hyphenation Complete! Processed ' + processedCount + ' elements.');
+        if (count > 0) log('✅ წარმატებით დამუშავდა ' + count + ' ელემენტი.');
     };
 
-    // Run on page load
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', runHyphenation);
-    } else {
-        runHyphenation();
-    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
+    else run();
     
-    // Support for Elementor popups
-    if (typeof jQuery !== 'undefined') {
-        jQuery(document).on('elementor/popup/show', function() {
-            console.log('🎨 Elementor popup detected, running hyphenation...');
-            setTimeout(runHyphenation, 100);
-        });
-    }
-    
-    // MutationObserver for dynamic content (AJAX, Load More, etc.)
-    const observer = new MutationObserver((mutations) => {
-        let shouldRun = false;
-        mutations.forEach(mutation => {
-            if (mutation.addedNodes.length) {
-                shouldRun = true;
-            }
-        });
-        if (shouldRun) {
-            console.log('🔄 DOM changed, re-running hyphenation...');
-            setTimeout(runHyphenation, 100);
+    let timeout;
+    new MutationObserver((mutations) => {
+        if (mutations.some(m => m.addedNodes.length)) {
+            clearTimeout(timeout);
+            timeout = setTimeout(run, 500);
         }
-    });
+    }).observe(document.body, { childList: true, subtree: true });
     
-    observer.observe(document.body, {
-        childList: true,
-        subtree: true
-    });
-    
-    console.log('👀 MutationObserver active, watching for dynamic content...');
+    if (typeof jQuery !== 'undefined') jQuery(document).on('elementor/popup/show', () => setTimeout(run, 200));
 })();
-JAVASCRIPT;
-        
-        wp_add_inline_script('georgian-hyphenation', $init_js);
+JS;
+        wp_add_inline_script('georgian-hyphenation', $script);
     }
 }
-
-// Initialize plugin
 new GeorgianHyphenationWP();

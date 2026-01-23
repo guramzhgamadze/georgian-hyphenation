@@ -4,7 +4,7 @@ Tags: georgian, hyphenation, elementor, kartuli, typography
 Requires at least: 5.0
 Tested up to: 6.4
 Requires PHP: 7.0
-Stable tag: 2.0.1
+Stable tag: 2.0.8
 License: MIT
 License URI: https://opensource.org/licenses/MIT
 
@@ -125,11 +125,6 @@ The plugin automatically skips contentEditable elements to avoid interference wi
 * MutationObserver for dynamic content
 * Auto-justify option
 * CDN delivery from jsDelivr (NPM package)
-
-== Upgrade Notice ==
-
-= 2.0.1 =
-Initial release with v2.0 Academic Logic. Provides accurate Georgian hyphenation with full Elementor support.
 
 == Credits ==
 
