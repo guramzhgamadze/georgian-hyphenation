@@ -261,7 +261,7 @@ print(to_hunspell_format('საქართველო'))
 3. Done! ✅
 
 **Chrome (Manual):**
-1. Download [latest release](https://github.com/guramzhgamadze/georgian-hyphenation/releases)
+1. Download
 2. Extract `browser-extension-chrome.zip`
 3. Chrome → `chrome://extensions/`
 4. Enable "Developer mode"
@@ -286,7 +286,7 @@ print(to_hunspell_format('საქართველო'))
 **From WordPress.org:** *(Coming soon)*
 
 **Manual Installation:**
-1. Download [latest release](https://github.com/guramzhgamadze/georgian-hyphenation/releases) (`georgian-hyphenation-wp-2.0.3.zip`)
+1. Download georgian-hyphenation-wp-2.0.8.zip
 2. WordPress Admin → Plugins → Add New → Upload Plugin
 3. Choose ZIP file and click "Install Now"
 4. Activate the plugin
