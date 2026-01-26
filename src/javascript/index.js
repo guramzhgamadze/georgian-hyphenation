@@ -1,108 +1,151 @@
 /**
- * Georgian Language Hyphenation Library (v2.0 - Academic Logic)
- * ქართული ენის დამარცვლის ბიბლიოთეკა
- * * Logic: Phonological distance analysis & Anti-Orphan protection.
- * Author: Guram Zhgamadze
+ * Georgian Hyphenation Library v2.2.1
+ * Modernized & Optimized by GitHub Code Architect
  */
 
-class GeorgianHyphenator {
-  /**
-   * Initialize Georgian Hyphenator
-   * @param {string} hyphenChar - Character to use for hyphenation (default: soft hyphen U+00AD)
-   */
+export default class GeorgianHyphenator {
   constructor(hyphenChar = '\u00AD') {
     this.hyphenChar = hyphenChar;
     this.vowels = 'აეიოუ';
+    this.leftMin = 2;
+    this.rightMin = 2;
+
+    // ოპტიმიზაცია: გამოყენებულია Set სწრაფი ძებნისთვის (O(1))
+    this.harmonicClusters = new Set([
+      'ბლ', 'ბრ', 'ბღ', 'ბზ', 'გდ', 'გლ', 'გმ', 'გნ', 'გვ', 'გზ', 'გრ',
+      'დრ', 'თლ', 'თრ', 'თღ', 'კლ', 'კმ', 'კნ', 'კრ', 'კვ', 'მტ', 'პლ', 
+      'პრ', 'ჟღ', 'რგ', 'რლ', 'რმ', 'სწ', 'სხ', 'ტკ', 'ტპ', 'ტრ', 'ფლ', 
+      'ფრ', 'ფქ', 'ფშ', 'ქლ', 'ქნ', 'ქვ', 'ქრ', 'ღლ', 'ღრ', 'ყლ', 'ყრ', 
+      'შთ', 'შპ', 'ჩქ', 'ჩრ', 'ცლ', 'ცნ', 'ცრ', 'ცვ', 'ძგ', 'ძვ', 'ძღ', 
+      'წლ', 'წრ', 'წნ', 'წკ', 'ჭკ', 'ჭრ', 'ჭყ', 'ხლ', 'ხმ', 'ხნ', 'ხვ', 'ჯგ'
+    ]);
+
+    this.dictionary = new Map();
   }
 
   /**
-   * Hyphenate a single Georgian word
-   * @param {string} word - Georgian word to hyphenate
-   * @returns {string} Word with hyphenation points
+   * შლის არსებულ დამარცვლის სიმბოლოებს (Sanitization)
    */
-  hyphenate(word) {
-    // 1. Safety Rule: Words shorter than 4 chars are never hyphenated
-    // (Prevents: "a-ra", "i-gi", "e-na")
-    if (word.length < 4) return word;
+  _stripHyphens(text) {
+    if (!text) return '';
+    // Escape special regex characters
+    const escapedChar = this.hyphenChar.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`[\u00AD${escapedChar}]`, 'g');
+    return text.replace(regex, '');
+  }
 
-    // 2. Find all vowel indices
-    let vowelIndices = [];
-    for (let i = 0; i < word.length; i++) {
-      if (this.vowels.includes(word[i])) {
-        vowelIndices.push(i);
+  loadLibrary(data) {
+    if (data && typeof data === 'object') {
+      Object.entries(data).forEach(([word, hyphenated]) => {
+        this.dictionary.set(word, hyphenated);
+      });
+    }
+  }
+
+  async loadDefaultLibrary() {
+    // 1. Browser Environment
+    if (typeof window !== 'undefined' && typeof fetch !== 'undefined') {
+      try {
+        const response = await fetch('https://unpkg.com/georgian-hyphenation@2/data/exceptions.json');
+        if (!response.ok) throw new Error("Network response error");
+        const data = await response.json();
+        this.loadLibrary(data);
+      } catch (error) {
+        console.warn("Georgian Hyphenation: Using algorithm only (Fetch failed)");
+      }
+    } 
+    // 2. Node.js Environment (ESM context)
+    else if (typeof process !== 'undefined') {
+      try {
+        // Node-ში ლოკალური ფაილის წაკითხვა
+        const { default: data } = await import('../../data/exceptions.json', {
+          assert: { type: 'json' }
+        });
+        this.loadLibrary(data);
+      } catch (error) {
+        console.warn("Georgian Hyphenation: Local dictionary not found");
       }
     }
+  }
 
-    // 3. If less than 2 vowels, cannot be hyphenated (e.g. "mcvrtnls")
+  hyphenate(word) {
+    const sanitizedWord = this._stripHyphens(word);
+    const cleanWord = sanitizedWord.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
+
+    if (this.dictionary.has(cleanWord)) {
+      return this.dictionary.get(cleanWord).replace(/-/g, this.hyphenChar);
+    }
+
+    return this.applyAlgorithm(sanitizedWord);
+  }
+
+  applyAlgorithm(word) {
+    if (word.length < (this.leftMin + this.rightMin)) return word;
+
+    const vowelIndices = [];
+    for (let i = 0; i < word.length; i++) {
+      if (this.vowels.includes(word[i])) vowelIndices.push(i);
+    }
+
     if (vowelIndices.length < 2) return word;
 
-    let insertPoints = [];
-
-    // 4. Core Logic: Analyze distance between vowels
+    const insertPoints = [];
     for (let i = 0; i < vowelIndices.length - 1; i++) {
-      let v1 = vowelIndices[i];
-      let v2 = vowelIndices[i + 1];
-      let distance = v2 - v1 - 1; // Number of consonants between vowels
-      let betweenSubstring = word.substring(v1 + 1, v2);
+      const v1 = vowelIndices[i];
+      const v2 = vowelIndices[i + 1];
+      const distance = v2 - v1 - 1;
+      const betweenSubstring = word.substring(v1 + 1, v2);
 
       let candidatePos = -1;
 
-      if (distance === 0) {
-        // Case V-V (Hiatus): Split between vowels (ga-a-a-na-li-za)
-        candidatePos = v1 + 1;
-      } else if (distance === 1) {
-        // Case V-C-V: Split before consonant (ga-da)
+      if (distance === 0 || distance === 1) {
         candidatePos = v1 + 1;
       } else {
-        // Case V-CC...-V: Cluster handling
-        // 'R' Rule: If cluster starts with 'r', keep it left (bar-bi)
-        // Otherwise, split after first consonant (saq-me) for balance
-        if (betweenSubstring[0] === 'რ') {
-          candidatePos = v1 + 2;
+        let doubleConsonantIndex = -1;
+        for (let j = 0; j < betweenSubstring.length - 1; j++) {
+          if (betweenSubstring[j] === betweenSubstring[j + 1]) {
+            doubleConsonantIndex = j;
+            break;
+          }
+        }
+
+        if (doubleConsonantIndex !== -1) {
+          candidatePos = v1 + 1 + doubleConsonantIndex + 1;
         } else {
-          candidatePos = v1 + 2;
+          let breakIndex = -1;
+          if (distance >= 2) {
+            const lastTwo = betweenSubstring.substring(distance - 2, distance);
+            if (this.harmonicClusters.has(lastTwo)) {
+              breakIndex = distance - 2;
+            }
+          }
+          candidatePos = (breakIndex !== -1) ? v1 + 1 + breakIndex : v1 + 2;
         }
       }
 
-      // 5. Critical Filter (Anti-Orphan / Anti-Widow)
-      // Ensure at least 2 characters remain on both sides of the hyphen
-      if (candidatePos >= 2 && (word.length - candidatePos) >= 2) {
+      if (candidatePos >= this.leftMin && (word.length - candidatePos) >= this.rightMin) {
         insertPoints.push(candidatePos);
       }
     }
 
-    // 6. Reconstruct the word
     let result = word.split('');
     for (let i = insertPoints.length - 1; i >= 0; i--) {
       result.splice(insertPoints[i], 0, this.hyphenChar);
     }
-
     return result.join('');
   }
 
-  /**
-   * Get array of syllables for a word
-   * @param {string} word - Georgian word
-   * @returns {string[]} Array of syllables
-   */
   getSyllables(word) {
-    // Use a temporary hyphenator with a safe delimiter to split
-    const tempHyphenator = new GeorgianHyphenator('-');
-    return tempHyphenator.hyphenate(word).split('-');
+    return this.hyphenate(word).split(this.hyphenChar);
   }
 
-  /**
-   * Hyphenate entire text (preserves punctuation)
-   * @param {string} text - Georgian text
-   * @returns {string} Hyphenated text
-   */
   hyphenateText(text) {
-    // Improved Tokenizer: Splits by non-Georgian chars to protect punctuation
-    const parts = text.split(/([^ა-ჰ]+)/);
-    
+    if (!text) return '';
+    const sanitizedText = this._stripHyphens(text);
+    const parts = sanitizedText.split(/([ა-ჰ]+)/);
+
     return parts.map(part => {
-      // Process only Georgian words with length >= 4
-      if (/[ა-ჰ]{4,}/.test(part)) {
+      if (part.length >= 4 && /[ა-ჰ]/.test(part)) {
         return this.hyphenate(part);
       }
       return part;
@@ -110,42 +153,15 @@ class GeorgianHyphenator {
   }
 }
 
-/**
- * Convert word to TeX pattern format (e.g., .გ1ა1ა1ნ1ა1ლ1ი1ზ1ა.)
- * Useful for LaTeX or TeX engines
+/** * კროს-პლატფორმული მხარდაჭერა 
  */
-function toTeXPattern(word) {
-  const hyphenator = new GeorgianHyphenator();
-  const syllables = hyphenator.getSyllables(word);
-  if (syllables.length <= 1) {
-    return `.${word}.`;
-  }
-  // TeX hyphenation patterns usually use odd numbers (1, 3, 5) to indicate hyphens
-  // Here we simply join syllables with '1'
-  return '.' + syllables.join('1') + '.';
-}
-
-/**
- * Convert word to Hunspell format (syllable=syllable)
- */
-function toHunspellFormat(word) {
-  const hyphenator = new GeorgianHyphenator();
-  const syllables = hyphenator.getSyllables(word);
-  return syllables.join('=');
-}
-
-// Export for Node.js
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = {
-    GeorgianHyphenator,
-    toTeXPattern,
-    toHunspellFormat
-  };
-}
-
-// Export for Browser
+// 1. ბრაუზერისთვის (Global Object)
 if (typeof window !== 'undefined') {
   window.GeorgianHyphenator = GeorgianHyphenator;
-  window.toTeXPattern = toTeXPattern;
-  window.toHunspellFormat = toHunspellFormat;
+}
+
+// 2. Node.js (CommonJS) - იმ შემთხვევაში თუ ვინმე მაინც require-ს გამოიყენებს
+// (მხოლოდ თუ module.exports არსებობს)
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = GeorgianHyphenator;
 }

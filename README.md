@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Firefox Add-on](https://img.shields.io/amo/v/georgian-hyphenation?label=Firefox)](https://addons.mozilla.org/firefox/addon/georgian-hyphenation/)
 
-**Version 2.0.1** (Library) / **2.0.8** (WordPress Plugin)
+**Version 2.2.2** (Library) / **2.0.8** (WordPress Plugin)
 
 A comprehensive hyphenation library for the Georgian language, using advanced linguistic algorithms for accurate syllabification.
 
@@ -17,59 +17,77 @@ A comprehensive hyphenation library for the Georgian language, using advanced li
 
 ## ✨ Features / ფუნქციები
 
-### 🎓 v2.0 Academic Logic
-- **Phonological Distance Analysis**: Intelligent vowel-to-vowel distance calculation
-- **Anti-Orphan Protection**: Prevents single-character splits (minimum 2 chars per side)
-- **'R' Rule**: Special handling for Georgian 'რ' in consonant clusters
-- **Hiatus Handling**: Proper V-V split detection (e.g., გა-ა-ნა-ლი-ზა)
-- **98%+ Accuracy**: Validated on 10,000+ Georgian words
+### 🌟 New in v2.2.2 (Smart Updates)
 
-### 🚀 Core Features
-- ✅ **Accurate syllabification** based on Georgian phonological rules
-- ✅ **Multiple platforms**: Python, JavaScript (Node.js & Browser), Browser Extensions, WordPress
-- ✅ **Multiple output formats**: Soft hyphens (U+00AD), visible hyphens, TeX patterns, Hunspell
-- ✅ **Zero dependencies**: Lightweight and fast
-- ✅ **Open source**: MIT License
-- ✅ **Well-tested**: Comprehensive Georgian word corpus
+* **🧹 Automatic Sanitization**: ბიბლიოთეკა ავტომატურად ცნობს და შლის ტექსტში უკვე არსებულ დამარცვლის ნიშნებს (Soft-hyphens) დამუშავებამდე. ეს გამორიცხავს "ორმაგი დამარცვლის" შეცდომას.
+* **📚 Dictionary Integration**: მხარდაჭერილია გამონაკლისების ლექსიკონი (`exceptions.json`), რომელიც პრიორიტეტულია ალგორითმთან შედარებით რთული სიტყვების დამუშავებისას.
+* **⚡ High Performance**: ჰარმონიული ჯგუფების ძებნა ოპტიმიზირებულია `Set` სტრუქტურით, რაც უზრუნველყოფს მყისიერ დამუშავებას (O(1) complexity) დიდ ტექსტებზეც კი.
+* **📦 Modern ESM**: სრული თავსებადობა თანამედროვე JavaScript სტანდარტებთან (`import/export`), რაც აადვილებს ინტეგრაციას Vite, React და Vue პროექტებში.
+
+### 🎓 v2.2 Academic Logic (Linguistic Core)
+
+* **🧠 Phonological Distance Analysis**: ხმოვნებს შორის მანძილის ჭკვიანი გაზომვა ზუსტი დამარცვლისთვის.
+* **🛡️ Anti-Orphan Protection**: ხელს უშლის სიტყვის დასაწყისში ან ბოლოში ერთი ასოს მარტო დატოვებას (მინიმუმ 2 სიმბოლო თითოეულ მხარეს).
+* **🎼 Harmonic Clusters Support**: სპეციალური წესები ქართული ჰარმონიული თანხმოვნებისთვის (მაგ: `ბრ`, `წვ`, `მთ`), რომლებიც დამარცვლისას არ იშლება.
+* **🔄 Hiatus Handling**: ხმოვანთშერწყმის (V-V) სწორი დამუშავება (მაგ: `გა-ა-ნა-ლი-ზა`).
+
+### 🚀 Integration & Flexibility
+
+* ✅ **Multi-Platform**: ხელმისაწვდომია Python, JavaScript (Node & Browser), WordPress და Browser Extensions პლატფორმებისთვის.
+* ✅ **Universal Formats**: მხარდაჭერილია Soft-hyphen (\u00AD), ვიზუალური ტირე, TeX patterns და Hunspell ფორმატები.
+* ✅ **Zero Dependencies**: ბიბლიოთეკა არის სრულიად დამოუკიდებელი და მსუბუქი (~5KB).
+* ✅ **Punctuation Aware**: ტექსტის დამუშავებისას ინარჩუნებს სასვენ ნიშნებს, ციფრებს და ლათინურ სიმბოლოებს.
+
+---
+
+რა თქმა უნდა, აი განახლებული და გაუმჯობესებული **Algorithm Logic** სექცია, რომელიც დეტალურად ხსნის v2.2.1 ვერსიის მუშაობის პრინციპს:
 
 ---
 
 ## 🧠 Algorithm Logic / ალგორითმის ლოგიკა
 
-### Version 2.0: Academic Approach
+ბიბლიოთეკა იყენებს აკადემიურ ფონოლოგიურ ანალიზს, რომელიც ეფუძნება ხმოვნებს შორის მანძილს და თანხმოვნების ტიპებს. v2.2 ვერსიაში დამატებულია წინასწარი გასუფთავების ფენა (Sanitization).
 
-The v2.0 algorithm uses **phonological distance analysis** instead of pattern matching:
+### 1. წინასწარი დამუშავება (Sanitization)
 
-#### **Core Principles:**
+დამარცვლის დაწყებამდე სისტემა ასრულებს შემდეგ ნაბიჯებს:
 
-1. **Vowel Distance Analysis** (ხმოვანთა მანძილის ანალიზი)
-   - Finds all vowel positions in the word
-   - Analyzes consonant cluster distance between vowels
-   - Applies context-aware splitting rules
+* **Cleaning**: ტექსტიდან იშლება ყველა არსებული დამარცვლის სიმბოლო (`\u00AD` ან `-`), რათა თავიდან ავიცილოთ ორმაგი დამარცვლა.
+* **Validation**: მოკლე სიტყვები (4 სიმბოლოზე ნაკლები) და სიტყვები ხმოვნების გარეშე ავტომატურად გამოიტოვება.
 
-2. **Splitting Rules:**
-   - **V-V** (distance = 0): Split between vowels → `გა-ა-ნა`
-   - **V-C-V** (distance = 1): Split before consonant → `მა-მა`
-   - **V-CC-V** (distance ≥ 2): Split after first consonant → `საქ-მე`
+### 2. ხმოვანთა მანძილის ანალიზი
 
-3. **Special Rules:**
-   - **'R' Rule**: If cluster starts with 'რ', keep it left → `ბარ-ბი` (not `ბა-რბი`)
-   - **Anti-Orphan**: Minimum 2 characters on each side → `არა` stays intact
+ალგორითმი პოულობს ხმოვნების ინდექსებს და ითვლის მანძილს () მათ შორის:
 
-4. **Safety Filters:**
-   - Words < 4 characters: Never hyphenated
-   - Single vowel words: Cannot be split
-   - Punctuation preserved in text processing
+* **V-V ():** იყოფა ხმოვნებს შორის.
+> მაგალითი: `ი-ა-რა-ღი`
 
-#### **Examples:**
 
-| Word | Analysis | Result |
-|------|----------|--------|
-| **საქართველო** | V(ა)-C(ქ)-C(რ)-V(ე) | სა-ქარ-თვე-ლო |
-| **იარაღი** | V(ი)-V(ა)-C(რ)-V(ა) | ი-ა-რა-ღი |
-| **ბარბი** | V(ა)-C(**რ**)-C(ბ)-V(ი) | ბარ-ბი *(R Rule)* |
-| **არა** | V(ა)-C(რ)-V(ა) | არა *(Anti-Orphan)* |
-| **კომპიუტერი** | Complex cluster | კომ-პი-უ-ტე-რი |
+* **V-C-V ():** იყოფა პირველი ხმოვნის შემდეგ.
+> მაგალითი: `მა-მა`, `დე-და`
+
+
+* **V-CC-V ():** სისტემა ამოწმებს თანხმოვნების ტიპს:
+* **Double Consonants**: თუ გვერდიგვერდ ერთი და იგივე თანხმოვანია, იყოფა მათ შორის (`ჯ-ჯ`, `ტ-ტ`).
+* **Harmonic Clusters**: თუ თანხმოვნები ქმნიან ჰარმონიულ წყვილს (მაგ: `ბრ`, `წვ`), ისინი რჩებიან ერთად და მარცვალი წყდება მათ წინ.
+* **Default**: სხვა შემთხვევაში იყოფა პირველი თანხმოვნის შემდეგ.
+
+
+
+### 3. უსაფრთხოების წესები (Constraints)
+
+* **Anti-Orphan**: მარცვალი არასდროს წყდება ისე, რომ რომელიმე მხარეს დარჩეს მხოლოდ 1 ასო.
+* **Left/Right Min**: დამარცვლა ხდება მხოლოდ მაშინ, თუ ორივე მხარეს მინიმუმ 2 სიმბოლო რჩება (მაგ: `არა` არ დაიყოფა).
+
+### მაგალითების ანალიზი:
+
+| სიტყვა | ანალიზი (ხმოვნებს შორის) | შედეგი | წესი |
+| --- | --- | --- | --- |
+| **საქართველო** | `ა-ქ-რ-ე` (2 თანხმოვანი) | `სა-ქარ-თვე-ლო` |  (სტანდარტული) |
+| **ბარბი** | `ა-რ-ბ-ი` ('რ' წესი) | `ბარ-ბი` | სპეციალური 'რ' წესი |
+| **მწვრთნელი** | `მ-წ-ვ-რ-თ-ნ-ე` | `მწვრთნე-ლი` | ჰარმონიული ჯგუფი |
+| **გაანალიზება** | `ა-ა` (0 თანხმოვანი) | `გა-ა-ნა-ლი-ზე-ბა` |  (ხმოვანთშერწყმა) |
+
 
 ---
 
@@ -93,46 +111,6 @@ npm install georgian-hyphenation
 **🦊 Firefox:** [Install from Firefox Add-ons](https://addons.mozilla.org/firefox/addon/georgian-hyphenation/)
 
 **🌐 Chrome:** *Coming soon to Chrome Web Store*
-
----
-
-## 📖 Quick Start / სწრაფი დაწყება
-
-### Python
-
-```python
-from georgian_hyphenation import GeorgianHyphenator
-
-# Initialize
-hyphenator = GeorgianHyphenator('-')
-
-# Hyphenate
-print(hyphenator.hyphenate('საქართველო'))
-# Output: სა-ქარ-თვე-ლო
-
-# Get syllables
-print(hyphenator.get_syllables('საქართველო'))
-# Output: ['სა', 'ქარ', 'თვე', 'ლო']
-
-```
-
-### JavaScript
-
-```javascript
-const { GeorgianHyphenator } = require('georgian-hyphenation');
-
-// Initialize
-const hyphenator = new GeorgianHyphenator('-');
-
-// Hyphenate
-console.log(hyphenator.hyphenate('საქართველო'));
-// Output: სა-ქარ-თვე-ლო
-
-// Get syllables
-console.log(hyphenator.getSyllables('საქართველო'));
-// Output: ['სა', 'ქარ', 'თვე', 'ლო']
-
-```
 
 ---
 
@@ -166,59 +144,128 @@ print(hyphenator.hyphenate_text(text))
 
 ```
 
-### JavaScript API
+---
+
+## 📚 JavaScript API (v2.2.1+)
+
+v2.2.1 ვერსია სრულად გადასულია **ES Modules (ESM)** სტანდარტზე, რაც უზრუნველყოფს საუკეთესო თავსებადობას თანამედროვე ხელსაწყოებთან (Vite, React, Vue, Next.js) და Node.js-ის ახალ ვერსიებთან.
+
+### ⚙️ ინიციალიზაცია
+
+ბიბლიოთეკის შემოტანა ხდება `import` სინტაქსით. კონსტრუქტორი იღებს ერთ არასავალდებულო პარამეტრს — დამარცვლის სიმბოლოს.
 
 ```javascript
-const { GeorgianHyphenator } = require('georgian-hyphenation');
+import GeorgianHyphenator from 'georgian-hyphenation';
 
-// Initialize with soft hyphen (default: U+00AD)
+// ნაგულისხმევი სიმბოლოა Soft-Hyphen (\u00AD)
 const hyphenator = new GeorgianHyphenator();
 
-// Hyphenate a word
-const word = "საქართველო";
-const result = hyphenator.hyphenate(word);
-console.log(result);  // სა­ქარ­თვე­ლო (with U+00AD)
-
-// Get syllables
-const syllables = hyphenator.getSyllables(word);
-console.log(syllables);  // ['სა', 'ქარ', 'თვე', 'ლო']
-
-// Use visible hyphens
-const visible = new GeorgianHyphenator('-');
-console.log(visible.hyphenate(word));  // სა-ქარ-თვე-ლო
-
-// Hyphenate entire text
-const text = "საქართველო არის ლამაზი ქვეყანა";
-console.log(hyphenator.hyphenateText(text));
+// ტესტირებისთვის შეგიძლიათ გამოიყენოთ ხილული ტირე (-)
+const visibleHyphenator = new GeorgianHyphenator('-');
 
 ```
 
-### Browser Usage
+### 🛠 ძირითადი მეთოდები
+
+#### 1. `hyphenate(word)`
+
+ამარცვლებს ერთ კონკრეტულ ქართულ სიტყვას.
+
+* **ავტომატური Sanitization**: მეთოდი ჯერ ასუფთავებს სიტყვას მასში უკვე არსებული დამარცვლის სიმბოლოებისგან და შემდეგ ამარცვლებს მას თავიდან.
+* **პრიორიტეტი**: ჯერ მოწმდება გამონაკლისების ლექსიკონი, შემდეგ კი გამოიყენება ალგორითმი.
+
+```javascript
+const result = hyphenator.hyphenate('საქართველო');
+console.log(result); // "სა-ქარ-თვე-ლო"
+
+```
+
+#### 2. `hyphenateText(text)`
+
+ამარცვლებს მთლიან ტექსტს (წინადადებას, აბზაცს).
+
+* ინარჩუნებს ყველა სასვენ ნიშანს, ციფრს და ლათინურ სიმბოლოს.
+* ამარცვლებს მხოლოდ ქართულ სიტყვებს (სიგრძით >= 4 სიმბოლო).
+
+```javascript
+const longText = "გამარჯობა, საქართველო მშვენიერი ქვეყანაა!";
+console.log(hyphenator.hyphenateText(longText));
+
+```
+
+#### 3. `getSyllables(word)`
+
+სიტყვას შლის და აბრუნებს მარცვლების მასივს (`Array`).
+
+```javascript
+const syllables = hyphenator.getSyllables('უნივერსიტეტი');
+console.log(syllables); // ["უ", "ნი", "ვერ", "სი", "ტე", "ტი"]
+
+```
+
+#### 4. `loadDefaultLibrary()` (Async)
+
+ტვირთავს გამონაკლისების ლექსიკონს (`exceptions.json`) საუკეთესო სიზუსტისთვის.
+
+* **Browser-ში**: ტვირთავს CDN-იდან (unpkg).
+* **Node-ში**: კითხულობს ლოკალური ფაილიდან.
+
+```javascript
+await hyphenator.loadDefaultLibrary();
+console.log('ლექსიკონი ჩაიტვირთა');
+
+```
+---
+
+## 🌐 Browser Usage (CDN / ESM)
+
+v2.2.1 ვერსიიდან ბიბლიოთეკა მუშაობს როგორც სტანდარტული JavaScript მოდული. ეს საშუალებას გაძლევთ გამოიყენოთ `import` პირდაპირ ბრაუზერში, ყოველგვარი Build-ხელსაწყოების (Webpack, Vite) გარეშე.
+
+### 1. CSS კონფიგურაცია
+
+იმისათვის, რომ ბრაუზერმა სწორად აჩვენოს "ფარული დამარცვლის" სიმბოლოები (**Soft Hyphens**), აუცილებელია კონტეინერს ჰქონდეს შემდეგი სტილები:
+
+```css
+.hyphenated {
+  /* ააქტიურებს დამარცვლის სიმბოლოების ხილვადობას საჭიროებისას */
+  hyphens: manual;
+  -webkit-hyphens: manual;
+  
+  /* რეკომენდებულია ტექსტის გასწორება უკეთესი ვიზუალისთვის */
+  text-align: justify;
+  line-height: 1.6;
+}
+
+```
+
+---
+
+### 2. იმპორტი და ინიციალიზაცია
+
+გამოიყენეთ `type="module"` თქვენს `<script>` თეგში. რეკომენდებულია **Async/Await** მიდგომა, რათა გამონაკლისების ლექსიკონი (`exceptions.json`) სწორად ჩაიტვირთოს.
 
 ```html
-<!DOCTYPE html>
-<html lang="ka">
-<head>
-    <style>
-        .hyphenated {
-            hyphens: manual;
-            -webkit-hyphens: manual;
-            text-align: justify;
-        }
-    </style>
-</head>
-<body>
-    <p class="hyphenated" id="text"></p>
+<p class="hyphenated" id="content"></p>
+
+<script type="module">
+  // იმპორტი პირდაპირ CDN-იდან (unpkg)
+  import GeorgianHyphenator from 'https://cdn.jsdelivr.net/npm/georgian-hyphenation@2.2.1/src/javascript/index.js';
+
+  async function initializeHyphenator() {
+    // ინიციალიზაცია Soft Hyphen (\u00AD) სიმბოლოთი
+    const hyphenator = new GeorgianHyphenator('\u00AD');
+
+    // ტვირთავს გამონაკლისების ბაზას (Optional, but recommended)
+    await hyphenator.loadDefaultLibrary();
+
+    const text = "საქართველო არის ძალიან ლამაზი ქვეყანა, სადაც ბევრი ისტორიული ძეგლია.";
     
-    <script src="[https://cdn.jsdelivr.net/npm/georgian-hyphenation@2/src/javascript/index.js](https://cdn.jsdelivr.net/npm/georgian-hyphenation@2/src/javascript/index.js)"></script>
-    <script>
-        const hyphenator = new GeorgianHyphenator('\u00AD');
-        const text = "საქართველო არის ძალიან ლამაზი ქვეყანა";
-        document.getElementById('text').textContent = 
-            hyphenator.hyphenateText(text);
-    </script>
-</body>
-</html>
+    // დამარცვლა და ტექსტის ასახვა
+    document.getElementById('content').textContent = hyphenator.hyphenateText(text);
+  }
+
+  initializeHyphenator();
+</script>
 
 ```
 
@@ -342,10 +389,6 @@ article p, .entry-content p, .my-custom-class
 
 4. **Auto Justify Text** - Apply `text-align: justify` for better effect
 
-### Screenshots:
-
-* **Settings Page:** New modern UI with switches.
-* **Before & After:** Visual comparison.
 
 ### Requirements:
 
@@ -439,37 +482,48 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
+
 ---
 
 ## 📝 Changelog
 
+### Version 2.2.1 (2026-01-26) — The Modernization Update 🚀
+
+* 🧹 **Automatic Sanitization**: დაემატა `_stripHyphens` ფუნქციონალი, რომელიც ავტომატურად ასუფთავებს ტექსტს ძველი დამარცვლის სიმბოლოებისგან.
+* 📦 **ES Modules (ESM)**: ბიბლიოთეკა სრულად გადავიდა თანამედროვე JavaScript სტანდარტზე (`import/export`).
+* 📚 **Async Dictionary Support**: დაემატა `loadDefaultLibrary()` მეთოდი გამონაკლისების ლექსიკონის ავტომატური ჩატვირთვისთვის.
+* ⚡ **Optimization**: ჰარმონიული ჯგუფების ძებნა გადავიდა `Set` სტრუქტურაზე ( სისწრაფისთვის).
+* 🛠 **Package Improvements**: განახლდა `package.json` კონფიგურაცია (`exports`, `files` whitelist) NPM-ისთვის.
+
+---
+
 ### Version 2.0.8 (WordPress Plugin) (2025-01-23)
 
-* 🔌 **WordPress Plugin Update**:
-* Moved settings to Top-Level Menu with icon
-* Added modern Red/Green UI switches
-* Added smart fallback selectors
-* Added detailed helper text for custom CSS selectors
+* 🔌 **WP UI/UX Update**:
+* პარამეტრები გადავიდა მთავარ მენიუში (Top-Level Menu) შესაბამისი აიკონით.
+* დაემატა თანამედროვე Red/Green UI გადამრთველები (Switches).
+* **Smart Fallback**: დაემატა სელექტორების ავტომატური მოძებნის ლოგიკა.
+* **Helper Text**: დაემატა დეტალური ინსტრუქციები Custom CSS სელექტორების გამოსაყენებლად.
 
-
+---
 
 ### Version 2.0.1 (2025-01-22)
 
-* 📦 NPM package published with dedicated README
-* 📝 Documentation improvements
-* 🐛 Minor bug fixes
+* 📦 **NPM Deployment**: ბიბლიოთეკა ოფიციალურად გამოქვეყნდა NPM-ზე ცალკეული `README-NPM.md` დოკუმენტაციით.
+* 📝 **Docs**: გაუმჯობესდა საინსტალაციო და გამოყენების ინსტრუქციები.
+* 🐛 **Bug Fixes**: გამოსწორდა მცირე ხარვეზები სიმბოლოების დამუშავებისას.
 
-### Version 2.0.0 (2025-01-21) 🎉
+---
 
-**Major Rewrite: Academic Logic**
+### Version 2.0.0 (2025-01-21) — Academic Logic v2.0 🎉
 
-* ✅ **Complete algorithm rewrite** - Phonological distance analysis
-* ✅ **Anti-Orphan protection** - Minimum 2 characters on each side
-* ✅ **'R' Rule implementation** - Special handling for 'რ' consonant clusters
-* ✅ **Hiatus detection** - Proper V-V split handling
-* ✅ **Improved accuracy** - 95% → 98%+ on test corpus
-* ✅ **Cleaner codebase** - 60 lines vs 100+ lines (v1.0)
-* ✅ **Modern packaging** - `pyproject.toml` support
+* ✅ **Major Algorithm Rewrite**: დაინერგა აკადემიური ფონოლოგიური დისტანციის ანალიზი.
+* 🛡️ **Anti-Orphan Protection**: მინიმუმ 2 სიმბოლოს შენარჩუნება მარცვლის ორივე მხარეს.
+* 🎼 **'R' Rule**: სპეციალური ლოგიკა 'რ' თანხმოვნის შემცველი ჯგუფებისთვის.
+* 🔄 **Hiatus Detection**: ხმოვანთშერწყმის (V-V) სწორი დამარცვლა.
+* 📈 **Accuracy**: სიზუსტე გაიზარდა **98%+**-მდე (ვალიდირებულია 10,000+ სიტყვაზე).
+* 🏗️ **Packaging**: დაემატა `pyproject.toml` მხარდაჭერა Python-ისთვის.
+
 
 ---
 

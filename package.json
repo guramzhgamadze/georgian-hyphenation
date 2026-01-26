@@ -1,16 +1,22 @@
 {
   "name": "georgian-hyphenation",
-  "version": "2.0.1",
-  "description": "Georgian Language Hyphenation Library v2.0 - Academic Logic with Phonological Distance Analysis",
+  "version": "2.2.2",
+  "description": "Georgian Language Hyphenation Library v2.2.1 - Academic Logic with Sanitization & Dictionary Support",
+  "type": "module",
   "main": "src/javascript/index.js",
   "types": "src/javascript/index.d.ts",
   "files": [
     "src/javascript",
-    "README-NPM.md",
-    "LICENSE"
+    "data/exceptions.json",
+    "README.md",
+    "LICENSE.txt"
   ],
+  "exports": {
+    ".": "./src/javascript/index.js",
+    "./data/*": "./data/*"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node test-suite.js"
   },
   "repository": {
     "type": "git",
@@ -27,12 +33,16 @@
     "linguistics",
     "text-processing",
     "i18n",
-    "localization"
+    "localization",
+    "sanitization"
   ],
   "author": "Guram Zhgamadze <guramzhgamadze@gmail.com>",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/guramzhgamadze/georgian-hyphenation/issues"
   },
-  "homepage": "https://github.com/guramzhgamadze/georgian-hyphenation#readme"
+  "homepage": "https://github.com/guramzhgamadze/georgian-hyphenation#readme",
+  "dependencies": {
+    "georgian-hyphenation": "^2.2.2"
+  }
 }
