@@ -1,23 +1,44 @@
 [build-system]
-requires = ["setuptools>=45", "wheel"]
+requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "georgian-hyphenation"
-version = "2.0.1"
-description = "Georgian Language Hyphenation Library v2.0 - Academic Logic"
+version = "2.2.2"
+description = "Georgian Language Hyphenation Library v2.2.1 - Modernized & Optimized with Dictionary Support"
 readme = "README.md"
-requires-python = ">=3.7"
-license = {text = "MIT"}
 authors = [
     {name = "Guram Zhgamadze", email = "guramzhgamadze@gmail.com"}
 ]
+license = {text = "MIT"}
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Text Processing :: Linguistic",
+    "Natural Language :: Georgian"
 ]
+keywords = ["georgian", "hyphenation", "syllabification", "nlp", "linguistics", "kartuli", "dictionary"]
+requires-python = ">=3.7"
 
 [project.urls]
 Homepage = "https://github.com/guramzhgamadze/georgian-hyphenation"
+Repository = "https://github.com/guramzhgamadze/georgian-hyphenation"
+Documentation = "https://github.com/guramzhgamadze/georgian-hyphenation#readme"
+"Bug Tracker" = "https://github.com/guramzhgamadze/georgian-hyphenation/issues"
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools]
+include-package-data = true

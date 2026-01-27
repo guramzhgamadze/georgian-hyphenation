@@ -1,50 +1,180 @@
 # -*- coding: utf-8 -*-
 """
-Georgian Language Hyphenation Library (v2.0 - Academic Logic)
+Georgian Hyphenation Library v2.2.1
 ქართული ენის დამარცვლის ბიბლიოთეკა
-Logic: Phonological distance analysis & Anti-Orphan protection
+
+Modernized & Optimized
+- Hybrid Engine: Algorithm + Dictionary
+- Harmonic Clusters Support
+- Gemination Handling
+- O(1) Cluster Lookup with Set
+
 Author: Guram Zhgamadze
 """
 
+import json
+import os
+import re
+from typing import List, Dict, Set
+
+
 class GeorgianHyphenator:
     """
-    Georgian word hyphenation based on phonological distance analysis
+    Georgian language hyphenation with hybrid engine
+    
+    Features:
+    - Phonological distance analysis
+    - Dictionary-based exception handling
+    - Harmonic cluster awareness
+    - Gemination (double consonant) handling
+    - Anti-orphan protection
     """
     
-    def __init__(self, hyphen_char='\u00AD'):
+    def __init__(self, hyphen_char: str = '\u00AD'):
         """
-        Initialize hyphenator
+        Initialize Georgian Hyphenator
         
         Args:
-            hyphen_char (str): Character to use for hyphenation (default: soft hyphen U+00AD)
+            hyphen_char: Character to use for hyphenation (default: soft hyphen U+00AD)
         """
         self.hyphen_char = hyphen_char
         self.vowels = 'აეიოუ'
+        self.left_min = 2
+        self.right_min = 2
+        
+        # v2.2.1: Optimized - Set for O(1) lookup instead of list
+        self.harmonic_clusters: Set[str] = {
+            'ბლ', 'ბრ', 'ბღ', 'ბზ', 'გდ', 'გლ', 'გმ', 'გნ', 'გვ', 'გზ', 'გრ',
+            'დრ', 'თლ', 'თრ', 'თღ', 'კლ', 'კმ', 'კნ', 'კრ', 'კვ', 'მტ', 'პლ', 
+            'პრ', 'ჟღ', 'რგ', 'რლ', 'რმ', 'სწ', 'სხ', 'ტკ', 'ტპ', 'ტრ', 'ფლ', 
+            'ფრ', 'ფქ', 'ფშ', 'ქლ', 'ქნ', 'ქვ', 'ქრ', 'ღლ', 'ღრ', 'ყლ', 'ყრ', 
+            'შთ', 'შპ', 'ჩქ', 'ჩრ', 'ცლ', 'ცნ', 'ცრ', 'ცვ', 'ძგ', 'ძვ', 'ძღ', 
+            'წლ', 'წრ', 'წნ', 'წკ', 'ჭკ', 'ჭრ', 'ჭყ', 'ხლ', 'ხმ', 'ხნ', 'ხვ', 'ჯგ'
+        }
+        
+        # v2.2.1: Dictionary for exception words
+        self.dictionary: Dict[str, str] = {}
     
-    def hyphenate(self, word):
+    def _strip_hyphens(self, text: str) -> str:
         """
-        Hyphenate a single Georgian word
+        Remove existing hyphenation symbols (Sanitization)
         
         Args:
-            word (str): Georgian word to hyphenate
+            text: Input text
             
         Returns:
-            str: Word with hyphenation points inserted
+            Text without any hyphens
         """
-        # Rule 1: Words shorter than 4 chars are never hyphenated
-        if len(word) < 4:
+        if not text:
+            return ''
+        # Remove soft hyphens and visible hyphens
+        return text.replace('\u00AD', '').replace(self.hyphen_char, '').replace('-', '')
+    
+    def load_library(self, data: Dict[str, str]) -> None:
+        """
+        Load custom dictionary
+        
+        Args:
+            data: Dictionary mapping words to their hyphenation
+                  Example: {"საქართველო": "სა-ქარ-თვე-ლო"}
+        """
+        if data and isinstance(data, dict):
+            self.dictionary.update(data)
+    
+    def load_default_library(self) -> None:
+        """
+        Load default exceptions dictionary from data/exceptions.json
+        
+        Works in both development and installed package modes.
+        Tries multiple locations to find the data file.
+        """
+        try:
+            package_dir = os.path.dirname(__file__)
+            
+            # Try multiple possible locations
+            locations = [
+                # Development mode (root data/ folder)
+                os.path.join(package_dir, '..', '..', 'data', 'exceptions.json'),
+                # Installed via pip (data/ copied to site-packages)
+                os.path.join(os.path.dirname(package_dir), 'data', 'exceptions.json'),
+                # Alternative installed location
+                os.path.join(package_dir, 'data', 'exceptions.json'),
+            ]
+            
+            data_file = None
+            for loc in locations:
+                abs_loc = os.path.abspath(loc)
+                if os.path.exists(abs_loc):
+                    data_file = abs_loc
+                    break
+            
+            if data_file:
+                with open(data_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    self.load_library(data)
+                    print(f"Georgian Hyphenation v2.2.1: Dictionary loaded ({len(self.dictionary)} words)")
+            else:
+                print("Georgian Hyphenation v2.2.1: Dictionary not found, using algorithm only")
+        
+        except Exception as e:
+            print(f"Georgian Hyphenation v2.2.1: Could not load dictionary ({e}), using algorithm only")
+    
+    def hyphenate(self, word: str) -> str:
+        """
+        Hyphenate a Georgian word
+        
+        v2.2.1 Behavior: Always strip existing hyphens and re-hyphenate.
+        This corrects any previously incorrect hyphenation.
+        
+        Args:
+            word: Georgian word to hyphenate
+            
+        Returns:
+            Hyphenated word with configured hyphen character
+        """
+        # v2.2.1: Always strip existing hyphens first (sanitization)
+        sanitized_word = self._strip_hyphens(word)
+        
+        # Remove punctuation for dictionary lookup
+        clean_word = re.sub(r'[.,/#!$%^&*;:{}=\-_`~()]', '', sanitized_word)
+        
+        # Check dictionary first (if available)
+        if clean_word in self.dictionary:
+            return self.dictionary[clean_word].replace('-', self.hyphen_char)
+        
+        # Fallback to algorithm
+        return self.apply_algorithm(sanitized_word)
+    
+    def apply_algorithm(self, word: str) -> str:
+        """
+        Apply hyphenation algorithm
+        
+        v2.2.1 Algorithm Features:
+        - Vowel-based syllable detection
+        - Gemination (double consonant) handling
+        - Harmonic cluster preservation
+        - Anti-orphan protection (leftMin=2, rightMin=2)
+        
+        Args:
+            word: Word to hyphenate
+            
+        Returns:
+            Hyphenated word
+        """
+        # Skip short words
+        if len(word) < (self.left_min + self.right_min):
             return word
         
-        # Find all vowel indices
+        # Find all vowel positions
         vowel_indices = [i for i, char in enumerate(word) if char in self.vowels]
         
-        # Rule 2: Need at least 2 vowels to hyphenate
+        # Need at least 2 vowels for hyphenation
         if len(vowel_indices) < 2:
             return word
         
         insert_points = []
         
-        # Analyze distance between consecutive vowels
+        # Analyze each vowel pair
         for i in range(len(vowel_indices) - 1):
             v1 = vowel_indices[i]
             v2 = vowel_indices[i + 1]
@@ -54,90 +184,175 @@ class GeorgianHyphenator:
             candidate_pos = -1
             
             if distance == 0:
-                # Case V-V: Split between vowels (hiatus)
+                # V-V: Split between vowels (გა-ა-ნა-ლი-ზა)
                 candidate_pos = v1 + 1
             elif distance == 1:
-                # Case V-C-V: Split before consonant
+                # V-C-V: Split after vowel (მა-მა)
                 candidate_pos = v1 + 1
             else:
-                # Case V-CC...-V: Cluster handling
-                # 'R' Rule: If cluster starts with 'რ', keep it left
-                if between_substring[0] == 'რ':
-                    candidate_pos = v1 + 2
+                # V-CC...C-V: Complex case
+                
+                # v2.2.1: Check for gemination (double consonants)
+                double_consonant_index = -1
+                for j in range(len(between_substring) - 1):
+                    if between_substring[j] == between_substring[j + 1]:
+                        double_consonant_index = j
+                        break
+                
+                if double_consonant_index != -1:
+                    # Split between double consonants (კლას-სი, მას-სა)
+                    candidate_pos = v1 + 1 + double_consonant_index + 1
                 else:
-                    candidate_pos = v1 + 2
+                    # v2.2.1: Check for harmonic clusters
+                    break_index = -1
+                    if distance >= 2:
+                        last_two = between_substring[distance - 2:distance]
+                        if last_two in self.harmonic_clusters:
+                            break_index = distance - 2
+                    
+                    if break_index != -1:
+                        # Split before harmonic cluster (ას-ტრო-ნო-მი-ა)
+                        candidate_pos = v1 + 1 + break_index
+                    else:
+                        # Default: split after first consonant (ბარ-ბა-რე)
+                        candidate_pos = v1 + 2
             
-            # Anti-Orphan Filter: Ensure at least 2 chars on both sides
-            if candidate_pos >= 2 and (len(word) - candidate_pos) >= 2:
+            # Anti-orphan protection: ensure minimum 2 chars on each side
+            if candidate_pos >= self.left_min and (len(word) - candidate_pos) >= self.right_min:
                 insert_points.append(candidate_pos)
         
-        # Reconstruct word with hyphens
+        # Insert hyphens (from right to left to maintain positions)
         result = list(word)
         for pos in reversed(insert_points):
             result.insert(pos, self.hyphen_char)
         
         return ''.join(result)
     
-    def get_syllables(self, word):
+    def get_syllables(self, word: str) -> List[str]:
         """
-        Get array of syllables for a word
+        Get syllables as a list
         
         Args:
-            word (str): Georgian word
+            word: Word to split into syllables
             
         Returns:
-            list: List of syllables
+            List of syllables without hyphen characters
         """
-        temp_hyphenator = GeorgianHyphenator('-')
-        return temp_hyphenator.hyphenate(word).split('-')
+        hyphenated = self.hyphenate(word)
+        return hyphenated.split(self.hyphen_char)
     
-    def hyphenate_text(self, text):
+    def hyphenate_text(self, text: str) -> str:
         """
-        Hyphenate entire text (preserves punctuation)
+        Hyphenate entire Georgian text
+        
+        Preserves:
+        - Punctuation
+        - Non-Georgian characters
+        - Word boundaries
+        - Whitespace
+        
+        v2.2.1: Strips existing hyphens from entire text first
         
         Args:
-            text (str): Georgian text
+            text: Text to hyphenate (can contain multiple words)
             
         Returns:
-            str: Hyphenated text
+            Hyphenated text
         """
-        import re
-        # Split by non-Georgian characters to preserve punctuation
-        parts = re.split(r'([^ა-ჰ]+)', text)
+        if not text:
+            return ''
         
-        return ''.join(
-            self.hyphenate(part) if re.search(r'[ა-ჰ]{4,}', part) else part
-            for part in parts
-        )
+        # v2.2.1: Strip existing hyphens from entire text
+        sanitized_text = self._strip_hyphens(text)
+        
+        # Split text into Georgian words and other characters
+        # Pattern captures Georgian letter sequences
+        parts = re.split(r'([ა-ჰ]+)', sanitized_text)
+        
+        result = []
+        for part in parts:
+            # Only hyphenate Georgian words with 4+ characters
+            if len(part) >= 4 and re.search(r'[ა-ჰ]', part):
+                result.append(self.hyphenate(part))
+            else:
+                result.append(part)
+        
+        return ''.join(result)
 
 
-def to_tex_pattern(word):
+# Convenience functions for backward compatibility and quick usage
+
+def hyphenate(word: str, hyphen_char: str = '\u00AD') -> str:
     """
-    Convert word to TeX pattern format
+    Hyphenate a single Georgian word
     
     Args:
-        word (str): Georgian word
+        word: Georgian word
+        hyphen_char: Hyphen character to use
         
     Returns:
-        str: TeX pattern (e.g., .გ1ა1ნ1ა1თ1ლე1ბა.)
+        Hyphenated word
     """
-    hyphenator = GeorgianHyphenator()
-    syllables = hyphenator.get_syllables(word)
-    if len(syllables) <= 1:
-        return f'.{word}.'
+    h = GeorgianHyphenator(hyphen_char)
+    return h.hyphenate(word)
+
+
+def get_syllables(word: str) -> List[str]:
+    """
+    Get syllables of a Georgian word
+    
+    Args:
+        word: Georgian word
+        
+    Returns:
+        List of syllables
+    """
+    h = GeorgianHyphenator('-')
+    return h.get_syllables(word)
+
+
+def hyphenate_text(text: str, hyphen_char: str = '\u00AD') -> str:
+    """
+    Hyphenate Georgian text
+    
+    Args:
+        text: Text containing Georgian words
+        hyphen_char: Hyphen character to use
+        
+    Returns:
+        Hyphenated text
+    """
+    h = GeorgianHyphenator(hyphen_char)
+    return h.hyphenate_text(text)
+
+
+# Export format converters (v2.0 compatibility)
+
+def to_tex_pattern(word: str) -> str:
+    """
+    Convert to TeX hyphenation pattern format
+    
+    Args:
+        word: Georgian word
+        
+    Returns:
+        TeX pattern (e.g., ".სა1ქარ1თვე1ლო.")
+    """
+    h = GeorgianHyphenator('-')
+    syllables = h.get_syllables(word)
     return '.' + '1'.join(syllables) + '.'
 
 
-def to_hunspell_format(word):
+def to_hunspell_format(word: str) -> str:
     """
-    Convert word to Hunspell dictionary format
+    Convert to Hunspell hyphenation format
     
     Args:
-        word (str): Georgian word
+        word: Georgian word
         
     Returns:
-        str: Hunspell format (syllable=syllable)
+        Hunspell format (e.g., "სა=ქარ=თვე=ლო")
     """
-    hyphenator = GeorgianHyphenator()
-    syllables = hyphenator.get_syllables(word)
-    return '='.join(syllables)
+    h = GeorgianHyphenator('-')
+    hyphenated = h.hyphenate(word)
+    return hyphenated.replace('-', '=')
