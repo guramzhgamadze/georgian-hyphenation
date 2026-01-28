@@ -1,6 +1,6 @@
 /**
- * Georgian Hyphenation Library v2.2.1
- * Modernized & Optimized by GitHub Code Architect
+ * Georgian Hyphenation Library v2.2.4
+ * Browser + Node.js Compatible
  */
 
 export default class GeorgianHyphenator {
@@ -21,6 +21,7 @@ export default class GeorgianHyphenator {
     ]);
 
     this.dictionary = new Map();
+    this.dictionaryLoaded = false;
   }
 
   /**
@@ -28,12 +29,13 @@ export default class GeorgianHyphenator {
    */
   _stripHyphens(text) {
     if (!text) return '';
-    // Escape special regex characters
-    const escapedChar = this.hyphenChar.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const regex = new RegExp(`[\u00AD${escapedChar}]`, 'g');
-    return text.replace(regex, '');
+    // Remove soft hyphens, regular hyphens, and custom hyphen char
+    return text.replace(/[\u00AD\-]/g, '').replace(new RegExp(this.hyphenChar, 'g'), '');
   }
 
+  /**
+   * ტვირთავს მომხმარებლის dictionary-ს
+   */
   loadLibrary(data) {
     if (data && typeof data === 'object') {
       Object.entries(data).forEach(([word, hyphenated]) => {
@@ -42,43 +44,65 @@ export default class GeorgianHyphenator {
     }
   }
 
+  /**
+   * ✅ ტვირთავს default dictionary-ს (Browser + Node.js compatible)
+   */
   async loadDefaultLibrary() {
-    // 1. Browser Environment
+    if (this.dictionaryLoaded) return;
+
+    // Browser Environment
     if (typeof window !== 'undefined' && typeof fetch !== 'undefined') {
       try {
-        const response = await fetch('https://unpkg.com/georgian-hyphenation@2/data/exceptions.json');
-        if (!response.ok) throw new Error("Network response error");
+        // ✅ სწორი CDN URL - jsdelivr უფრო სანდოა unpkg-ზე
+        const response = await fetch('https://cdn.jsdelivr.net/npm/georgian-hyphenation@2.2.4/data/exceptions.json');
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        
         const data = await response.json();
         this.loadLibrary(data);
+        this.dictionaryLoaded = true;
+        
+        console.log(`Georgian Hyphenation v2.2.4: Dictionary loaded (${this.dictionary.size} words)`);
       } catch (error) {
-        console.warn("Georgian Hyphenation: Using algorithm only (Fetch failed)");
+        console.warn('Georgian Hyphenation v2.2.4: Dictionary not available, using algorithm only');
+        console.warn('Error:', error.message);
       }
-    } 
-    // 2. Node.js Environment (ESM context)
-    else if (typeof process !== 'undefined') {
+    }
+    // Node.js Environment (Dynamic Import)
+    else if (typeof process !== 'undefined' && typeof require !== 'undefined') {
       try {
-        // Node-ში ლოკალური ფაილის წაკითხვა
-        const { default: data } = await import('../../data/exceptions.json', {
-          assert: { type: 'json' }
-        });
+        // Try CommonJS require first
+        const data = require('../../data/exceptions.json');
         this.loadLibrary(data);
+        this.dictionaryLoaded = true;
+        console.log(`Georgian Hyphenation v2.2.4: Dictionary loaded (${this.dictionary.size} words)`);
       } catch (error) {
-        console.warn("Georgian Hyphenation: Local dictionary not found");
+        console.warn('Georgian Hyphenation v2.2.4: Local dictionary not found, using algorithm only');
       }
     }
   }
 
+  /**
+   * ამარცვლებს ერთ სიტყვას
+   */
   hyphenate(word) {
     const sanitizedWord = this._stripHyphens(word);
     const cleanWord = sanitizedWord.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
 
+    // Dictionary check
     if (this.dictionary.has(cleanWord)) {
       return this.dictionary.get(cleanWord).replace(/-/g, this.hyphenChar);
     }
 
+    // Algorithm fallback
     return this.applyAlgorithm(sanitizedWord);
   }
 
+  /**
+   * ალგორითმის გამოყენება
+   */
   applyAlgorithm(word) {
     if (word.length < (this.leftMin + this.rightMin)) return word;
 
@@ -101,6 +125,7 @@ export default class GeorgianHyphenator {
       if (distance === 0 || distance === 1) {
         candidatePos = v1 + 1;
       } else {
+        // Gemination check
         let doubleConsonantIndex = -1;
         for (let j = 0; j < betweenSubstring.length - 1; j++) {
           if (betweenSubstring[j] === betweenSubstring[j + 1]) {
@@ -112,6 +137,7 @@ export default class GeorgianHyphenator {
         if (doubleConsonantIndex !== -1) {
           candidatePos = v1 + 1 + doubleConsonantIndex + 1;
         } else {
+          // Harmonic cluster check
           let breakIndex = -1;
           if (distance >= 2) {
             const lastTwo = betweenSubstring.substring(distance - 2, distance);
@@ -123,6 +149,7 @@ export default class GeorgianHyphenator {
         }
       }
 
+      // Anti-orphan protection
       if (candidatePos >= this.leftMin && (word.length - candidatePos) >= this.rightMin) {
         insertPoints.push(candidatePos);
       }
@@ -135,10 +162,16 @@ export default class GeorgianHyphenator {
     return result.join('');
   }
 
+  /**
+   * მარცვლების მიღება მასივის სახით
+   */
   getSyllables(word) {
     return this.hyphenate(word).split(this.hyphenChar);
   }
 
+  /**
+   * მთელი ტექსტის დამარცვლა
+   */
   hyphenateText(text) {
     if (!text) return '';
     const sanitizedText = this._stripHyphens(text);
@@ -153,15 +186,20 @@ export default class GeorgianHyphenator {
   }
 }
 
-/** * კროს-პლატფორმული მხარდაჭერა 
+/**
+ * ✅ კროს-პლატფორმული Export
  */
-// 1. ბრაუზერისთვის (Global Object)
+
+// 1. ES Module (Modern)
+// export default GeorgianHyphenator; (already at top)
+
+// 2. Browser Global (for <script> tag without type="module")
 if (typeof window !== 'undefined') {
   window.GeorgianHyphenator = GeorgianHyphenator;
 }
 
-// 2. Node.js (CommonJS) - იმ შემთხვევაში თუ ვინმე მაინც require-ს გამოიყენებს
-// (მხოლოდ თუ module.exports არსებობს)
+// 3. Node.js CommonJS (for require())
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = GeorgianHyphenator;
+  module.exports.default = GeorgianHyphenator;
 }

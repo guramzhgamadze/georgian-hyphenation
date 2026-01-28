@@ -1,48 +1,43 @@
 {
   "name": "georgian-hyphenation",
-  "version": "2.2.2",
-  "description": "Georgian Language Hyphenation Library v2.2.1 - Academic Logic with Sanitization & Dictionary Support",
-  "type": "module",
+  "version": "2.2.4",
+  "description": "Georgian Language Hyphenation Library - Browser + Node.js compatible",
   "main": "src/javascript/index.js",
-  "types": "src/javascript/index.d.ts",
-  "files": [
-    "src/javascript",
-    "data/exceptions.json",
-    "README.md",
-    "LICENSE.txt"
-  ],
+  "module": "src/javascript/index.js",
+  "type": "module",
   "exports": {
-    ".": "./src/javascript/index.js",
-    "./data/*": "./data/*"
+    ".": {
+      "import": "./src/javascript/index.js",
+      "require": "./src/javascript/index.js"
+    },
+    "./data/exceptions.json": "./data/exceptions.json"
   },
+  "files": [
+    "src/javascript/",
+    "data/",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
-    "test": "node test-suite.js"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/guramzhgamadze/georgian-hyphenation.git"
+    "test": "node test_javascript.js"
   },
   "keywords": [
     "georgian",
-    "kartuli",
-    "ქართული",
     "hyphenation",
     "syllabification",
+    "kartuli",
     "nlp",
-    "natural-language-processing",
-    "linguistics",
-    "text-processing",
-    "i18n",
-    "localization",
-    "sanitization"
+    "browser",
+    "nodejs"
   ],
   "author": "Guram Zhgamadze <guramzhgamadze@gmail.com>",
   "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/guramzhgamadze/georgian-hyphenation/issues"
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/guramzhgamadze/georgian-hyphenation.git"
   },
   "homepage": "https://github.com/guramzhgamadze/georgian-hyphenation#readme",
-  "dependencies": {
-    "georgian-hyphenation": "^2.2.2"
+  "bugs": {
+    "url": "https://github.com/guramzhgamadze/georgian-hyphenation/issues"
   }
 }
