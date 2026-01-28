@@ -10,7 +10,6 @@
       padding: 0;
       box-sizing: border-box;
     }
-
     body {
       width: 300px;
       padding: 20px;
@@ -18,20 +17,23 @@
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
     }
-
     h1 {
       font-size: 18px;
-      margin-bottom: 10px;
+      margin-bottom: 5px;
       text-align: center;
     }
-
+    .version {
+      font-size: 10px;
+      text-align: center;
+      opacity: 0.7;
+      margin-bottom: 5px;
+    }
     .subtitle {
       font-size: 12px;
       text-align: center;
       opacity: 0.9;
       margin-bottom: 20px;
     }
-
     .toggle-container {
       background: rgba(255, 255, 255, 0.2);
       border-radius: 10px;
@@ -39,20 +41,26 @@
       margin-bottom: 15px;
       backdrop-filter: blur(10px);
     }
-
     .toggle-label {
       display: flex;
       align-items: center;
       justify-content: space-between;
       cursor: pointer;
       user-select: none;
+      margin-bottom: 12px;
     }
-
+    .toggle-label:last-child {
+      margin-bottom: 0;
+    }
     .toggle-text {
       font-size: 14px;
       font-weight: 500;
     }
-
+    .toggle-desc {
+      font-size: 11px;
+      opacity: 0.8;
+      margin-top: 2px;
+    }
     .switch {
       position: relative;
       width: 50px;
@@ -60,12 +68,11 @@
       background: rgba(0, 0, 0, 0.3);
       border-radius: 13px;
       transition: background 0.3s;
+      flex-shrink: 0;
     }
-
     .switch.active {
       background: #4CAF50;
     }
-
     .slider {
       position: absolute;
       top: 3px;
@@ -75,12 +82,11 @@
       background: white;
       border-radius: 50%;
       transition: transform 0.3s;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     }
-
     .switch.active .slider {
       transform: translateX(24px);
     }
-
     .status {
       text-align: center;
       font-size: 12px;
@@ -89,11 +95,9 @@
       background: rgba(255, 255, 255, 0.2);
       margin-bottom: 15px;
     }
-
     .status.active {
       background: rgba(76, 175, 80, 0.3);
     }
-
     .stats {
       background: rgba(255, 255, 255, 0.2);
       border-radius: 10px;
@@ -101,34 +105,28 @@
       margin-bottom: 15px;
       font-size: 12px;
     }
-
     .stat-item {
       display: flex;
       justify-content: space-between;
       margin-bottom: 8px;
     }
-
     .stat-item:last-child {
       margin-bottom: 0;
     }
-
     .stat-value {
       font-weight: bold;
     }
-
     .footer {
       text-align: center;
       font-size: 10px;
       opacity: 0.8;
       margin-top: 10px;
     }
-
     .footer a {
       color: white;
       text-decoration: none;
       font-weight: bold;
     }
-
     .footer a:hover {
       text-decoration: underline;
     }
@@ -136,21 +134,35 @@
 </head>
 <body>
   <h1>🇬🇪 ქართული დამარცვლა</h1>
+  <p class="version">v2.2.4 (Hybrid Engine)</p>
   <p class="subtitle">Georgian Hyphenation</p>
-
+  
   <div class="status" id="status">
     ✅ გააქტიურებულია
   </div>
-
+  
   <div class="toggle-container">
     <label class="toggle-label">
-      <span class="toggle-text">ავტომატური დამარცვლა</span>
+      <div>
+        <div class="toggle-text">ავტომატური დამარცვლა</div>
+        <div class="toggle-desc">Hyphenation On/Off</div>
+      </div>
       <div class="switch active" id="toggle">
         <div class="slider"></div>
       </div>
     </label>
+    
+    <label class="toggle-label">
+      <div>
+        <div class="toggle-text">Smart Justify</div>
+        <div class="toggle-desc">Auto text-align: justify</div>
+      </div>
+      <div class="switch active" id="toggleJustify">
+        <div class="slider"></div>
+      </div>
+    </label>
   </div>
-
+  
   <div class="stats">
     <div class="stat-item">
       <span>დამუშავებული სიტყვები:</span>
@@ -161,11 +173,11 @@
       <span class="stat-value" id="wordsHyphenated">0</span>
     </div>
   </div>
-
+  
   <div class="footer">
     Made with ❤️ by <a href="https://github.com/guramzhgamadze/georgian-hyphenation" target="_blank">Guram Zhgamadze</a>
   </div>
-
+  
   <script src="js/popup.js"></script>
 </body>
 </html>

@@ -1,8 +1,9 @@
-// Popup Script - Final Version with Auto-Injection
+// Popup Script v2.2.4 - Stats Fix
 (function() {
   'use strict';
 
   const toggle = document.getElementById('toggle');
+  const toggleJustify = document.getElementById('toggleJustify');
   const status = document.getElementById('status');
   const wordsProcessed = document.getElementById('wordsProcessed');
   const wordsHyphenated = document.getElementById('wordsHyphenated');
@@ -12,51 +13,74 @@
     return;
   }
 
-  // Inject content script into current tab if not already injected
   function injectContentScript(tabId) {
     chrome.scripting.executeScript({
       target: { tabId: tabId },
       files: ['js/hyphenator.js', 'js/content.js']
     }).catch(err => {
-      // Silent fail - might be restricted page
       console.log('Could not inject script:', err);
     });
   }
 
-  // Load current state
   function loadState() {
-    chrome.storage.local.get(['enabled', 'stats'], (result) => {
+    chrome.storage.sync.get(['enabled', 'smartJustify', 'stats'], (result) => {
       if (chrome.runtime.lastError) {
         console.error('Error loading state:', chrome.runtime.lastError);
         return;
       }
 
       const isEnabled = result.enabled !== false;
+      const smartJustify = result.smartJustify !== false;
+      
       updateUI(isEnabled);
+      updateJustifyUI(smartJustify);
 
+      // ✅ Load stats from storage first
       if (result.stats) {
         wordsProcessed.textContent = result.stats.processed || 0;
         wordsHyphenated.textContent = result.stats.hyphenated || 0;
       }
+
+      // ✅ Then try to get live stats from content script
+      loadStats();
     });
   }
 
-  // Toggle click handler
   function handleToggle() {
     const isActive = toggle.classList.contains('active');
     const newState = !isActive;
 
     updateUI(newState);
     
-    // Save state
-    chrome.storage.local.set({ enabled: newState }, () => {
+    chrome.storage.sync.set({ enabled: newState }, () => {
       if (chrome.runtime.lastError) {
         console.error('Error saving state:', chrome.runtime.lastError);
         return;
       }
     });
 
-    // Get current tab
+    sendMessageToTab({ action: 'toggleHyphenation', enabled: newState });
+  }
+
+  function handleToggleJustify() {
+    if (!toggleJustify) return;
+    
+    const isActive = toggleJustify.classList.contains('active');
+    const newState = !isActive;
+
+    updateJustifyUI(newState);
+    
+    chrome.storage.sync.set({ smartJustify: newState }, () => {
+      if (chrome.runtime.lastError) {
+        console.error('Error saving state:', chrome.runtime.lastError);
+        return;
+      }
+    });
+
+    sendMessageToTab({ action: 'toggleSmartJustify', smartJustify: newState });
+  }
+
+  function sendMessageToTab(message) {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (chrome.runtime.lastError || !tabs || !tabs[0]) {
         return;
@@ -64,36 +88,23 @@
 
       const tabId = tabs[0].id;
 
-      // Try to send message first
-      chrome.tabs.sendMessage(
-        tabId,
-        { action: 'toggle', enabled: newState },
-        (response) => {
-          if (chrome.runtime.lastError) {
-            // Content script not loaded - inject it
-            console.log('Content script not loaded, injecting...');
-            injectContentScript(tabId);
-            
-            // Wait a bit and try again
-            setTimeout(() => {
-              chrome.tabs.sendMessage(
-                tabId,
-                { action: 'toggle', enabled: newState },
-                () => {
-                  // Ignore errors
-                  if (chrome.runtime.lastError) {
-                    console.log('Script injection might be restricted on this page');
-                  }
-                }
-              );
-            }, 500);
-          }
+      chrome.tabs.sendMessage(tabId, message, (response) => {
+        if (chrome.runtime.lastError) {
+          console.log('Content script not loaded, injecting...');
+          injectContentScript(tabId);
+          
+          setTimeout(() => {
+            chrome.tabs.sendMessage(tabId, message, () => {
+              if (chrome.runtime.lastError) {
+                console.log('Script injection might be restricted on this page');
+              }
+            });
+          }, 500);
         }
-      );
+      });
     });
   }
 
-  // Update UI
   function updateUI(isEnabled) {
     if (isEnabled) {
       toggle.classList.add('active');
@@ -106,7 +117,16 @@
     }
   }
 
-  // Request stats from content script
+  function updateJustifyUI(isEnabled) {
+    if (!toggleJustify) return;
+    
+    if (isEnabled) {
+      toggleJustify.classList.add('active');
+    } else {
+      toggleJustify.classList.remove('active');
+    }
+  }
+
   function loadStats() {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (chrome.runtime.lastError || !tabs || !tabs[0]) {
@@ -118,13 +138,16 @@
         { action: 'getStats' },
         (response) => {
           if (chrome.runtime.lastError) {
-            // Silent fail
+            // Content script not loaded - stats will come from storage
             return;
           }
           
           if (response && response.stats) {
             wordsProcessed.textContent = response.stats.processed || 0;
             wordsHyphenated.textContent = response.stats.hyphenated || 0;
+            
+            // ✅ Save to storage for persistence
+            chrome.storage.sync.set({ stats: response.stats });
           }
         }
       );
@@ -133,9 +156,20 @@
 
   // Event listeners
   toggle.addEventListener('click', handleToggle);
+  
+  if (toggleJustify) {
+    toggleJustify.addEventListener('click', handleToggleJustify);
+  }
 
   // Initialize
   loadState();
-  loadStats();
+
+  // ✅ Refresh stats every 2 seconds while popup is open
+  const statsInterval = setInterval(loadStats, 2000);
+  
+  // Cleanup on popup close
+  window.addEventListener('unload', () => {
+    clearInterval(statsInterval);
+  });
 
 })();

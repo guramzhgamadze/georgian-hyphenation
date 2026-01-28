@@ -1,34 +1,46 @@
 {
   "manifest_version": 2,
   "name": "Georgian Hyphenation",
-  "version": "2.0.1",
-  "description": "Automatic hyphenation for Georgian text",
-  "permissions": ["activeTab", "storage", "<all_urls>"],
+  "version": "2.2.4",
+  "description": "Automatic hyphenation for Georgian text with v2.2 Hybrid Engine (Algorithm + Dictionary)",
+  
+  "permissions": [
+    "storage",
+    "<all_urls>",
+    "tabs"
+  ],
+  
   "browser_action": {
     "default_popup": "popup.html",
     "default_icon": {
-      "48": "icons/icon48.png"
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
     }
   },
+  
   "icons": {
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "content_scripts": [{
-    "matches": ["<all_urls>"],
-    "js": ["js/hyphenator.js", "js/content.js"],
-    "run_at": "document_idle"
-  }],
+  
   "background": {
-    "scripts": ["js/background.js"]
+    "scripts": ["js/background.js"],
+    "persistent": true
   },
-  "browser_specific_settings": {
+  
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["js/hyphenator.js", "js/content.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  
+  "applications": {
     "gecko": {
-      "id": "georgian-hyphenation@guramzhgamadze.github.io",
-      "strict_min_version": "142.0",
-      "data_collection_permissions": {
-        "required": ["none"]
-      }
+      "id": "georgian-hyphenation@guramzhgamadze.com",
+      "strict_min_version": "57.0"
     }
   }
 }
