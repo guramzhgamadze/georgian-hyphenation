@@ -186,7 +186,7 @@ console.log('ლექსიკონი ჩაიტვირთა');
 <p class="hyphenated" id="content"></p>
 
 <script type="module">
-  import GeorgianHyphenator from 'https://cdn.jsdelivr.net/npm/georgian-hyphenation@2.2.2/src/javascript/index.js';
+  import GeorgianHyphenator from 'https://cdn.jsdelivr.net/npm/georgian-hyphenation@2.2.4/src/javascript/index.js';
 
   async function initializeHyphenator() {
     const hyphenator = new GeorgianHyphenator('\u00AD');
@@ -235,33 +235,103 @@ print(to_hunspell_format('საქართველო'))
 
 ---
 
-## 🌐 Browser Extension / ბრაუზერის გაფართოება
+### 🌐 Browser Extension / ბრაუზერის გაფართოება
+
+**Current Version: v2.2.4**
 
 ### Features:
 
-* ✅ Automatic hyphenation on all Georgian websites
-* ✅ Works on Facebook, Twitter, Wikipedia, News sites
-* ✅ Toggle on/off per site
-* ✅ Real-time statistics
-* ✅ Zero performance impact
-* ✅ Supports dynamic content (React, Vue, Angular)
-* ✅ Respects editable fields (no interference with typing)
+* ✅ **v2.2.4 Update**: Critical CSS fix for visible soft hyphens
+* ✅ **Automatic hyphenation** on all Georgian websites
+* ✅ **CSS Injection**: Properly hides soft hyphens until line break
+* ✅ **Smart Skip Logic**: Balanced detection - skips navigation, headers, buttons
+* ✅ **Smart Justify**: Optional text alignment (Firefox only)
+* ✅ **Dictionary Support**: 150+ exception words from CDN
+* ✅ **Works everywhere**: Facebook, Twitter, Wikipedia, News sites
+* ✅ **Toggle on/off** per site
+* ✅ **Real-time statistics**: Words processed & hyphenated count
+* ✅ **Zero performance impact**: Efficient O(1) harmonic cluster lookup
+* ✅ **Dynamic content support**: React, Vue, Angular, AJAX
+* ✅ **Respects editable fields**: No interference with typing
+* ✅ **MutationObserver**: Automatically processes new content
 
 ### Installation:
 
-**Firefox:**
+**🦊 Firefox (Recommended):**
 
 1. Visit [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/georgian-hyphenation/)
 2. Click "Add to Firefox"
-3. Done! ✅
+3. Extension will auto-activate on Georgian websites
+4. Click extension icon to toggle or view stats
 
-**Chrome (Manual):**
+**🌐 Chrome (Manual Install):**
 
-1. Download `browser-extension-chrome.zip`
+1. Download [`georgian-hyphenation-chrome-v2.2.4.zip`](https://github.com/guramzhgamadze/georgian-hyphenation/releases)
 2. Extract ZIP file
-3. Chrome → `chrome://extensions/`
-4. Enable "Developer mode"
-5. Click "Load unpacked" → Select folder
+3. Open Chrome → `chrome://extensions/`
+4. Enable "Developer mode" (top-right toggle)
+5. Click "Load unpacked" → Select extracted folder
+6. Extension is ready! ✅
+
+### What's New in v2.2.4:
+
+**🎨 Critical CSS Fix:**
+- Fixed issue where soft hyphens were visible as dashes before line breaks
+- Added CSS injection: `hyphens: manual`, `overflow-wrap: break-word`
+- Properly hides `\u00AD` characters until browser line breaking
+- Fixes font rendering issues across different websites
+
+**🎯 Balanced Skip Logic:**
+- Skips: `<nav>`, `<header>`, `<footer>`, `<h1-h6>`, `<button>`, large fonts (>20px)
+- Processes: Paragraph text, article content, descriptions
+- 5-level ancestor check (optimized from 15 levels)
+- Removed overly restrictive content container detection
+
+**⚡ Performance:**
+- Embedded NPM v2.2.4 library (no external dependencies)
+- O(1) harmonic cluster lookup with Set structure
+- Efficient DOM traversal with depth limits
+- Throttled processing (1000ms cooldown)
+
+**🧹 Other Improvements:**
+- Automatic sanitization of old hyphens
+- CSS removal on extension disable
+- Better console logging for debugging
+- MutationObserver for dynamic content
+
+### Browser Compatibility:
+
+* ✅ **Firefox** 109+ (Manifest v2)
+* ✅ **Chrome** 88+ (Manifest v3)
+
+### Usage:
+
+**After Installation:**
+1. Visit any Georgian website (e.g., formulanews.ge, interpressnews.ge)
+2. Extension auto-processes text content
+3. Click extension icon to:
+   - Toggle hyphenation on/off
+   - Toggle Smart Justify (Firefox only)
+   - View statistics (words processed/hyphenated)
+
+**Debug Mode:**
+- Open Browser Console (F12)
+- Look for logs: `🇬🇪 GH v2.2.4: ...`
+- Check processing stats and any errors
+
+### Troubleshooting:
+
+**Problem: Soft hyphens visible as dashes**
+- Solution: v2.2.4 fixes this! Update to latest version.
+
+**Problem: Not hyphenating on some sites**
+- Check Console (F12) for "Skipping blacklisted site" message
+- Blacklisted: claude.ai, chat.openai.com, gemini.google.com
+
+**Problem: Extension not loading**
+- Refresh page after installation
+- Check extension is enabled in browser settings
+- Review Console for error messages
 
 ---
 
@@ -350,27 +420,65 @@ Open browser console (F12) to see detailed logs:
 * ⚡ **Performance**: O(1) harmonic cluster lookup with Set structure
 * 🎯 **Hybrid Engine**: Dictionary-first, algorithm fallback
 
-### Changelog:
+## 📝 Changelog
 
-**v2.2.4 (2025-01-27)**
-* Fixed ESM module loading with manual `type="module"` injection
-* Added Dictionary Support toggle (150+ exceptions)
-* Updated to NPM v2.2.2 CDN (jsdelivr)
-* Improved console logging
-* Better error handling
+### Version 2.2.4 (Browser Extensions) (2026-01-29) — CSS Fix & Optimization 🎨
 
-**v2.0.8 (2025-01-23)**
-* Moved to Top-Level Admin Menu with icon
-* Added modern Red/Green UI switches
-* Smart Fallback for selector detection
-* Helper text for Custom CSS selectors
+**🎨 Critical CSS Fix:**
+* Fixed visible soft hyphens issue - hyphens now properly hidden until line break
+* Added comprehensive CSS injection for proper hyphenation rendering
+* Fixed font-feature-settings conflicts
 
-**v2.0.7 (2025-01-22)**
-* Added detailed helper text
+**🎯 Balanced Skip Logic:**
+* Optimized skip detection: fontSize > 20px (from 16px)
+* 5-level ancestor check (optimized from 15 levels)
+* Removed restrictive content container requirement
+* Better navigation/header/button detection
 
-**v2.0.6 (2025-01-21)**
-* Added modern UI switches
+**⚡ Performance:**
+* Embedded NPM v2.2.4 library code
+* O(1) harmonic cluster lookup
+* Efficient DOM traversal
+* Throttled processing
 
+**Chrome Extension v2.2.4:**
+* Manifest v3 compliance
+* Service worker background script
+* CSS injection with ID for removal
+* Works: formulanews.ge tested (514 words processed, 483 hyphenated)
+
+**Firefox Extension v2.2.4:**
+* Manifest v2 with browser.* API
+* Smart Justify toggle in UI
+* browser.storage.sync for settings
+* Auto-injection on page load
+
+---
+
+### Version 2.2.4 (WordPress Plugin) (2026-01-27)
+
+* 🌐 **ESM Module Loading**: Fixed browser compatibility with proper `type="module"` injection
+* 📚 **Dictionary Support**: Optional CDN loading of 150+ exception words
+* 🧹 **Auto Sanitization**: Built-in cleaning of old hyphens before processing
+* ⚡ **Performance**: O(1) harmonic cluster lookup with Set structure
+
+---
+
+### Version 2.2.2 (Library) (2026-01-27) — Documentation Update 📝
+
+* 📝 **README Corrections**: გამოსწორდა არასწორი მაგალითები (მაგ: "კლასსი" → წაშლილია).
+* 📚 **Python README**: განახლდა Python package-ის README სრული დოკუმენტაციით.
+* ✅ **PyPI v2.2.2**: ხელახლა გამოქვეყნდა PyPI-ზე გასწორებული დოკუმენტაციით.
+
+---
+
+### Version 2.2.1 (Library) (2026-01-26) — The Modernization Update 🚀
+
+* 🧹 **Automatic Sanitization**: დაემატა `_stripHyphens` ფუნქციონალი
+* 📦 **ES Modules (ESM)**: სრული ESM სტანდარტი
+* 📚 **Async Dictionary Support**: `loadDefaultLibrary()` მეთოდი
+* ⚡ **Optimization**: Set-based harmonic cluster lookup
+* 🛠 **Package Improvements**: განახლებული package.json
 ---
 
 ## 🎨 Live Demo
@@ -498,11 +606,11 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 * ✅ v2.0 Academic Logic - **DONE**
 * ✅ PyPI v2.2.2 release - **DONE**
-* ✅ NPM v2.2.2 release - **DONE**
-* ✅ Firefox Extension v2.0.1 - **DONE**
+* ✅ NPM v2.2.4 release - **DONE**
+* ✅ Firefox Extension v2.2.4 - **DONE**
+* ✅ Chrome Extension v2.2.4 - **DONE**
 * ✅ WordPress Plugin v2.2.4 - **DONE**
 * 🔄 Chrome Web Store submission
-* 📱 Mobile app (React Native)
 
 ### Mid-term (2026 Q3-Q4)
 
