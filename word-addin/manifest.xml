@@ -79,7 +79,7 @@
                 <bt:Image id="Icon.80x80" DefaultValue="https://guramzhgamadze.github.io/georgian-hyphenation/word-addin/assets/icon-80.png"/>
             </bt:Images>
             <bt:Urls>
-                <bt:Url id="Commands.Url" DefaultValue="https://guramzhgamadze.github.io/georgian-hyphenation/word-addin/commands.html" />
+                <bt:Url id="Commands.Url" DefaultValue="https://guramzhgamadze.github.io/georgian-hyphenation/word-addin/commands/commands.html" />
                 <bt:Url id="Taskpane.Url" DefaultValue="https://guramzhgamadze.github.io/georgian-hyphenation/word-addin/taskpane.html" />
                 <bt:Url id="GetStarted.LearnMoreUrl" DefaultValue="https://github.com/guramzhgamadze/georgian-hyphenation" />
             </bt:Urls>
