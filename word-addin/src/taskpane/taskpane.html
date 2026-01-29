@@ -1,111 +1,154 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Georgian Hyphenation</title>
-  
-  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
-  
-  <style>
-    body {
-      margin: 0;
-      padding: 20px;
-      font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-    }
-    .container {
-      max-width: 500px;
-    }
-    h1 {
-      font-size: 24px;
-      margin: 0 0 10px 0;
-    }
-    .version {
-      font-size: 14px;
-      opacity: 0.8;
-      margin-bottom: 30px;
-    }
-    button {
-      width: 100%;
-      padding: 15px;
-      margin-bottom: 15px;
-      border: none;
-      border-radius: 8px;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      background: #4CAF50;
-      color: white;
-      transition: all 0.3s;
-    }
-    button:hover {
-      background: #45a049;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    }
-    button:active {
-      transform: translateY(0);
-    }
-    .features {
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 8px;
-      padding: 15px;
-      margin-top: 20px;
-      font-size: 14px;
-    }
-    .features ul {
-      margin: 10px 0 0 0;
-      padding-left: 20px;
-    }
-    .features li {
-      margin-bottom: 5px;
-    }
-    #status {
-      padding: 10px;
-      margin-bottom: 15px;
-      border-radius: 6px;
-      text-align: center;
-      font-size: 14px;
-      background: rgba(255, 255, 255, 0.1);
-    }
-    #status.success {
-      background: rgba(76, 175, 80, 0.3);
-    }
-    #status.error {
-      background: rgba(244, 67, 54, 0.3);
-    }
-  </style>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Georgian Hyphenation</title>
+    
+    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+    <link rel="stylesheet" href="https://static2.sharepointonline.com/files/fabric/office-ui-fabric-core/11.0.0/css/fabric.min.css" />
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #ffffff;
+            color: #323130;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+        }
+
+        .header {
+            width: 100%;
+            padding: 30px 0;
+            background-color: #2b579a;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .content-main {
+            width: 90%;
+            max-width: 300px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            margin: 0;
+            font-weight: 600;
+        }
+
+        .version-badge {
+            margin-top: 8px;
+            padding: 2px 10px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            font-size: 11px;
+        }
+
+        #status {
+            width: 100%;
+            margin-bottom: 25px;
+            padding: 10px 0;
+            background-color: #f3f2f1;
+            border-bottom: 2px solid #0078d4;
+            font-size: 13px;
+            text-align: center;
+        }
+
+        /* ორივე ღილაკის ერთიანი სტილი */
+        .ms-Button {
+            width: 100%;
+            height: 48px; /* ოდნავ გავზარდეთ სიმაღლე მეტი კომფორტისთვის */
+            margin-bottom: 12px;
+            border-radius: 4px;
+            border: 1px solid #2b579a;
+            background-color: #2b579a;
+            color: #ffffff;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s ease-in-out;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ms-Button:hover {
+            background-color: #1e3e6d;
+            border-color: #1e3e6d;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        .ms-Button:active {
+            transform: translateY(1px);
+        }
+
+        .features-card {
+            width: 100%;
+            margin-top: 25px;
+            padding: 15px;
+            border: 1px solid #edebe9;
+            background-color: #faf9f8;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .features-card strong {
+            display: block;
+            text-align: center;
+            margin-bottom: 12px;
+            color: #2b579a;
+            font-size: 14px;
+        }
+
+        .description-text {
+            font-size: 13px;
+            color: #605e5c;
+            line-height: 1.6;
+            margin: 0;
+            text-align: justify;
+            text-justify: inter-word;
+        }
+    </style>
 </head>
-<body>
-  <div class="container">
-    <h1>🇬🇪 ქართული დამარცვლა</h1>
-    <p class="version">Georgian Hyphenation v2.2.4</p>
-    
-    <div id="status">Ready</div>
-    
-    <!-- ✅ NO onclick attribute! -->
-    <button id="hyphenate-document">
-      დაამარცვლე დოკუმენტი / Hyphenate Document
-    </button>
-    
-    <button id="hyphenate-selection">
-      დაამარცვლე მონიშნული / Hyphenate Selection
-    </button>
-    
-    <div class="features">
-      <strong>v2.2.4 Features:</strong>
-      <ul>
-        <li>62 Harmonic Clusters</li>
-        <li>150+ Exception Words</li>
-        <li>Anti-Orphan Protection</li>
-        <li>97%+ Accuracy</li>
-      </ul>
+<body class="ms-Fabric">
+    <div class="header">
+        <h1 class="ms-font-xl">Georgian Hyphenation</h1>
+        <div class="version-badge">Version 2.2.4 Hybrid</div>
     </div>
-  </div>
-  
-  <script src="taskpane.js"></script>
+
+    <div class="content-main">
+        <div id="status">მზად არის სამუშაოდ</div>
+        
+        <button id="hyphenate-document" class="ms-Button">
+            <span class="ms-Button-label">დაამარცვლე მთლიანი დოკუმენტი</span>
+        </button>
+        
+        <button id="hyphenate-selection" class="ms-Button">
+            <span class="ms-Button-label">დაამარცვლე მონიშნული ტექსტი</span>
+        </button>
+        
+        <div class="features-card">
+            <strong>რას აკეთებს ეს პროგრამა?</strong>
+            <p class="description-text">
+                ეს არის დამხმარე ინსტრუმენტი ქართულენოვანი ტექსტების სწორი ფორმატირებისთვის. 
+                პროგრამა ავტომატურად ყოფს სიტყვებს მარცვლებად და სვამს გადატანის ნიშნებს იქ, 
+                სადაც ეს გრამატიკულად და სტამბური წესების მიხედვითაა საჭირო. 
+                შედეგად, თქვენ იღებთ ვიზუალურად გამართულ და პროფესიონალურად დალაგებულ 
+                ტექსტს Word-ის დოკუმენტში.
+            </p>
+        </div>
+    </div>
+    
+    <script src="taskpane.js"></script>
 </body>
 </html>
