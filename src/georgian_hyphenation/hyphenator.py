@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Georgian Hyphenation Library v2.2.1
+Georgian Hyphenation Library v2.2.6
 ქართული ენის დამარცვლის ბიბლიოთეკა
 
 Modernized & Optimized
@@ -8,6 +8,7 @@ Modernized & Optimized
 - Harmonic Clusters Support
 - Gemination Handling
 - O(1) Cluster Lookup with Set
+- Preserves compound word hyphens (v2.2.6)
 
 Author: Guram Zhgamadze
 """
@@ -28,6 +29,7 @@ class GeorgianHyphenator:
     - Harmonic cluster awareness
     - Gemination (double consonant) handling
     - Anti-orphan protection
+    - Preserves compound word hyphens (v2.2.6)
     """
     
     def __init__(self, hyphen_char: str = '\u00AD'):
@@ -59,16 +61,27 @@ class GeorgianHyphenator:
         """
         Remove existing hyphenation symbols (Sanitization)
         
+        v2.2.6: Only removes soft hyphens and zero-width spaces,
+        preserves regular hyphens for compound words.
+        
         Args:
             text: Input text
             
         Returns:
-            Text without any hyphens
+            Text without soft hyphens or zero-width spaces
         """
         if not text:
             return ''
-        # Remove soft hyphens and visible hyphens
-        return text.replace('\u00AD', '').replace(self.hyphen_char, '').replace('-', '')
+        # v2.2.6: Remove only soft hyphens (\u00AD) and zero-width spaces (\u200B)
+        # Preserve regular hyphens (-) for compound words
+        text = text.replace('\u00AD', '')  # soft hyphen
+        text = text.replace('\u200B', '')  # zero-width space
+        
+        # Remove custom hyphen_char if it's different from regular hyphen
+        if self.hyphen_char not in ['-', '\u00AD']:
+            text = text.replace(self.hyphen_char, '')
+        
+        return text
     
     def load_library(self, data: Dict[str, str]) -> None:
         """
@@ -112,19 +125,19 @@ class GeorgianHyphenator:
                 with open(data_file, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                     self.load_library(data)
-                    print(f"Georgian Hyphenation v2.2.1: Dictionary loaded ({len(self.dictionary)} words)")
+                    print(f"Georgian Hyphenation v2.2.6: Dictionary loaded ({len(self.dictionary)} words)")
             else:
-                print("Georgian Hyphenation v2.2.1: Dictionary not found, using algorithm only")
+                print("Georgian Hyphenation v2.2.6: Dictionary not found, using algorithm only")
         
         except Exception as e:
-            print(f"Georgian Hyphenation v2.2.1: Could not load dictionary ({e}), using algorithm only")
+            print(f"Georgian Hyphenation v2.2.6: Could not load dictionary ({e}), using algorithm only")
     
     def hyphenate(self, word: str) -> str:
         """
         Hyphenate a Georgian word
         
-        v2.2.1 Behavior: Always strip existing hyphens and re-hyphenate.
-        This corrects any previously incorrect hyphenation.
+        v2.2.6 Behavior: Strips soft hyphens but preserves regular hyphens
+        in compound words.
         
         Args:
             word: Georgian word to hyphenate
@@ -132,11 +145,11 @@ class GeorgianHyphenator:
         Returns:
             Hyphenated word with configured hyphen character
         """
-        # v2.2.1: Always strip existing hyphens first (sanitization)
+        # v2.2.6: Strip only soft hyphens and zero-width spaces
         sanitized_word = self._strip_hyphens(word)
         
-        # Remove punctuation for dictionary lookup
-        clean_word = re.sub(r'[.,/#!$%^&*;:{}=\-_`~()]', '', sanitized_word)
+        # Remove punctuation for dictionary lookup (but not hyphens)
+        clean_word = re.sub(r'[.,/#!$%^&*;:{}=_`~()]', '', sanitized_word)
         
         # Check dictionary first (if available)
         if clean_word in self.dictionary:
@@ -250,8 +263,7 @@ class GeorgianHyphenator:
         - Non-Georgian characters
         - Word boundaries
         - Whitespace
-        
-        v2.2.1: Strips existing hyphens from entire text first
+        - Regular hyphens in compound words (v2.2.6)
         
         Args:
             text: Text to hyphenate (can contain multiple words)
@@ -262,7 +274,7 @@ class GeorgianHyphenator:
         if not text:
             return ''
         
-        # v2.2.1: Strip existing hyphens from entire text
+        # v2.2.6: Strip only soft hyphens and zero-width spaces
         sanitized_text = self._strip_hyphens(text)
         
         # Split text into Georgian words and other characters

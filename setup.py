@@ -6,15 +6,19 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="georgian-hyphenation",
-    version="2.0.0",
+    version="2.2.6.1",
     author="Guram Zhgamadze",
     author_email="guramzhgamadze@gmail.com",
-    description="Georgian Language Hyphenation Library v2.0 - Academic Logic",
+    description="Georgian Language Hyphenation Library v2.2.6 - Preserves compound word hyphens",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/guramzhgamadze/georgian-hyphenation",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
+    include_package_data=True,
+    package_data={
+        "georgian_hyphenation": ["data/*.json"],
+    },
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
@@ -26,6 +30,8 @@ setup(
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
+        "Topic :: Text Processing :: Linguistic",
+        "Natural Language :: Georgian",
     ],
     python_requires=">=3.7",
 )
