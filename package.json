@@ -1,6 +1,6 @@
 {
   "name": "georgian-hyphenation",
-  "version": "2.2.5",
+  "version": "2.2.6",
   "description": "Georgian Language Hyphenation Library - Browser + Node.js compatible",
   "main": "src/javascript/index.cjs",
   "module": "src/javascript/index.js",

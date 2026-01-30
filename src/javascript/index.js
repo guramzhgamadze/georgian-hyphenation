@@ -1,5 +1,5 @@
 /**
- * Georgian Hyphenation Library v2.2.5
+ * Georgian Hyphenation Library v2.2.6
  * Browser + Node.js Compatible (ES Module)
  */
 
@@ -54,7 +54,7 @@ export default class GeorgianHyphenator {
     if (typeof window !== 'undefined' && typeof fetch !== 'undefined') {
       try {
         // ✅ სწორი CDN URL - jsdelivr უფრო სანდოა unpkg-ზე
-        const response = await fetch('https://cdn.jsdelivr.net/npm/georgian-hyphenation@2.2.5/data/exceptions.json');
+        const response = await fetch('https://cdn.jsdelivr.net/npm/georgian-hyphenation@2.2.6/data/exceptions.json');
         
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);
@@ -64,9 +64,9 @@ export default class GeorgianHyphenator {
         this.loadLibrary(data);
         this.dictionaryLoaded = true;
         
-        console.log(`Georgian Hyphenation v2.2.5: Dictionary loaded (${this.dictionary.size} words)`);
+        console.log(`Georgian Hyphenation v2.2.6: Dictionary loaded (${this.dictionary.size} words)`);
       } catch (error) {
-        console.warn('Georgian Hyphenation v2.2.5: Dictionary not available, using algorithm only');
+        console.warn('Georgian Hyphenation v2.2.6: Dictionary not available, using algorithm only');
         console.warn('Error:', error.message);
       }
     }
@@ -78,9 +78,9 @@ export default class GeorgianHyphenator {
         const data = module.default;
         this.loadLibrary(data);
         this.dictionaryLoaded = true;
-        console.log(`Georgian Hyphenation v2.2.5: Dictionary loaded (${this.dictionary.size} words)`);
+        console.log(`Georgian Hyphenation v2.2.6: Dictionary loaded (${this.dictionary.size} words)`);
       } catch (error) {
-        console.warn('Georgian Hyphenation v2.2.5: Local dictionary not found, using algorithm only');
+        console.warn('Georgian Hyphenation v2.2.6: Local dictionary not found, using algorithm only');
       }
     }
   }

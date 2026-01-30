@@ -1,5 +1,5 @@
 /**
- * Georgian Hyphenation Library v2.2.5
+ * Georgian Hyphenation Library v2.2.6
  * Node.js CommonJS Compatible
  */
 
@@ -44,9 +44,9 @@ class GeorgianHyphenator {
       const data = require('../../data/exceptions.json');
       this.loadLibrary(data);
       this.dictionaryLoaded = true;
-      console.log(`Georgian Hyphenation v2.2.5: Dictionary loaded (${this.dictionary.size} words)`);
+      console.log(`Georgian Hyphenation v2.2.6: Dictionary loaded (${this.dictionary.size} words)`);
     } catch (error) {
-      console.warn('Georgian Hyphenation v2.2.5: Local dictionary not found, using algorithm only');
+      console.warn('Georgian Hyphenation v2.2.6: Local dictionary not found, using algorithm only');
     }
   }
 
