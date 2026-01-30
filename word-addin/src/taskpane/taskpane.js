@@ -1,7 +1,8 @@
 /* global Office Word */
 
 /**
- * ✅ Georgian Hyphenation Library v3.3.0 (Strict Orphan Fix)
+ * ✅ Georgian Hyphenation Library v3.3.2 (Ghost Character Fix)
+ * Fixes: Removes trailing &nbsp; symbol after hyphenation
  */
 class GeorgianHyphenator {
     constructor(hyphenChar = '&shy;') {
@@ -25,7 +26,8 @@ class GeorgianHyphenator {
 
     _stripHyphens(text) {
         if (!text) return '';
-        return text.replace(/[\u00AD\u200B\-]/g, '').replace(new RegExp(this.hyphenChar, 'g'), '');
+        // ინარჩუნებს (-) დეფისს, შლის მხოლოდ უხილავებს
+        return text.replace(/[\u00AD\u200B]/g, '').replace(new RegExp(this.hyphenChar, 'g'), '');
     }
 
     loadLibrary(data) {
@@ -67,23 +69,20 @@ class GeorgianHyphenator {
             result = this.applyAlgorithm(sanitizedWord);
         }
 
-        // ✅ ეს არის ის მაგიური ადგილი, რომელიც "ობლებს" ასწორებს
         return this.fixOrphans(result);
     }
 
-    // 🛡️ უსაფრთხო მეთოდი: მასივებად შლის და 1-ასოიან ნაწილებს აწებებს
     fixOrphans(hyphenatedWord) {
         let parts = hyphenatedWord.split(this.hyphenChar);
-
         if (parts.length <= 1) return hyphenatedWord;
 
-        // 1. თუ პირველი მარცვალი 1 ასოა -> ვაწებებთ მეორეს
+        // Start fix
         if (parts[0].length === 1) {
             parts[0] = parts[0] + parts[1];
             parts.splice(1, 1);
         }
 
-        // 2. თუ ბოლო მარცვალი 1 ასოა -> ვაწებებთ წინას
+        // End fix
         if (parts.length > 1 && parts[parts.length - 1].length === 1) {
             let lastIdx = parts.length - 1;
             parts[lastIdx - 1] = parts[lastIdx - 1] + parts[lastIdx];
@@ -144,6 +143,7 @@ class GeorgianHyphenator {
     hyphenateText(text) {
         if (!text) return '';
         const sanitizedText = this._stripHyphens(text);
+        
         return sanitizedText.replace(/([ა-ჰ]+)/g, (word) => {
             if (word.length >= 4) return this.hyphenate(word);
             return word;
@@ -156,7 +156,7 @@ class GeorgianHyphenator {
  */
 Office.onReady((info) => {
     if (info.host === Office.HostType.Word) {
-        console.log('🇬🇪 Georgian Hyphenation Add-in Ready v3.3.0');
+        console.log('🇬🇪 Georgian Hyphenation Add-in Ready v3.3.2');
 
         const docBtn = document.getElementById('hyphenate-document');
         const selBtn = document.getElementById('hyphenate-selection');
@@ -164,8 +164,7 @@ Office.onReady((info) => {
         if (docBtn) docBtn.onclick = hyphenateDocument;
         if (selBtn) selBtn.onclick = hyphenateSelection;
         
-        // სტატუს ბარში ვწერთ ვერსიას, რომ დარწმუნდეთ განახლებაში
-        showStatus('მზად არის (v3.3.0)', '');
+        showStatus('მზად არის (v3.3.2)', '');
     }
 });
 
@@ -182,7 +181,12 @@ async function preserveFormattingHyphenation(context, objectWithHtml) {
 
     walkAndHyphenate(doc.body, hyphenator);
 
-    const newHtml = doc.body.innerHTML;
+    let newHtml = doc.body.innerHTML;
+
+    // 🚮 FIX: ბოლოში დამატებული "მოჩვენება" სიმბოლოების (&nbsp; და სფეისები) მოშორება
+    // Regex ჭრის ბოლოში არსებულ ნებისმიერ &nbsp;-ს ან \u00A0-ს
+    newHtml = newHtml.replace(/(&nbsp;|[\s\u00A0])+$/g, '');
+
     objectWithHtml.insertHtml(newHtml, Word.InsertLocation.replace);
     await context.sync();
 }
@@ -256,6 +260,6 @@ function showStatus(message, type) {
             status.style.borderBottom = '2px solid #0078d4';
             status.style.color = '#323130';
         }
-        if (type) setTimeout(() => { showStatus('მზად არის (v3.3.0)', ''); }, 3000);
+        if (type) setTimeout(() => { showStatus('მზად არის (v3.3.2)', ''); }, 3000);
     }
 }
