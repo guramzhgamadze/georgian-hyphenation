@@ -1,8 +1,8 @@
 /* global Office Word */
 
 /**
- * ✅ Georgian Hyphenation Library v3.6.0 (Nuclear Cleaner)
- * Fixes: Physically deletes trailing ghost characters using Word Object Model
+ * ✅ Georgian Hyphenation Library v3.7.0 (Last Paragraph Fix)
+ * Fixes: Ghost character removal now works specifically for "Hyphenate Document"
  */
 class GeorgianHyphenator {
     constructor(hyphenChar = '&shy;') {
@@ -26,7 +26,6 @@ class GeorgianHyphenator {
 
     _stripHyphens(text) {
         if (!text) return '';
-        // ინარჩუნებს (-) დეფისს
         return text.replace(/[\u00AD\u200B]/g, '').replace(new RegExp(this.hyphenChar, 'g'), '');
     }
 
@@ -76,13 +75,11 @@ class GeorgianHyphenator {
         let parts = hyphenatedWord.split(this.hyphenChar);
         if (parts.length <= 1) return hyphenatedWord;
 
-        // Start fix
         if (parts[0].length === 1) {
             parts[0] = parts[0] + parts[1];
             parts.splice(1, 1);
         }
 
-        // End fix
         if (parts.length > 1 && parts[parts.length - 1].length === 1) {
             let lastIdx = parts.length - 1;
             parts[lastIdx - 1] = parts[lastIdx - 1] + parts[lastIdx];
@@ -144,7 +141,6 @@ class GeorgianHyphenator {
         if (!text) return '';
         const sanitizedText = this._stripHyphens(text);
         
-        // Trim-ს ვუკეთებთ თვითონ სიტყვებსაც, რომ შემთხვევით სფეისი არ გაჰყვეს
         return sanitizedText.replace(/([ა-ჰ]+)/g, (word) => {
             if (word.length >= 4) return this.hyphenate(word);
             return word;
@@ -157,7 +153,7 @@ class GeorgianHyphenator {
  */
 Office.onReady((info) => {
     if (info.host === Office.HostType.Word) {
-        console.log('🇬🇪 Georgian Hyphenation Add-in Ready v3.6.0');
+        console.log('🇬🇪 Georgian Hyphenation Add-in Ready v3.7.0');
 
         const docBtn = document.getElementById('hyphenate-document');
         const selBtn = document.getElementById('hyphenate-selection');
@@ -165,7 +161,7 @@ Office.onReady((info) => {
         if (docBtn) docBtn.onclick = hyphenateDocument;
         if (selBtn) selBtn.onclick = hyphenateSelection;
         
-        showStatus('მზად არის (v3.6.0)', '');
+        showStatus('მზად არის (v3.7.0)', '');
     }
 });
 
@@ -184,7 +180,7 @@ async function preserveFormattingHyphenation(context, objectWithHtml) {
 
     let newHtml = doc.body.innerHTML;
 
-    // 1. HTML String Trim
+    // 1. JS String Trim (Basic cleaning)
     newHtml = newHtml.trim();
     const tailRegex = /(&nbsp;|[\s\u00A0\u200B]|<br\s*\/?>)+$/gi;
     while (tailRegex.test(newHtml)) {
@@ -193,44 +189,25 @@ async function preserveFormattingHyphenation(context, objectWithHtml) {
 
     objectWithHtml.insertHtml(newHtml, Word.InsertLocation.replace);
     
-    // 2. ☢️ WORD OBJECT MODEL CLEANER
-    // ჩასმის შემდეგ, ფიზიკურად ვამოწმებთ Word-ის ობიექტს
+    // 2. ☢️ WORD CLEANER (OPTIMIZED)
     await cleanUpWordArtifacts(context, objectWithHtml);
     
     await context.sync();
 }
 
-// ახალი ფუნქცია: Word-ის დონეზე შლის ბოლო სიმბოლოებს
+// ✅ განახლებული ფუნქცია: იყენებს getLast()-ს, რაც მუშაობს როგორც Body-ზე, ისე Selection-ზე
 async function cleanUpWordArtifacts(context, rangeObject) {
-    // ვიღებთ რეინჯის ბოლო პარაგრაფს
-    // (მთლიანი დოკუმენტისთვის body, სელექციისთვის თვითონ selection)
-    const paragraphs = rangeObject.paragraphs;
-    paragraphs.load("items");
+    // 1. ვიღებთ კონკრეტულად ბოლო პარაგრაფს (მთელი სიის ჩატვირთვის გარეშე)
+    const lastParagraph = rangeObject.paragraphs.getLast();
+    
+    // 2. ვეძებთ მხოლოდ ამ ბოლო პარაგრაფში "მოჩვენება" სიმბოლოებს (^0160 = Non-breaking space)
+    const searchResults = lastParagraph.search("^0160", { matchWildcards: false });
+    searchResults.load("items");
     await context.sync();
 
-    if (paragraphs.items.length > 0) {
-        const lastParagraph = paragraphs.items[paragraphs.items.length - 1];
-        
-        // ვიღებთ პარაგრაფის ბოლო სიმბოლოებს
-        const charRange = lastParagraph.getRange("End"); 
-        // "End" ნიშნავს პარაგრაფის ბოლოს. ჩვენ გვინდა ოდნავ უკან დავიწიოთ რომ შევამოწმოთ
-        // მაგრამ Word API-ში ჯობს Search გამოვიყენოთ ბოლო სიმბოლოზე
-        
-        // უფრო მარტივი გზა: ვეძებთ ბოლოში არსებულ Non-breaking space-ს
-        const searchResults = lastParagraph.search("^0160", { matchWildcards: false });
-        searchResults.load("items");
-        await context.sync();
-
-        // თუ ბოლო პარაგრაფში არის ეს სიმბოლოები, ვშლით მათ
-        // (უკუღმა ვშლით, რომ ინდექსები არ აირიოს)
-        for (let i = searchResults.items.length - 1; i >= 0; i--) {
-            const foundItem = searchResults.items[i];
-            
-            // ვამოწმებთ, ნამდვილად ბოლოშია თუ არა (ან ბოლოსთან ახლოს)
-            // ეს რომ შუა ტექსტში არ წაშალოს საჭირო სიმბოლოები
-            // თუმცა ^0160 (Non-breaking space) ტექსტის ბოლოში არაფერში გვჭირდება
-            foundItem.delete();
-        }
+    // 3. თუ ვიპოვეთ, ვშლით
+    for (let i = searchResults.items.length - 1; i >= 0; i--) {
+        searchResults.items[i].delete();
     }
 }
 
@@ -303,6 +280,6 @@ function showStatus(message, type) {
             status.style.borderBottom = '2px solid #0078d4';
             status.style.color = '#323130';
         }
-        if (type) setTimeout(() => { showStatus('მზად არის (v3.6.0)', ''); }, 3000);
+        if (type) setTimeout(() => { showStatus('მზად არის (v3.7.0)', ''); }, 3000);
     }
 }
