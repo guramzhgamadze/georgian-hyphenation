@@ -1,7 +1,7 @@
 /* global Office Word */
 
 /**
- * ✅ Georgian Hyphenation Library v2.2.4 (DOM Deep Clean)
+ * ✅ Georgian Hyphenation Library v2.2.4.1 (DOM Deep Clean)
  * Fixes: Recursively removes trailing ghost characters from the DOM tree
  */
 class GeorgianHyphenator {
@@ -156,7 +156,7 @@ class GeorgianHyphenator {
  */
 Office.onReady((info) => {
     if (info.host === Office.HostType.Word) {
-        console.log('🇬🇪 Georgian Hyphenation Add-in Ready v2.2.4');
+        console.log('🇬🇪 Georgian Hyphenation Add-in Ready v2.2.4.1');
 
         const docBtn = document.getElementById('hyphenate-document');
         const selBtn = document.getElementById('hyphenate-selection');
@@ -164,7 +164,7 @@ Office.onReady((info) => {
         if (docBtn) docBtn.onclick = hyphenateDocument;
         if (selBtn) selBtn.onclick = hyphenateSelection;
         
-        showStatus('მზად არის (v2.2.4)', '');
+        showStatus('მზად არის (v2.2.4.1)', '');
     }
 });
 
@@ -286,6 +286,6 @@ function showStatus(message, type) {
             status.style.borderBottom = '2px solid #0078d4';
             status.style.color = '#323130';
         }
-        if (type) setTimeout(() => { showStatus('მზად არის (v2.2.4)', ''); }, 3000);
+        if (type) setTimeout(() => { showStatus('მზად არის (v2.2.4.1)', ''); }, 3000);
     }
 }
