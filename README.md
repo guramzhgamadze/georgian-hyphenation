@@ -311,7 +311,6 @@ The algorithm applies Georgian phonological principles:
 | **V-C-V** | Split after first vowel | მამა | მა-მა |
 | **V-CC-V** | Split between consonants | ბარბარე | ბარ-ბა-რე |
 | **V-XY-V** | Keep harmonic clusters | ასტრონომია | ას-ტრო-ნო-მი-ა |
-| **V-CC-V** (gem) | Split double consonants | ვარდი) | ვარ-დი|
 | **Compound** | Preserve existing hyphens | მაგ-რამ | მაგ-რამ |
 
 ### Harmonic Clusters (70+ supported)
