@@ -1,8 +1,8 @@
 /* global Office Word */
 
 /**
- * ✅ Georgian Hyphenation Library v3.5.0 (Aggressive Trim)
- * Fixes: Removes double &nbsp; symbols at the end of the text
+ * ✅ Georgian Hyphenation Library v3.6.0 (Nuclear Cleaner)
+ * Fixes: Physically deletes trailing ghost characters using Word Object Model
  */
 class GeorgianHyphenator {
     constructor(hyphenChar = '&shy;') {
@@ -144,13 +144,11 @@ class GeorgianHyphenator {
         if (!text) return '';
         const sanitizedText = this._stripHyphens(text);
         
-        let processed = sanitizedText.replace(/([ა-ჰ]+)/g, (word) => {
+        // Trim-ს ვუკეთებთ თვითონ სიტყვებსაც, რომ შემთხვევით სფეისი არ გაჰყვეს
+        return sanitizedText.replace(/([ა-ჰ]+)/g, (word) => {
             if (word.length >= 4) return this.hyphenate(word);
             return word;
-        });
-
-        // 🛡️ TRIMMING: ვაშორებთ სფეისებს თვითონ სიტყვებს
-        return processed.trim();
+        }).trim();
     }
 }
 
@@ -159,7 +157,7 @@ class GeorgianHyphenator {
  */
 Office.onReady((info) => {
     if (info.host === Office.HostType.Word) {
-        console.log('🇬🇪 Georgian Hyphenation Add-in Ready v3.5.0');
+        console.log('🇬🇪 Georgian Hyphenation Add-in Ready v3.6.0');
 
         const docBtn = document.getElementById('hyphenate-document');
         const selBtn = document.getElementById('hyphenate-selection');
@@ -167,7 +165,7 @@ Office.onReady((info) => {
         if (docBtn) docBtn.onclick = hyphenateDocument;
         if (selBtn) selBtn.onclick = hyphenateSelection;
         
-        showStatus('მზად არის (v3.5.0)', '');
+        showStatus('მზად არის (v3.6.0)', '');
     }
 });
 
@@ -186,23 +184,54 @@ async function preserveFormattingHyphenation(context, objectWithHtml) {
 
     let newHtml = doc.body.innerHTML;
 
-    // 🚮 AGGRESSIVE CLEANER: აგრესიული წმენდა
-    // ვიყენებთ loop-ს, რომ დარწმუნებით მოვაშოროთ ბოლოში არსებული 
-    // ნებისმიერი რაოდენობის სფეისი, &nbsp; ან \u00A0
-    
-    // 1. ჯერ ჩვეულებრივი trim
+    // 1. HTML String Trim
     newHtml = newHtml.trim();
-
-    // 2. შემდეგ Regex-ით "ვჭამთ" ბოლო სიმბოლოებს
-    // ეს Regex შლის: &nbsp;, \u00A0, სფეისებს, <br>-ს ბოლოდან
     const tailRegex = /(&nbsp;|[\s\u00A0\u200B]|<br\s*\/?>)+$/gi;
-    
     while (tailRegex.test(newHtml)) {
         newHtml = newHtml.replace(tailRegex, '');
     }
 
     objectWithHtml.insertHtml(newHtml, Word.InsertLocation.replace);
+    
+    // 2. ☢️ WORD OBJECT MODEL CLEANER
+    // ჩასმის შემდეგ, ფიზიკურად ვამოწმებთ Word-ის ობიექტს
+    await cleanUpWordArtifacts(context, objectWithHtml);
+    
     await context.sync();
+}
+
+// ახალი ფუნქცია: Word-ის დონეზე შლის ბოლო სიმბოლოებს
+async function cleanUpWordArtifacts(context, rangeObject) {
+    // ვიღებთ რეინჯის ბოლო პარაგრაფს
+    // (მთლიანი დოკუმენტისთვის body, სელექციისთვის თვითონ selection)
+    const paragraphs = rangeObject.paragraphs;
+    paragraphs.load("items");
+    await context.sync();
+
+    if (paragraphs.items.length > 0) {
+        const lastParagraph = paragraphs.items[paragraphs.items.length - 1];
+        
+        // ვიღებთ პარაგრაფის ბოლო სიმბოლოებს
+        const charRange = lastParagraph.getRange("End"); 
+        // "End" ნიშნავს პარაგრაფის ბოლოს. ჩვენ გვინდა ოდნავ უკან დავიწიოთ რომ შევამოწმოთ
+        // მაგრამ Word API-ში ჯობს Search გამოვიყენოთ ბოლო სიმბოლოზე
+        
+        // უფრო მარტივი გზა: ვეძებთ ბოლოში არსებულ Non-breaking space-ს
+        const searchResults = lastParagraph.search("^0160", { matchWildcards: false });
+        searchResults.load("items");
+        await context.sync();
+
+        // თუ ბოლო პარაგრაფში არის ეს სიმბოლოები, ვშლით მათ
+        // (უკუღმა ვშლით, რომ ინდექსები არ აირიოს)
+        for (let i = searchResults.items.length - 1; i >= 0; i--) {
+            const foundItem = searchResults.items[i];
+            
+            // ვამოწმებთ, ნამდვილად ბოლოშია თუ არა (ან ბოლოსთან ახლოს)
+            // ეს რომ შუა ტექსტში არ წაშალოს საჭირო სიმბოლოები
+            // თუმცა ^0160 (Non-breaking space) ტექსტის ბოლოში არაფერში გვჭირდება
+            foundItem.delete();
+        }
+    }
 }
 
 function walkAndHyphenate(node, hyphenator) {
@@ -274,6 +303,6 @@ function showStatus(message, type) {
             status.style.borderBottom = '2px solid #0078d4';
             status.style.color = '#323130';
         }
-        if (type) setTimeout(() => { showStatus('მზად არის (v3.5.0)', ''); }, 3000);
+        if (type) setTimeout(() => { showStatus('მზად არის (v3.6.0)', ''); }, 3000);
     }
 }
