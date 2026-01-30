@@ -1,14 +1,14 @@
 {
   "name": "georgian-hyphenation",
-  "version": "2.2.4",
+  "version": "2.2.5",
   "description": "Georgian Language Hyphenation Library - Browser + Node.js compatible",
-  "main": "src/javascript/index.js",
+  "main": "src/javascript/index.cjs",
   "module": "src/javascript/index.js",
   "type": "module",
   "exports": {
     ".": {
       "import": "./src/javascript/index.js",
-      "require": "./src/javascript/index.js"
+      "require": "./src/javascript/index.cjs"
     },
     "./data/exceptions.json": "./data/exceptions.json"
   },
