@@ -1,8 +1,8 @@
 /* global Office Word */
 
 /**
- * ✅ Georgian Hyphenation Library v3.8.0 (Enhanced Ghost Character Removal)
- * Fixes: Complete removal of all invisible characters and empty paragraphs
+ * ✅ Georgian Hyphenation Library v3.8.1 (Safe Ghost Character Removal)
+ * Fixes: Only removes actual ghost paragraphs, preserves all content
  */
 class GeorgianHyphenator {
     constructor(hyphenChar = '&shy;') {
@@ -153,7 +153,7 @@ class GeorgianHyphenator {
  */
 Office.onReady((info) => {
     if (info.host === Office.HostType.Word) {
-        console.log('🇬🇪 Georgian Hyphenation Add-in Ready v3.8.0');
+        console.log('🇬🇪 Georgian Hyphenation Add-in Ready v3.8.1');
 
         const docBtn = document.getElementById('hyphenate-document');
         const selBtn = document.getElementById('hyphenate-selection');
@@ -161,7 +161,7 @@ Office.onReady((info) => {
         if (docBtn) docBtn.onclick = hyphenateDocument;
         if (selBtn) selBtn.onclick = hyphenateSelection;
         
-        showStatus('მზად არის (v3.8.0)', '');
+        showStatus('მზად არის (v3.8.1)', '');
     }
 });
 
@@ -189,100 +189,98 @@ async function preserveFormattingHyphenation(context, objectWithHtml) {
 
     objectWithHtml.insertHtml(newHtml, Word.InsertLocation.replace);
     
-    // 2. ☢️ ENHANCED WORD CLEANER (ყველა უხილავი სიმბოლოს წაშლა)
+    // 2. ☢️ SAFE WORD CLEANER (მხოლოდ მოჩვენება სიმბოლოების წაშლა)
     await cleanUpWordArtifacts(context, objectWithHtml);
     
     await context.sync();
 }
 
 /**
- * ✅ გაუმჯობესებული გასუფთავების ფუნქცია
- * წაშლის ყველა უხილავ სიმბოლოს და ცარიელ პარაგრაფებს
+ * ✅ უსაფრთხო გასუფთავების ფუნქცია
+ * წაშლის მხოლოდ უხილავ სიმბოლოებს, არა რეალურ კონტენტს
  */
 async function cleanUpWordArtifacts(context, rangeObject) {
     try {
-        // 1. ვიღებთ ყველა პარაგრაფს
-        const paragraphs = rangeObject.paragraphs;
-        paragraphs.load("items");
-        await context.sync();
-
-        // 2. უკუღმა გავივლით (ბოლოდან დასაწყისისკენ) და ვასუფთავებთ
-        for (let i = paragraphs.items.length - 1; i >= 0; i--) {
-            const para = paragraphs.items[i];
-            
-            // ვტვირთავთ ტექსტს
-            para.load("text");
-            await context.sync();
-
-            const text = para.text || '';
-            
-            // თუ პარაგრაფი სრულიად ცარიელია ან შეიცავს მხოლოდ უხილავ სიმბოლოებს
-            const cleanText = text.replace(/[\u00A0\u200B\s\r\n]/g, '');
-            
-            if (cleanText.length === 0 && text.length > 0) {
-                // ეს არის "მოჩვენება" პარაგრაფი - წავშალოთ
-                para.delete();
-                await context.sync();
-            } else if (i === paragraphs.items.length - 1) {
-                // ბოლო პარაგრაფისთვის ვასუფთავებთ უხილავ სიმბოლოებს
-                await cleanInvisibleCharacters(context, para);
-            }
-        }
-
-        // 3. დამატებითი გასუფთავება - ვეძებთ და ვშლით კონკრეტულ უხილავ სიმბოლოებს
+        // ვეძებთ და ვშლით მხოლოდ უხილავ სიმბოლოებს (არა ტექსტს!)
         const searchPatterns = [
-            "^0160",  // Non-breaking space
-            "^l",     // Manual line break
-            "^013"    // Paragraph mark
+            { pattern: "^0160", description: "non-breaking space" },  // Non-breaking space
+            { pattern: "^l", description: "line break" },             // Manual line break
         ];
 
-        for (const pattern of searchPatterns) {
+        for (const { pattern, description } of searchPatterns) {
             const searchResults = rangeObject.search(pattern, { matchWildcards: false });
             searchResults.load("items");
             await context.sync();
 
+            console.log(`🔍 Found ${searchResults.items.length} ${description} characters`);
+
             // წავშალოთ უკუღმა
             for (let i = searchResults.items.length - 1; i >= 0; i--) {
                 const item = searchResults.items[i];
+                
+                // ⚠️ CRITICAL: ვშლით მხოლოდ ᲛᲐᲠᲢᲝ ᲛᲓᲒᲝᲛ უხილავ სიმბოლოებს
+                // არა იმათ, რაც ტექსტშია ჩაბმული
                 item.load("text");
                 await context.sync();
                 
-                // წავშალოთ მხოლოდ თუ ეს არის ცარიელი ან უხილავი
-                if (item.text.trim().length === 0) {
+                // თუ ეს არის მხოლოდ უხილავი სიმბოლო (გარეშე რეალური ტექსტისა)
+                const cleanedText = item.text.replace(/[\u00A0\u200B\s\r\n]/g, '');
+                if (cleanedText.length === 0) {
                     item.delete();
+                    console.log(`✂️ Deleted invisible ${description}`);
                 }
             }
             await context.sync();
         }
 
+        // დამატებით: ვასუფთავებთ ბოლო ცარიელ პარაგრაფებს
+        await cleanEmptyTrailingParagraphs(context, rangeObject);
+
     } catch (error) {
         console.warn('⚠️ Cleanup warning:', error.message);
-        // არ გავაჩეროთ მთელი პროცესი თუ გასუფთავება ვერ მოხერხდა
+        // არ გავაჩეროთ მთელი პროცესი
     }
 }
 
 /**
- * ✅ დამხმარე ფუნქცია - ასუფთავებს უხილავ სიმბოლოებს კონკრეტულ პარაგრაფში
+ * ✅ ასუფთავებს მხოლოდ ბოლოში მდგომ ცარიელ პარაგრაფებს
  */
-async function cleanInvisibleCharacters(context, paragraph) {
+async function cleanEmptyTrailingParagraphs(context, rangeObject) {
     try {
-        paragraph.load("text");
+        const paragraphs = rangeObject.paragraphs;
+        paragraphs.load("items");
         await context.sync();
 
-        let text = paragraph.text;
+        const totalCount = paragraphs.items.length;
+        console.log(`📄 Total paragraphs: ${totalCount}`);
+
+        // ვამოწმებთ მხოლოდ ბოლო 3 პარაგრაფს (თავიდან ავიცილოთ ყველას წაშლა)
+        const checkCount = Math.min(3, totalCount);
         
-        // ვაცლებთ უხილავ სიმბოლოებს ბოლოდან
-        const originalLength = text.length;
-        text = text.replace(/[\u00A0\u200B\s]+$/g, '');
-        
-        // თუ შეიცვალა, ვცვლით პარაგრაფს
-        if (text.length !== originalLength) {
-            const range = paragraph.getRange();
-            range.insertText(text, Word.InsertLocation.replace);
+        for (let i = totalCount - 1; i >= totalCount - checkCount; i--) {
+            if (i < 0) break;
+            
+            const para = paragraphs.items[i];
+            para.load("text");
             await context.sync();
+
+            const text = para.text || '';
+            const cleanText = text.replace(/[\u00A0\u200B\s\r\n\t]/g, '');
+
+            // თუ სრულიად ცარიელია და ბოლოშია
+            if (cleanText.length === 0 && i === totalCount - 1) {
+                console.log(`🗑️ Deleting empty trailing paragraph ${i + 1}`);
+                para.delete();
+                await context.sync();
+            } else if (cleanText.length > 0) {
+                // თუ ვიპოვეთ არა-ცარიელი, ვჩერდებით
+                console.log(`✅ Found non-empty paragraph at ${i + 1}, stopping cleanup`);
+                break;
+            }
         }
+
     } catch (error) {
-        console.warn('⚠️ Character cleanup warning:', error.message);
+        console.warn('⚠️ Trailing paragraph cleanup warning:', error.message);
     }
 }
 
@@ -357,6 +355,6 @@ function showStatus(message, type) {
             status.style.borderBottom = '2px solid #0078d4';
             status.style.color = '#323130';
         }
-        if (type) setTimeout(() => { showStatus('მზად არის (v3.8.0)', ''); }, 3000);
+        if (type) setTimeout(() => { showStatus('მზად არის (v3.8.1)', ''); }, 3000);
     }
 }
