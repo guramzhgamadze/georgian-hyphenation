@@ -316,14 +316,14 @@ The algorithm applies Georgian phonological principles:
 
 ### Harmonic Clusters (70+ supported)
 ```
-ბლ ბრ ბღ ბზ  |  გდ გლ გმ გნ გვ გზ გრ  |  დრ
-თლ თრ თღ     |  კლ კმ კნ კრ კვ         |  მტ
-პლ პრ        |  ჟღ                    |  რგ რლ რმ
-სწ სხ        |  ტკ ტპ ტრ              |  ფლ ფრ ფქ ფშ
-ქლ ქნ ქვ ქრ  |  ღლ ღრ                 |  ყლ ყრ
-შთ შპ        |  ჩქ ჩრ                 |  ცლ ცნ ცრ ცვ
-ძგ ძვ ძღ     |  წლ წრ წნ წკ          |  ჭკ ჭრ ჭყ
-ხლ ხმ ხნ ხვ  |  ჯგ
+ბლ ბრ ბღ ბზ	|  გდ გლ გმ გნ გვ გზ გრ	|  დრ
+თლ თრ თღ		|  კლ კმ კნ კრ კვ			|  მტ
+პლ პრ			|  ჟღ						|  რგ რლ რმ
+სწ სხ			|  ტკ ტპ ტრ				|  ფლ ფრ ფქ ფშ
+ქლ ქნ ქვ ქრ		|  ღლ ღრ					|  ყლ ყრ
+შთ შპ			|  ჩქ ჩრ					|  ცლ ცნ ცრ ცვ
+ძგ ძვ ძღ		|  წლ წრ წნ წკ				|  ჭკ ჭრ ჭყ
+ხლ ხმ ხნ ხვ		|  ჯგ
 ```
 
 ### Constraints
@@ -519,10 +519,10 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 If you use this library in academic work, please cite:
 ```bibtex
-@software{georgian_hyphenation_2024,
+@software{georgian_hyphenation_2026,
   author = {Zhgamadze, Guram},
   title = {Georgian Hyphenation: A Phonological Approach to Automatic Syllabification},
-  year = {2024},
+  year = {2026},
   publisher = {GitHub},
   url = {https://github.com/guramzhgamadze/georgian-hyphenation},
   version = {2.2.6}
