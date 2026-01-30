@@ -1,8 +1,8 @@
 /* global Office Word */
 
 /**
- * ✅ Georgian Hyphenation Library v3.3.2 (Ghost Character Fix)
- * Fixes: Removes trailing &nbsp; symbol after hyphenation
+ * ✅ Georgian Hyphenation Library v2.2.4 (DOM Deep Clean)
+ * Fixes: Recursively removes trailing ghost characters from the DOM tree
  */
 class GeorgianHyphenator {
     constructor(hyphenChar = '&shy;') {
@@ -26,7 +26,7 @@ class GeorgianHyphenator {
 
     _stripHyphens(text) {
         if (!text) return '';
-        // ინარჩუნებს (-) დეფისს, შლის მხოლოდ უხილავებს
+        // ინარჩუნებს (-) დეფისს
         return text.replace(/[\u00AD\u200B]/g, '').replace(new RegExp(this.hyphenChar, 'g'), '');
     }
 
@@ -179,14 +179,13 @@ async function preserveFormattingHyphenation(context, objectWithHtml) {
     const parser = new DOMParser();
     const doc = parser.parseFromString(rawHtml, "text/html");
 
+    // 1. დამარცვლა
     walkAndHyphenate(doc.body, hyphenator);
 
-    let newHtml = doc.body.innerHTML;
+    // 2. 🧹 DEEP CLEAN: ბოლოში არსებული ნაგვის მოშორება DOM-ის დონეზე
+    cleanLastNode(doc.body);
 
-    // 🚮 FIX: ბოლოში დამატებული "მოჩვენება" სიმბოლოების (&nbsp; და სფეისები) მოშორება
-    // Regex ჭრის ბოლოში არსებულ ნებისმიერ &nbsp;-ს ან \u00A0-ს
-    newHtml = newHtml.replace(/(&nbsp;|[\s\u00A0])+$/g, '');
-
+    const newHtml = doc.body.innerHTML;
     objectWithHtml.insertHtml(newHtml, Word.InsertLocation.replace);
     await context.sync();
 }
@@ -201,12 +200,39 @@ function walkAndHyphenate(node, hyphenator) {
         if (originalText !== hyphenatedText) {
             const tempSpan = document.createElement('span');
             tempSpan.innerHTML = hyphenatedText;
+            // replaceWith შლის tempSpan-ს და მხოლოდ შიგთავსს სვამს, 
+            // ამიტომ span-ის "ნაგავი" არ რჩება
             node.replaceWith(...tempSpan.childNodes);
         }
     } else if (node.nodeType === 1) { 
         if (['SCRIPT', 'STYLE', 'CODE', 'PRE', 'svg', 'path'].includes(node.tagName)) return;
         Array.from(node.childNodes).forEach(child => walkAndHyphenate(child, hyphenator));
     }
+}
+
+// ✅ ახალი ფუნქცია: რეკურსიულად პოულობს ბოლო ტექსტურ ნოუდს და ასუფთავებს
+function cleanLastNode(node) {
+    // თუ ტექსტური ნოუდია, ვასუფთავებთ მარჯვენა მხარეს
+    if (node.nodeType === 3) {
+        // Regex შლის: სფეისებს, Non-breaking space-ს (\u00A0), და სხვა უხილავებს ბოლოდან
+        if (/[\s\u00A0]+$/.test(node.nodeValue)) {
+            node.nodeValue = node.nodeValue.replace(/[\s\u00A0]+$/, '');
+            return true; // ვიპოვეთ და გავწმინდეთ, ვჩერდებით
+        }
+        return false;
+    }
+
+    // თუ ელემენტია, შევდივართ შვილებში (ბოლოდან პირველისკენ)
+    if (node.hasChildNodes()) {
+        const children = node.childNodes;
+        for (let i = children.length - 1; i >= 0; i--) {
+            // თუ შვილში ვიპოვეთ და გავწმინდეთ ბოლო ნოუდი, ვაჩერებთ ძებნას
+            if (cleanLastNode(children[i])) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 async function hyphenateDocument() {
