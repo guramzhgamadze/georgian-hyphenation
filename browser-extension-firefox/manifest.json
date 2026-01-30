@@ -1,15 +1,13 @@
 {
   "manifest_version": 2,
   "name": "Georgian Hyphenation",
-  "version": "2.2.4",
+  "version": "2.2.6.2",
   "description": "Automatic hyphenation for Georgian text with v2.2 Hybrid Engine (Algorithm + Dictionary)",
-  
   "permissions": [
     "storage",
     "<all_urls>",
     "tabs"
   ],
-  
   "browser_action": {
     "default_popup": "popup.html",
     "default_icon": {
@@ -17,32 +15,37 @@
       "128": "icons/icon128.png"
     }
   },
-  
   "icons": {
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  
   "background": {
-    "scripts": ["js/background.js"],
+    "scripts": [
+      "js/background.js"
+    ],
     "persistent": true
   },
-  
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["js/hyphenator.js", "js/content.js"],
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "js/hyphenator.js",
+        "js/content.js"
+      ],
       "run_at": "document_idle",
       "all_frames": false
     }
   ],
-  
-    "browser_specific_settings": {
+  "browser_specific_settings": {
     "gecko": {
       "id": "georgian-hyphenation@guramzhgamadze.github.io",
       "strict_min_version": "142.0",
       "data_collection_permissions": {
-        "required": ["none"]
+        "required": [
+          "none"
+        ]
       }
     }
   }

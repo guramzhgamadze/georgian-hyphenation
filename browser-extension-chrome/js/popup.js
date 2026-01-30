@@ -1,4 +1,4 @@
-// Popup Script v2.2.4 - Stats Fix
+// Popup Script v2.2.6 - Fixed Toggle Communication
 (function() {
   'use strict';
 
@@ -32,16 +32,18 @@
       const isEnabled = result.enabled !== false;
       const smartJustify = result.smartJustify !== false;
       
+      console.log('Popup loaded state:', { isEnabled, smartJustify, stats: result.stats });
+      
       updateUI(isEnabled);
       updateJustifyUI(smartJustify);
 
-      // ✅ Load stats from storage first
+      // Load stats from storage first
       if (result.stats) {
         wordsProcessed.textContent = result.stats.processed || 0;
         wordsHyphenated.textContent = result.stats.hyphenated || 0;
       }
 
-      // ✅ Then try to get live stats from content script
+      // Then try to get live stats from content script
       loadStats();
     });
   }
@@ -50,15 +52,20 @@
     const isActive = toggle.classList.contains('active');
     const newState = !isActive;
 
+    console.log('Toggle clicked. New state:', newState);
+    
     updateUI(newState);
     
+    // ✅ Save to storage first
     chrome.storage.sync.set({ enabled: newState }, () => {
       if (chrome.runtime.lastError) {
         console.error('Error saving state:', chrome.runtime.lastError);
         return;
       }
+      console.log('Saved enabled state to storage:', newState);
     });
 
+    // ✅ Then send message to content script
     sendMessageToTab({ action: 'toggleHyphenation', enabled: newState });
   }
 
@@ -68,6 +75,8 @@
     const isActive = toggleJustify.classList.contains('active');
     const newState = !isActive;
 
+    console.log('Smart Justify toggled. New state:', newState);
+    
     updateJustifyUI(newState);
     
     chrome.storage.sync.set({ smartJustify: newState }, () => {
@@ -75,6 +84,7 @@
         console.error('Error saving state:', chrome.runtime.lastError);
         return;
       }
+      console.log('Saved smartJustify state to storage:', newState);
     });
 
     sendMessageToTab({ action: 'toggleSmartJustify', smartJustify: newState });
@@ -83,23 +93,31 @@
   function sendMessageToTab(message) {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (chrome.runtime.lastError || !tabs || !tabs[0]) {
+        console.error('Error querying tabs:', chrome.runtime.lastError);
         return;
       }
 
       const tabId = tabs[0].id;
+      
+      console.log('Sending message to tab:', tabId, message);
 
       chrome.tabs.sendMessage(tabId, message, (response) => {
         if (chrome.runtime.lastError) {
-          console.log('Content script not loaded, injecting...');
+          console.log('Content script not loaded, injecting...', chrome.runtime.lastError.message);
           injectContentScript(tabId);
           
+          // Wait and try again
           setTimeout(() => {
-            chrome.tabs.sendMessage(tabId, message, () => {
+            chrome.tabs.sendMessage(tabId, message, (response) => {
               if (chrome.runtime.lastError) {
                 console.log('Script injection might be restricted on this page');
+              } else {
+                console.log('Message sent successfully after injection:', response);
               }
             });
           }, 500);
+        } else {
+          console.log('Message sent successfully:', response);
         }
       });
     });
@@ -139,6 +157,7 @@
         (response) => {
           if (chrome.runtime.lastError) {
             // Content script not loaded - stats will come from storage
+            console.log('Could not get live stats:', chrome.runtime.lastError.message);
             return;
           }
           
@@ -146,7 +165,7 @@
             wordsProcessed.textContent = response.stats.processed || 0;
             wordsHyphenated.textContent = response.stats.hyphenated || 0;
             
-            // ✅ Save to storage for persistence
+            // Save to storage for persistence
             chrome.storage.sync.set({ stats: response.stats });
           }
         }
@@ -164,7 +183,7 @@
   // Initialize
   loadState();
 
-  // ✅ Refresh stats every 2 seconds while popup is open
+  // Refresh stats every 2 seconds while popup is open
   const statsInterval = setInterval(loadStats, 2000);
   
   // Cleanup on popup close

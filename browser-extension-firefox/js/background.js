@@ -1,28 +1,32 @@
-// Background Script v2.2.4 - Firefox (Enhanced with Auto-injection)
-console.log('Georgian Hyphenation v2.2.4: Background script loaded');
+// Background Script v2.2.6.1 - Firefox - FIXED
+console.log('Georgian Hyphenation v2.2.6.1 (Firefox): Background script loaded');
 
 // Initialize default settings on install/update
 browser.runtime.onInstalled.addListener((details) => {
   if (details.reason === 'install') {
-    console.log('Georgian Hyphenation Extension installed!');
+    console.log('Georgian Hyphenation v2.2.6.1 (Firefox): Extension installed!');
     
     browser.storage.sync.set({
       enabled: true,
       smartJustify: true,
-      stats: { processed: 0, hyphenated: 0 }
+      stats: { processed: 0, hyphenated: 0 },
+      version: '2.2.6.1'
+    }).catch(err => {
+      console.error('Storage error:', err);
+      // Fallback to local storage if sync fails
+      browser.storage.local.set({
+        enabled: true,
+        smartJustify: true,
+        stats: { processed: 0, hyphenated: 0 },
+        version: '2.2.6.1'
+      });
     });
   } else if (details.reason === 'update') {
-    console.log('Georgian Hyphenation Extension updated to v2.2.4!');
+    console.log('Georgian Hyphenation v2.2.6.1 (Firefox): Extension updated!');
     
-    // Ensure new settings exist
-    browser.storage.sync.get(['enabled', 'smartJustify']).then(result => {
-      const updates = {};
-      if (result.enabled === undefined) updates.enabled = true;
-      if (result.smartJustify === undefined) updates.smartJustify = true;
-      
-      if (Object.keys(updates).length > 0) {
-        browser.storage.sync.set(updates);
-      }
+    // Update version in storage
+    browser.storage.sync.set({ version: '2.2.6.1' }).catch(err => {
+      browser.storage.local.set({ version: '2.2.6.1' });
     });
   }
 });
@@ -62,8 +66,6 @@ browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
               // Silent fail for restricted pages
               console.log('Could not inject on:', tab.url, err.message);
             });
-          } else {
-            console.log('Scripts already loaded in tab:', tabId);
           }
         }).catch(err => {
           // If check fails, try to inject anyway (might be first load)
@@ -82,12 +84,15 @@ browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
           });
         });
       }
+    }).catch(err => {
+      console.error('Storage error:', err);
     });
   }
 });
 
 // Keep background script responsive
 browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  sendResponse({ received: true });
+  console.log('Background received message:', message);
+  sendResponse({ received: true, version: '2.2.6.1' });
   return true;
 });

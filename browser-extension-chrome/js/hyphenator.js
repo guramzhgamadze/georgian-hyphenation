@@ -1,5 +1,5 @@
 /**
- * Georgian Hyphenation Library v2.2.4
+ * Georgian Hyphenation Library v2.2.6
  * Embedded from NPM Package
  */
 
@@ -27,7 +27,7 @@ if (typeof window.GeorgianHyphenator === 'undefined') {
 
     _stripHyphens(text) {
       if (!text) return '';
-      return text.replace(/[\u00AD\-]/g, '').replace(new RegExp(this.hyphenChar, 'g'), '');
+    return text.replace(/[\u00AD\u200B]/g, '').replace(new RegExp(this.hyphenChar, 'g'), '');
     }
 
     loadLibrary(data) {
@@ -43,7 +43,7 @@ if (typeof window.GeorgianHyphenator === 'undefined') {
 
       if (typeof window !== 'undefined' && typeof fetch !== 'undefined') {
         try {
-          const response = await fetch('https://cdn.jsdelivr.net/npm/georgian-hyphenation@2.2.4/data/exceptions.json');
+          const response = await fetch('https://cdn.jsdelivr.net/npm/georgian-hyphenation@2.2.6/data/exceptions.json');
           
           if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
@@ -53,9 +53,9 @@ if (typeof window.GeorgianHyphenator === 'undefined') {
           this.loadLibrary(data);
           this.dictionaryLoaded = true;
           
-          console.log(`Georgian Hyphenation v2.2.4: Dictionary loaded (${this.dictionary.size} words)`);
+          console.log(`Georgian Hyphenation v2.2.6: Dictionary loaded (${this.dictionary.size} words)`);
         } catch (error) {
-          console.warn('Georgian Hyphenation v2.2.4: Dictionary not available, using algorithm only');
+          console.warn('Georgian Hyphenation v2.2.6: Dictionary not available, using algorithm only');
         }
       }
     }

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Georgian Hyphenation",
-  "version": "2.2.4",
+  "version": "2.2.6",
   "description": "Automatic hyphenation for Georgian text with v2.2 Hybrid Engine (Algorithm + Dictionary)",
   "permissions": ["storage", "scripting"],
   "host_permissions": ["<all_urls>"],

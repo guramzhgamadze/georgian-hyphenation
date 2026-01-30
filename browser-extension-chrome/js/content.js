@@ -1,4 +1,4 @@
-// Content Script v2.2.4 - CSS Fix for Visible Soft Hyphens
+// Content Script v2.2.6 - Fixed Warnings & Facebook Compatibility
 (function() {
   'use strict';
 
@@ -9,17 +9,18 @@
   window.georgianHyphenationExtensionLoaded = true;
 
   let isEnabled = true;
+  let smartJustifyEnabled = true;
   let hyphenator = new GeorgianHyphenator('\u00AD');
   let stats = { processed: 0, hyphenated: 0 };
   let processedNodes = new WeakSet();
   let isProcessing = false;
 
-  console.log('Georgian Hyphenation v2.2.4: Extension started');
+  console.log('Georgian Hyphenation v2.2.6: Extension started');
 
   // Blacklist
   const blacklistedHosts = ['claude.ai', 'chat.openai.com', 'gemini.google.com'];
   if (blacklistedHosts.some(host => window.location.hostname.includes(host))) {
-    console.log('Georgian Hyphenation v2.2.4: Skipping blacklisted site');
+    console.log('Georgian Hyphenation v2.2.6: Skipping blacklisted site');
     return;
   }
 
@@ -116,7 +117,7 @@
         processedNodes.add(node);
       }
     } catch (error) {
-      console.error('Georgian Hyphenation v2.2.4 error:', error);
+      // Silent error - don't log to avoid spam
     }
   }
 
@@ -161,21 +162,26 @@
     lastProcessTime = now;
     isProcessing = true;
     
-    console.log('Georgian Hyphenation v2.2.4: Processing page...');
+    // Reset stats for this processing cycle
+    const oldStats = { ...stats };
     stats = { processed: 0, hyphenated: 0 };
     
     const process = () => {
       try {
         processNode(document.body);
-        console.log(`Georgian Hyphenation v2.2.4: Processed ${stats.processed} words, hyphenated ${stats.hyphenated}`);
         
-        if (stats.processed === 0) {
-          console.warn('Georgian Hyphenation v2.2.4: No words found to process!');
+        // ✅ FIXED: Only log if we actually found Georgian text
+        if (stats.processed > 0) {
+          console.log(`Georgian Hyphenation v2.2.6: Processed ${stats.processed} words, hyphenated ${stats.hyphenated}`);
+          
+          // Use sync storage to match popup
+          chrome.storage.sync.set({ stats: stats });
+        } else {
+          // Keep old stats if no new content found
+          stats = oldStats;
         }
-        
-        chrome.storage.local.set({ stats: stats });
       } catch (error) {
-        console.error('Georgian Hyphenation v2.2.4 error:', error);
+        console.error('Georgian Hyphenation v2.2.6 error:', error);
       } finally {
         isProcessing = false;
       }
@@ -194,12 +200,31 @@
     
     clearTimeout(mutationTimeout);
     mutationTimeout = setTimeout(() => {
+      let hasNewContent = false;
+      
       for (let mutation of mutations) {
         for (let node of mutation.addedNodes) {
           if (!processedNodes.has(node)) {
-            processNode(node);
+            // ✅ Only process if it might contain Georgian text
+            if (node.nodeType === Node.TEXT_NODE) {
+              if (isGeorgianText(node.textContent)) {
+                processNode(node);
+                hasNewContent = true;
+              }
+            } else if (node.nodeType === Node.ELEMENT_NODE) {
+              const text = node.textContent || '';
+              if (isGeorgianText(text)) {
+                processNode(node);
+                hasNewContent = true;
+              }
+            }
           }
         }
+      }
+      
+      // Update storage only if we processed new content
+      if (hasNewContent && stats.processed > 0) {
+        chrome.storage.sync.set({ stats: stats });
       }
     }, 500);
   });
@@ -207,42 +232,112 @@
   function startObserving() {
     if (!document.body) return;
     observer.observe(document.body, { childList: true, subtree: true });
-    console.log('Georgian Hyphenation v2.2.4: Observer started');
+    console.log('Georgian Hyphenation v2.2.6: Observer started');
   }
 
   function stopObserving() {
     observer.disconnect();
+    console.log('Georgian Hyphenation v2.2.6: Observer stopped');
+  }
+
+  function addHyphenationCSS() {
+    if (document.getElementById('georgian-hyphenation-css')) return;
+    
+    const style = document.createElement('style');
+    style.id = 'georgian-hyphenation-css';
+    style.textContent = `
+      /* Force manual hyphenation mode */
+      body, p, div, span, article, section, li, td, th, blockquote, figcaption {
+        hyphens: manual !important;
+        -webkit-hyphens: manual !important;
+        -moz-hyphens: manual !important;
+        -ms-hyphens: manual !important;
+      }
+      
+      /* Hide soft hyphens when NOT at line break */
+      body, p, div, span, article, section, li, td, th, blockquote, figcaption {
+        overflow-wrap: break-word !important;
+        word-wrap: break-word !important;
+      }
+      
+      /* Fix for fonts that show soft hyphens as visible dashes */
+      * {
+        font-feature-settings: normal !important;
+      }
+    `;
+    document.head.appendChild(style);
+    console.log('Georgian Hyphenation v2.2.6: CSS injected');
+  }
+
+  function removeHyphenationCSS() {
+    const styleElement = document.getElementById('georgian-hyphenation-css');
+    if (styleElement) {
+      styleElement.remove();
+      console.log('Georgian Hyphenation v2.2.6: CSS removed');
+    }
+  }
+
+  function addSmartJustifyCSS() {
+    if (document.getElementById('georgian-smart-justify-css')) return;
+    
+    const style = document.createElement('style');
+    style.id = 'georgian-smart-justify-css';
+    style.textContent = `
+      p, div.content, article, section {
+        text-align: justify !important;
+      }
+    `;
+    document.head.appendChild(style);
+    console.log('Georgian Hyphenation v2.2.6: Smart Justify CSS injected');
+  }
+
+  function removeSmartJustifyCSS() {
+    const styleElement = document.getElementById('georgian-smart-justify-css');
+    if (styleElement) {
+      styleElement.remove();
+      console.log('Georgian Hyphenation v2.2.6: Smart Justify CSS removed');
+    }
+  }
+
+  function enable() {
+    isEnabled = true;
+    console.log('Georgian Hyphenation v2.2.6: ENABLED');
+    
+    addHyphenationCSS();
+    processPage();
+    startObserving();
+    
+    if (smartJustifyEnabled) {
+      addSmartJustifyCSS();
+    }
+  }
+
+  function disable() {
+    isEnabled = false;
+    console.log('Georgian Hyphenation v2.2.6: DISABLED');
+    
+    stopObserving();
+    removeHyphenationCSS();
+    removeSmartJustifyCSS();
+    
+    // Reload page to remove hyphens
+    location.reload();
   }
 
   function initialize() {
-    chrome.storage.local.get(['enabled'], (result) => {
+    // Use sync storage to match popup
+    chrome.storage.sync.get(['enabled', 'smartJustify'], (result) => {
       isEnabled = result.enabled !== false;
+      smartJustifyEnabled = result.smartJustify !== false;
+      
+      console.log('Georgian Hyphenation v2.2.6: Initial state -', { isEnabled, smartJustifyEnabled });
       
       if (isEnabled) {
-        // ✅ CRITICAL CSS FIX: Hide soft hyphens properly
-        const style = document.createElement('style');
-        style.id = 'georgian-hyphenation-css';
-        style.textContent = `
-          /* Force manual hyphenation mode */
-          body, p, div, span, article, section, li, td, th, blockquote, figcaption {
-            hyphens: manual !important;
-            -webkit-hyphens: manual !important;
-            -moz-hyphens: manual !important;
-            -ms-hyphens: manual !important;
-          }
-          
-          /* ✅ CRITICAL: Hide soft hyphens when NOT at line break */
-          body, p, div, span, article, section, li, td, th, blockquote, figcaption {
-            overflow-wrap: break-word !important;
-            word-wrap: break-word !important;
-          }
-          
-          /* ✅ Fix for fonts that show soft hyphens as visible dashes */
-          * {
-            font-feature-settings: normal !important;
-          }
-        `;
-        document.head.appendChild(style);
+        addHyphenationCSS();
+        
+        if (smartJustifyEnabled) {
+          addSmartJustifyCSS();
+        }
 
         if (document.readyState === 'loading') {
           document.addEventListener('DOMContentLoaded', () => {
@@ -261,39 +356,51 @@
     });
   }
 
+  // ✅ FIXED: Listen for BOTH 'toggle' and 'toggleHyphenation' actions
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.action === 'toggle') {
-      isEnabled = message.enabled;
+    console.log('Georgian Hyphenation v2.2.6: Received message', message);
+    
+    if (message.action === 'toggle' || message.action === 'toggleHyphenation') {
+      const newState = message.enabled;
       
-      if (isEnabled) {
-        processPage();
-        startObserving();
+      if (newState) {
+        enable();
       } else {
-        stopObserving();
-        
-        // Remove CSS when disabled
-        const styleElement = document.getElementById('georgian-hyphenation-css');
-        if (styleElement) {
-          styleElement.remove();
-        }
+        disable();
       }
       
-      sendResponse({ success: true });
+      sendResponse({ success: true, enabled: isEnabled });
       return true;
-    } else if (message.action === 'getStats') {
+    } 
+    else if (message.action === 'toggleSmartJustify') {
+      smartJustifyEnabled = message.smartJustify;
+      
+      if (smartJustifyEnabled) {
+        addSmartJustifyCSS();
+      } else {
+        removeSmartJustifyCSS();
+      }
+      
+      sendResponse({ success: true, smartJustify: smartJustifyEnabled });
+      return true;
+    }
+    else if (message.action === 'getStats') {
       sendResponse({ stats: stats });
       return true;
     }
+    
+    return false;
   });
 
   initialize();
 
+  // URL change detection for SPAs like Facebook
   let lastUrl = location.href;
   new MutationObserver(() => {
     const currentUrl = location.href;
     if (currentUrl !== lastUrl) {
       lastUrl = currentUrl;
-      console.log('Georgian Hyphenation v2.2.4: URL changed');
+      console.log('Georgian Hyphenation v2.2.6: URL changed, reprocessing...');
       processedNodes = new WeakSet();
       setTimeout(processPage, 500);
     }

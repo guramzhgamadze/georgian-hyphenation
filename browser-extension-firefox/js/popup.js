@@ -1,4 +1,4 @@
-// Popup Script v2.2.4 - Firefox
+// Popup Script v2.2.6.1 - Firefox - FIXED
 (function() {
   'use strict';
 
@@ -18,6 +18,8 @@
       const isEnabled = result.enabled !== false;
       const smartJustify = result.smartJustify !== false;
       
+      console.log('Popup loaded state:', { isEnabled, smartJustify, stats: result.stats });
+      
       updateUI(isEnabled);
       updateJustifyUI(smartJustify);
 
@@ -36,12 +38,18 @@
     const isActive = toggle.classList.contains('active');
     const newState = !isActive;
 
+    console.log('Toggle clicked. New state:', newState);
+    
     updateUI(newState);
     
-    browser.storage.sync.set({ enabled: newState }).catch(err => {
+    // ✅ Save to storage first
+    browser.storage.sync.set({ enabled: newState }).then(() => {
+      console.log('Saved enabled state to storage:', newState);
+    }).catch(err => {
       console.error('Error saving state:', err);
     });
 
+    // ✅ Send message to content script
     sendMessageToTab({ action: 'toggleHyphenation', enabled: newState });
   }
 
@@ -51,9 +59,13 @@
     const isActive = toggleJustify.classList.contains('active');
     const newState = !isActive;
 
+    console.log('Smart Justify toggled. New state:', newState);
+    
     updateJustifyUI(newState);
     
-    browser.storage.sync.set({ smartJustify: newState }).catch(err => {
+    browser.storage.sync.set({ smartJustify: newState }).then(() => {
+      console.log('Saved smartJustify state to storage:', newState);
+    }).catch(err => {
       console.error('Error saving state:', err);
     });
 
@@ -62,10 +74,17 @@
 
   function sendMessageToTab(message) {
     browser.tabs.query({ active: true, currentWindow: true }).then(tabs => {
-      if (!tabs || !tabs[0]) return;
+      if (!tabs || !tabs[0]) {
+        console.error('No active tab found');
+        return;
+      }
 
-      browser.tabs.sendMessage(tabs[0].id, message).catch(err => {
-        console.log('Could not send message:', err);
+      console.log('Sending message to tab:', tabs[0].id, message);
+
+      browser.tabs.sendMessage(tabs[0].id, message).then(response => {
+        console.log('Message sent successfully:', response);
+      }).catch(err => {
+        console.log('Could not send message:', err.message);
       });
     });
   }
@@ -101,10 +120,11 @@
           wordsProcessed.textContent = response.stats.processed || 0;
           wordsHyphenated.textContent = response.stats.hyphenated || 0;
           
+          // Save to storage for persistence
           browser.storage.sync.set({ stats: response.stats });
         }
       }).catch(err => {
-        // Silent fail
+        // Silent fail - content script might not be loaded
       });
     });
   }

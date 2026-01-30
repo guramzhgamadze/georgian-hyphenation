@@ -53,8 +53,8 @@ Georgian Hyphenation is a comprehensive, linguistically accurate library for aut
 | 🐍 **Python** | [![PyPI](https://img.shields.io/pypi/v/georgian-hyphenation)](https://pypi.org/project/georgian-hyphenation/) | `pip install georgian-hyphenation` |
 | 📦 **JavaScript/Node.js** | [![npm](https://img.shields.io/npm/v/georgian-hyphenation)](https://www.npmjs.com/package/georgian-hyphenation) | `npm install georgian-hyphenation` |
 | 🦊 **Firefox Extension** | [![Firefox](https://img.shields.io/amo/v/georgian-hyphenation)](https://addons.mozilla.org/firefox/addon/georgian-hyphenation/) | [Install from AMO](https://addons.mozilla.org/firefox/addon/georgian-hyphenation/) |
-| 🌐 **Chrome Extension** | v2.2.4 | [Manual install](#chrome-extension) |
-| 🔌 **WordPress Plugin** | v2.2.4 | [Download](#wordpress-plugin) |
+| 🌐 **Chrome Extension** | v2.2.6 | [Manual install](#chrome-extension) |
+| 🔌 **WordPress Plugin** | v2.2.6 | [Download](#wordpress-plugin) |
 | 📝 **MS Word Add-in** | Beta | [Sideload instructions](#microsoft-word-add-in) |
 
 ---
@@ -173,7 +173,7 @@ const GeorgianHyphenator = require('georgian-hyphenation');
 
 ### Chrome
 
-1. Download [georgian-hyphenation-chrome-v2.2.4.zip](https://github.com/guramzhgamadze/georgian-hyphenation/releases)
+1. Download 
 2. Extract ZIP file
 3. Open `chrome://extensions/`
 4. Enable "Developer mode"
@@ -191,7 +191,7 @@ const GeorgianHyphenator = require('georgian-hyphenation');
 <details>
 <summary><b>WordPress Plugin</b></summary>
 
-1. Download **georgian-hyphenation-wp-2.2.4.zip** from [releases](https://github.com/guramzhgamadze/georgian-hyphenation/releases)
+1. Download **georgian-hyphenation.zip**
 2. WordPress Admin → Plugins → Add New → Upload Plugin
 3. Install and activate
 4. Configure at **Settings → Geo Hyphenation**

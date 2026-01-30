@@ -3,18 +3,13 @@
  * Plugin Name: Georgian Hyphenation
  * Plugin URI: https://github.com/guramzhgamadze/georgian-hyphenation
  * Description: Georgian hyphenation with v2.2 Hybrid Engine (Algorithm + Dictionary). Full Elementor support.
- * Version: 2.2.4
+ * Version: 2.2.6
  * Author: Guram Zhgamadze
  * Author URI: https://github.com/guramzhgamadze
  * License: MIT
  * Text Domain: georgian-hyphenation
  * Requires at least: 5.0
  * Requires PHP: 7.0
- * 
- * Changelog:
- * 2.2.4 - Fixed ESM loading with manual type="module" injection
- * 2.2.3 - Added Dictionary Support (150+ exceptions)
- * 2.2.2 - Automatic Sanitization (strips old hyphens)
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
@@ -103,7 +98,7 @@ class GeorgianHyphenationWP {
         <div class="wrap">
             <h1>
                 🇬🇪 Georgian Hyphenation 
-                <span class="gh-version-badge">v2.2.4</span>
+                <span class="gh-version-badge">v2.2.6</span>
             </h1>
             <p style="font-size: 14px; color: #666;">
                 Hybrid Engine: Algorithm + Dictionary (150+ exceptions) | Auto-Sanitization
@@ -242,7 +237,7 @@ class GeorgianHyphenationWP {
 
         ?>
         <script type="module">
-import GeorgianHyphenator from 'https://cdn.jsdelivr.net/npm/georgian-hyphenation@2.2.4/src/javascript/index.js';
+import GeorgianHyphenator from 'https://cdn.jsdelivr.net/npm/georgian-hyphenation@2.2.6/src/javascript/index.js';
 
 (async function() {
     'use strict';
@@ -250,7 +245,7 @@ import GeorgianHyphenator from 'https://cdn.jsdelivr.net/npm/georgian-hyphenatio
     const LOAD_DICTIONARY = <?php echo $load_dictionary; ?>;
     
     function log(msg, ...args) {
-        if(DEBUG) console.log('🇬🇪 GH v2.2.4:', msg, ...args);
+        if(DEBUG) console.log('🇬🇪 GH v2.2.6:', msg, ...args);
     }
 
     log('🚀 Initializing...');
