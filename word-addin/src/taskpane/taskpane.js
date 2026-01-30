@@ -1,8 +1,8 @@
 /* global Office Word */
 
 /**
- * ✅ Georgian Hyphenation Library v3.8.1 (Safe Ghost Character Removal)
- * Fixes: Only removes actual ghost paragraphs, preserves all content
+ * ✅ Georgian Hyphenation Library v3.8.2 (Smart Trailing Cleanup)
+ * Finds last real paragraph and deletes everything after it
  */
 class GeorgianHyphenator {
     constructor(hyphenChar = '&shy;') {
@@ -153,7 +153,7 @@ class GeorgianHyphenator {
  */
 Office.onReady((info) => {
     if (info.host === Office.HostType.Word) {
-        console.log('🇬🇪 Georgian Hyphenation Add-in Ready v3.8.1');
+        console.log('🇬🇪 Georgian Hyphenation Add-in Ready v3.8.2');
 
         const docBtn = document.getElementById('hyphenate-document');
         const selBtn = document.getElementById('hyphenate-selection');
@@ -161,7 +161,7 @@ Office.onReady((info) => {
         if (docBtn) docBtn.onclick = hyphenateDocument;
         if (selBtn) selBtn.onclick = hyphenateSelection;
         
-        showStatus('მზად არის (v3.8.1)', '');
+        showStatus('მზად არის (v3.8.2)', '');
     }
 });
 
@@ -189,98 +189,62 @@ async function preserveFormattingHyphenation(context, objectWithHtml) {
 
     objectWithHtml.insertHtml(newHtml, Word.InsertLocation.replace);
     
-    // 2. ☢️ SAFE WORD CLEANER (მხოლოდ მოჩვენება სიმბოლოების წაშლა)
+    // 2. ☢️ SMART CLEANUP (იპოვე ბოლო რეალური პარაგრაფი და წაშალე ყველაფერი მის შემდეგ)
     await cleanUpWordArtifacts(context, objectWithHtml);
     
     await context.sync();
 }
 
 /**
- * ✅ უსაფრთხო გასუფთავების ფუნქცია
- * წაშლის მხოლოდ უხილავ სიმბოლოებს, არა რეალურ კონტენტს
+ * ✅ ჭკვიანი გასუფთავება
+ * გადის ყველა პარაგრაფს უკუღმა, პოულობს ბოლო რეალურ ტექსტს და შლის ყველაფერს მის შემდეგ
  */
 async function cleanUpWordArtifacts(context, rangeObject) {
-    try {
-        // ვეძებთ და ვშლით მხოლოდ უხილავ სიმბოლოებს (არა ტექსტს!)
-        const searchPatterns = [
-            { pattern: "^0160", description: "non-breaking space" },  // Non-breaking space
-            { pattern: "^l", description: "line break" },             // Manual line break
-        ];
-
-        for (const { pattern, description } of searchPatterns) {
-            const searchResults = rangeObject.search(pattern, { matchWildcards: false });
-            searchResults.load("items");
-            await context.sync();
-
-            console.log(`🔍 Found ${searchResults.items.length} ${description} characters`);
-
-            // წავშალოთ უკუღმა
-            for (let i = searchResults.items.length - 1; i >= 0; i--) {
-                const item = searchResults.items[i];
-                
-                // ⚠️ CRITICAL: ვშლით მხოლოდ ᲛᲐᲠᲢᲝ ᲛᲓᲒᲝᲛ უხილავ სიმბოლოებს
-                // არა იმათ, რაც ტექსტშია ჩაბმული
-                item.load("text");
-                await context.sync();
-                
-                // თუ ეს არის მხოლოდ უხილავი სიმბოლო (გარეშე რეალური ტექსტისა)
-                const cleanedText = item.text.replace(/[\u00A0\u200B\s\r\n]/g, '');
-                if (cleanedText.length === 0) {
-                    item.delete();
-                    console.log(`✂️ Deleted invisible ${description}`);
-                }
-            }
-            await context.sync();
-        }
-
-        // დამატებით: ვასუფთავებთ ბოლო ცარიელ პარაგრაფებს
-        await cleanEmptyTrailingParagraphs(context, rangeObject);
-
-    } catch (error) {
-        console.warn('⚠️ Cleanup warning:', error.message);
-        // არ გავაჩეროთ მთელი პროცესი
-    }
-}
-
-/**
- * ✅ ასუფთავებს მხოლოდ ბოლოში მდგომ ცარიელ პარაგრაფებს
- */
-async function cleanEmptyTrailingParagraphs(context, rangeObject) {
     try {
         const paragraphs = rangeObject.paragraphs;
         paragraphs.load("items");
         await context.sync();
 
         const totalCount = paragraphs.items.length;
-        console.log(`📄 Total paragraphs: ${totalCount}`);
+        console.log(`📄 სულ პარაგრაფები: ${totalCount}`);
 
-        // ვამოწმებთ მხოლოდ ბოლო 3 პარაგრაფს (თავიდან ავიცილოთ ყველას წაშლა)
-        const checkCount = Math.min(3, totalCount);
+        // ვიღებთ ყველა პარაგრაფის ტექსტს ერთდროულად (ეფექტურობისთვის)
+        paragraphs.items.forEach(para => para.load("text"));
+        await context.sync();
+
+        // ვეძებთ ბოლო პარაგრაფს რომელსაც აქვს რეალური ტექსტი
+        let lastRealParagraphIndex = -1;
         
-        for (let i = totalCount - 1; i >= totalCount - checkCount; i--) {
-            if (i < 0) break;
-            
-            const para = paragraphs.items[i];
-            para.load("text");
-            await context.sync();
-
-            const text = para.text || '';
+        for (let i = totalCount - 1; i >= 0; i--) {
+            const text = paragraphs.items[i].text || '';
             const cleanText = text.replace(/[\u00A0\u200B\s\r\n\t]/g, '');
-
-            // თუ სრულიად ცარიელია და ბოლოშია
-            if (cleanText.length === 0 && i === totalCount - 1) {
-                console.log(`🗑️ Deleting empty trailing paragraph ${i + 1}`);
-                para.delete();
-                await context.sync();
-            } else if (cleanText.length > 0) {
-                // თუ ვიპოვეთ არა-ცარიელი, ვჩერდებით
-                console.log(`✅ Found non-empty paragraph at ${i + 1}, stopping cleanup`);
+            
+            if (cleanText.length > 0) {
+                lastRealParagraphIndex = i;
+                console.log(`✅ ბოლო რეალური პარაგრაფი: ${i + 1} ("${text.substring(0, 30)}...")`);
                 break;
             }
         }
 
+        // თუ ვიპოვეთ ბოლო რეალური და მის შემდეგ კიდევ არის პარაგრაფები
+        if (lastRealParagraphIndex !== -1 && lastRealParagraphIndex < totalCount - 1) {
+            const deleteCount = totalCount - 1 - lastRealParagraphIndex;
+            console.log(`🗑️ წავშალოთ ${deleteCount} ცარიელი პარაგრაფი`);
+            
+            // ვშლით უკუღმა (ბოლოდან) რომ ინდექსები არ დაიბნეს
+            for (let i = totalCount - 1; i > lastRealParagraphIndex; i--) {
+                console.log(`   წავშალე პარაგრაფი ${i + 1}`);
+                paragraphs.items[i].delete();
+            }
+            
+            await context.sync();
+            console.log(`✅ გასუფთავდა!`);
+        } else {
+            console.log(`ℹ️ ცარიელი პარაგრაფები არ მოიძებნა`);
+        }
+
     } catch (error) {
-        console.warn('⚠️ Trailing paragraph cleanup warning:', error.message);
+        console.warn('⚠️ Cleanup warning:', error.message);
     }
 }
 
@@ -355,6 +319,6 @@ function showStatus(message, type) {
             status.style.borderBottom = '2px solid #0078d4';
             status.style.color = '#323130';
         }
-        if (type) setTimeout(() => { showStatus('მზად არის (v3.8.1)', ''); }, 3000);
+        if (type) setTimeout(() => { showStatus('მზად არის (v3.8.2)', ''); }, 3000);
     }
 }
