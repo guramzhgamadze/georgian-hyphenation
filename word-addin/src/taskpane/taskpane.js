@@ -1,8 +1,8 @@
 /* global Office Word */
 
 /**
- * ✅ Georgian Hyphenation Library v3.8.2 (Smart Trailing Cleanup)
- * Finds last real paragraph and deletes everything after it
+ * ✅ Georgian Hyphenation Library v3.8.3 (Formatting Preservation Fix)
+ * Preserves spacing, indents, and paragraph formatting
  */
 class GeorgianHyphenator {
     constructor(hyphenChar = '&shy;') {
@@ -153,7 +153,7 @@ class GeorgianHyphenator {
  */
 Office.onReady((info) => {
     if (info.host === Office.HostType.Word) {
-        console.log('🇬🇪 Georgian Hyphenation Add-in Ready v3.8.2');
+        console.log('🇬🇪 Georgian Hyphenation Add-in Ready v3.8.3');
 
         const docBtn = document.getElementById('hyphenate-document');
         const selBtn = document.getElementById('hyphenate-selection');
@@ -161,43 +161,92 @@ Office.onReady((info) => {
         if (docBtn) docBtn.onclick = hyphenateDocument;
         if (selBtn) selBtn.onclick = hyphenateSelection;
         
-        showStatus('მზად არის (v3.8.2)', '');
+        showStatus('მზად არის (v3.8.3)', '');
     }
 });
 
+/**
+ * ✅ IMPROVED: Preserves paragraph formatting (spacing, indents, alignment)
+ */
 async function preserveFormattingHyphenation(context, objectWithHtml) {
-    const htmlResult = objectWithHtml.getHtml();
-    await context.sync();
-
-    let rawHtml = htmlResult.value;
     const hyphenator = new GeorgianHyphenator();
     await hyphenator.loadDefaultLibrary();
 
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(rawHtml, "text/html");
+    // Get all paragraphs in the range
+    const paragraphs = objectWithHtml.paragraphs;
+    paragraphs.load("items");
+    await context.sync();
 
-    walkAndHyphenate(doc.body, hyphenator);
+    // Process each paragraph individually to preserve formatting
+    for (let i = 0; i < paragraphs.items.length; i++) {
+        const para = paragraphs.items[i];
+        
+        // Load paragraph properties BEFORE getting HTML
+        para.load([
+            "text",
+            "leftIndent",
+            "rightIndent", 
+            "firstLineIndent",
+            "spaceAfter",
+            "spaceBefore",
+            "lineSpacing",
+            "alignment",
+            "style"
+        ]);
+        
+        await context.sync();
 
-    let newHtml = doc.body.innerHTML;
+        // Skip empty paragraphs
+        const paraText = para.text || '';
+        if (!paraText.trim()) continue;
 
-    // 1. JS String Trim (Basic cleaning)
-    newHtml = newHtml.trim();
-    const tailRegex = /(&nbsp;|[\s\u00A0\u200B]|<br\s*\/?>)+$/gi;
-    while (tailRegex.test(newHtml)) {
-        newHtml = newHtml.replace(tailRegex, '');
+        // Store original formatting
+        const originalFormatting = {
+            leftIndent: para.leftIndent,
+            rightIndent: para.rightIndent,
+            firstLineIndent: para.firstLineIndent,
+            spaceAfter: para.spaceAfter,
+            spaceBefore: para.spaceBefore,
+            lineSpacing: para.lineSpacing,
+            alignment: para.alignment,
+            style: para.style
+        };
+
+        // Get HTML and process it
+        const htmlResult = para.getHtml();
+        await context.sync();
+
+        let rawHtml = htmlResult.value;
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(rawHtml, "text/html");
+        
+        walkAndHyphenate(doc.body, hyphenator);
+        
+        let newHtml = doc.body.innerHTML.trim();
+        
+        // Replace HTML
+        para.insertHtml(newHtml, Word.InsertLocation.replace);
+        await context.sync();
+
+        // CRITICAL: Restore original formatting after HTML replacement
+        para.leftIndent = originalFormatting.leftIndent;
+        para.rightIndent = originalFormatting.rightIndent;
+        para.firstLineIndent = originalFormatting.firstLineIndent;
+        para.spaceAfter = originalFormatting.spaceAfter;
+        para.spaceBefore = originalFormatting.spaceBefore;
+        para.lineSpacing = originalFormatting.lineSpacing;
+        para.alignment = originalFormatting.alignment;
+        
+        await context.sync();
     }
 
-    objectWithHtml.insertHtml(newHtml, Word.InsertLocation.replace);
-    
-    // 2. ☢️ SMART CLEANUP (იპოვე ბოლო რეალური პარაგრაფი და წაშალე ყველაფერი მის შემდეგ)
+    // Clean up trailing empty paragraphs
     await cleanUpWordArtifacts(context, objectWithHtml);
-    
     await context.sync();
 }
 
 /**
- * ✅ ჭკვიანი გასუფთავება
- * გადის ყველა პარაგრაფს უკუღმა, პოულობს ბოლო რეალურ ტექსტს და შლის ყველაფერს მის შემდეგ
+ * ✅ Smart cleanup - finds last real paragraph and deletes everything after it
  */
 async function cleanUpWordArtifacts(context, rangeObject) {
     try {
@@ -206,13 +255,13 @@ async function cleanUpWordArtifacts(context, rangeObject) {
         await context.sync();
 
         const totalCount = paragraphs.items.length;
-        console.log(`📄 სულ პარაგრაფები: ${totalCount}`);
+        console.log(`📄 Total paragraphs: ${totalCount}`);
 
-        // ვიღებთ ყველა პარაგრაფის ტექსტს ერთდროულად (ეფექტურობისთვის)
+        // Load all paragraph texts at once
         paragraphs.items.forEach(para => para.load("text"));
         await context.sync();
 
-        // ვეძებთ ბოლო პარაგრაფს რომელსაც აქვს რეალური ტექსტი
+        // Find last paragraph with real content
         let lastRealParagraphIndex = -1;
         
         for (let i = totalCount - 1; i >= 0; i--) {
@@ -221,26 +270,26 @@ async function cleanUpWordArtifacts(context, rangeObject) {
             
             if (cleanText.length > 0) {
                 lastRealParagraphIndex = i;
-                console.log(`✅ ბოლო რეალური პარაგრაფი: ${i + 1} ("${text.substring(0, 30)}...")`);
+                console.log(`✅ Last real paragraph: ${i + 1} ("${text.substring(0, 30)}...")`);
                 break;
             }
         }
 
-        // თუ ვიპოვეთ ბოლო რეალური და მის შემდეგ კიდევ არის პარაგრაფები
+        // Delete trailing empty paragraphs
         if (lastRealParagraphIndex !== -1 && lastRealParagraphIndex < totalCount - 1) {
             const deleteCount = totalCount - 1 - lastRealParagraphIndex;
-            console.log(`🗑️ წავშალოთ ${deleteCount} ცარიელი პარაგრაფი`);
+            console.log(`🗑️ Deleting ${deleteCount} empty paragraphs`);
             
-            // ვშლით უკუღმა (ბოლოდან) რომ ინდექსები არ დაიბნეს
+            // Delete from end to avoid index confusion
             for (let i = totalCount - 1; i > lastRealParagraphIndex; i--) {
-                console.log(`   წავშალე პარაგრაფი ${i + 1}`);
+                console.log(`   Deleted paragraph ${i + 1}`);
                 paragraphs.items[i].delete();
             }
             
             await context.sync();
-            console.log(`✅ გასუფთავდა!`);
+            console.log(`✅ Cleanup complete!`);
         } else {
-            console.log(`ℹ️ ცარიელი პარაგრაფები არ მოიძებნა`);
+            console.log(`ℹ️ No empty paragraphs found`);
         }
 
     } catch (error) {
@@ -319,6 +368,6 @@ function showStatus(message, type) {
             status.style.borderBottom = '2px solid #0078d4';
             status.style.color = '#323130';
         }
-        if (type) setTimeout(() => { showStatus('მზად არის (v3.8.2)', ''); }, 3000);
+        if (type) setTimeout(() => { showStatus('მზად არის (v3.8.3)', ''); }, 3000);
     }
 }
