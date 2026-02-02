@@ -1,10 +1,10 @@
 <OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0" xsi:type="TaskPaneApp">
   <Id>a1b2c3d4-e5f6-7890-abcd-ef1234567890</Id>
-  <Version>2.2.4</Version>
+  <Version>3.0.0</Version>
   <ProviderName>Guram Zhgamadze</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="Georgian Hyphenation"/>
-  <Description DefaultValue="Automatic Georgian text hyphenation with v2.2.4 Hybrid Engine"/>
+  <Description DefaultValue="Automatic Georgian text hyphenation with v3.0.0 OOXML Engine"/>
   <IconUrl DefaultValue="https://raw.githubusercontent.com/guramzhgamadze/georgian-hyphenation/main/assets/icon-32.png"/>
   <SupportUrl DefaultValue="https://github.com/guramzhgamadze/georgian-hyphenation"/>
   <Hosts>

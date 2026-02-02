@@ -6,145 +6,139 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Georgian Hyphenation</title>
     
-    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js" type="text/javascript"></script>
     <link rel="stylesheet" href="https://static2.sharepointonline.com/files/fabric/office-ui-fabric-core/11.0.0/css/fabric.min.css" />
 
     <style>
         body {
-            margin: 0;
-            padding: 0;
-            background-color: #ffffff;
-            color: #323130;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            font-family: 'Segoe UI', Tahoma, sans-serif;
+            margin: 0; padding: 0;
+            background-color: #ffffff; color: #323130;
+            display: flex; flex-direction: column; align-items: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            height: 100vh;
         }
-
         .header {
-            width: 100%;
-            padding: 30px 0;
-            background-color: #2b579a;
-            color: #ffffff;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
+            width: 100%; padding: 24px 0;
+            background-color: #2b579a; color: #ffffff;
+            display: flex; flex-direction: column; align-items: center;
+            text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
-
         .content-main {
-            width: 90%;
-            max-width: 300px;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            width: 100%; padding: 20px; box-sizing: border-box;
+            display: flex; flex-direction: column; align-items: center;
+            flex: 1; overflow-y: auto;
         }
-
-        h1 {
-            margin: 0;
-            font-weight: 600;
-        }
-
+        h1 { margin: 0; font-weight: 600; font-size: 20px; letter-spacing: 0.5px; }
         .version-badge {
-            margin-top: 8px;
-            padding: 2px 10px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 4px;
-            font-size: 11px;
+            margin-top: 8px; padding: 2px 10px;
+            background: rgba(255,255,255,0.2); border-radius: 10px;
+            font-size: 11px; font-weight: 500;
         }
-
         #status {
-            width: 100%;
-            margin-bottom: 25px;
-            padding: 10px 0;
-            background-color: #f3f2f1;
-            border-bottom: 2px solid #0078d4;
-            font-size: 13px;
-            text-align: center;
+            width: 100%; margin-bottom: 20px; padding: 12px;
+            background-color: #f3f2f1; border-bottom: 3px solid #0078d4;
+            font-size: 13px; text-align: center; box-sizing: border-box;
         }
-
-        /* ორივე ღილაკის ერთიანი სტილი */
         .ms-Button {
-            width: 100%;
-            height: 48px; /* ოდნავ გავზარდეთ სიმაღლე მეტი კომფორტისთვის */
-            margin-bottom: 12px;
-            border-radius: 4px;
-            border: 1px solid #2b579a;
-            background-color: #2b579a;
-            color: #ffffff;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
+            width: 100%; max-width: 300px; height: 48px; margin-bottom: 12px;
+            border-radius: 4px; border: 1px solid #2b579a;
+            background-color: #2b579a; color: #ffffff;
+            cursor: pointer; font-size: 14px; font-weight: 600;
             transition: all 0.2s ease-in-out;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: flex; align-items: center; justify-content: center;
         }
-
-        .ms-Button:hover {
-            background-color: #1e3e6d;
-            border-color: #1e3e6d;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        .ms-Button:hover { background-color: #1e3e6d; box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
+        .ms-Button:disabled {
+            background-color: #cccccc; border-color: #cccccc;
+            cursor: not-allowed; opacity: 0.6;
         }
-
-        .ms-Button:active {
-            transform: translateY(1px);
+        .ms-Button-secondary {
+            background-color: #ffffff; color: #2b579a;
+            border: 2px solid #2b579a;
         }
-
+        .ms-Button-secondary:hover {
+            background-color: #f3f2f1;
+        }
+        .error-log-container {
+            width: 100%; max-width: 300px; margin-top: 20px;
+            border: 1px solid #0078d4; border-radius: 4px;
+            background-color: #f0f7ff; box-sizing: border-box;
+            display: none; 
+        }
+        .error-log-header {
+            padding: 8px 12px; background-color: #0078d4;
+            color: #ffffff; font-size: 12px; font-weight: 600;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .error-log-clear {
+            background: none; border: none; color: #ffffff;
+            cursor: pointer; font-size: 11px; text-decoration: underline; padding: 0;
+        }
+        .error-log-clear:hover { opacity: 0.8; }
+        #error-log-content {
+            padding: 10px; font-family: 'Consolas', monospace;
+            font-size: 11px; color: #004578; max-height: 120px;
+            overflow-y: auto; white-space: pre-wrap;
+        }
         .features-card {
-            width: 100%;
-            margin-top: 25px;
-            padding: 15px;
-            border: 1px solid #edebe9;
-            background-color: #faf9f8;
-            border-radius: 4px;
-            box-sizing: border-box;
+            width: 100%; max-width: 300px; margin-top: 25px; padding: 15px;
+            border: 1px solid #edebe9; background-color: #faf9f8;
+            border-radius: 6px; box-sizing: border-box;
         }
-
+        .description-text { 
+            font-size: 12px; 
+            color: #605e5c; 
+            line-height: 1.6; 
+            text-align: justify;
+            margin: 8px 0 0 0;
+        }
         .features-card strong {
             display: block;
-            text-align: center;
-            margin-bottom: 12px;
-            color: #2b579a;
-            font-size: 14px;
-        }
-
-        .description-text {
+            margin-bottom: 8px;
             font-size: 13px;
-            color: #605e5c;
-            line-height: 1.6;
-            margin: 0;
-            text-align: justify;
-            text-justify: inter-word;
-			
         }
     </style>
 </head>
 <body class="ms-Fabric">
-    <div class="header">
+    <header class="header">
         <h1 class="ms-font-xl">Georgian Hyphenation</h1>
-        <div class="version-badge">Version 3.8.3</div>
-    </div>
+        <div class="version-badge">Version 3.0.1-Debug</div>
+    </header>
 
-    <div class="content-main">
+    <main class="content-main">
         <div id="status">მზად არის სამუშაოდ</div>
         
         <button id="hyphenate-document" class="ms-Button">
-            <span class="ms-Button-label">დამარცვლე მთლიანი დოკუმენტი</span>
+            <span class="ms-Button-label">მთლიანი დოკუმენტის დამარცვლა</span>
         </button>
         
         <button id="hyphenate-selection" class="ms-Button">
-            <span class="ms-Button-label">დამარცვლე მონიშნული ტექსტი</span>
+            <span class="ms-Button-label">მონიშნული ტექსტის დამარცვლა</span>
         </button>
         
-        <div class="features-card">
-            <strong>რას აკეთებს ეს პროგრამა?</strong>
-            <p class="description-text">
-    ეს არის დამ&shy;ხმა&shy;რე ინსტ&shy;რუ&shy;მენ&shy;ტი ქარ&shy;თუ&shy;ლე&shy;ნო&shy;ვა&shy;ნი ტექ&shy;სტე&shy;ბის სწო&shy;რი ფორ&shy;მა&shy;ტი&shy;რე&shy;ბის&shy;თვის. პროგ&shy;რა&shy;მა ავ&shy;ტო&shy;მა&shy;ტუ&shy;რად ყოფს სიტყვებს მარც&shy;ვლე&shy;ბად და სვამს გა&shy;და&shy;ტა&shy;ნის ნიშ&shy;ნებს იქ, სა&shy;დაც ეს გრა&shy;მა&shy;ტი&shy;კუ&shy;ლად და სტამ&shy;ბუ&shy;რი წე&shy;სე&shy;ბის მი&shy;ხედ&shy;ვი&shy;თაა სა&shy;ჭი&shy;რო. შე&shy;დე&shy;გად, თქვენ იღებთ ვი&shy;ზუ&shy;ა&shy;ლუ&shy;რად გა&shy;მარ&shy;თულ და პრო&shy;ფე&shy;სი&shy;ო&shy;ნა&shy;ლუ&shy;რად და&shy;ლა&shy;გე&shy;ბულ ტექსტს Word-ის დო&shy;კუ&shy;მენ&shy;ტში.</p>
+        <button id="clear-highlighting" class="ms-Button ms-Button-secondary">
+            <span class="ms-Button-label">🧹 ფერების გასუფთავება</span>
+        </button>
+        
+        <div id="error-log-container" class="error-log-container">
+            <div class="error-log-header">
+                <span>📋 აქტივობის ლოგი</span>
+                <button id="clear-log" class="error-log-clear">გასუფთავება</button>
+            </div>
+            <div id="error-log-content"></div>
         </div>
-    </div>
-    
+        
+        <div class="features-card">
+            <strong>📌 როგორ მუშაობს</strong>
+            <p class="description-text">
+                პროგრამა ავტომატურად ამატებს გადატანის ნიშნებს ქართულ ტექსტში. გადატანის ნიშნები გამოჩნდება როდესაც გამოიყენებთ Justify გასწორებას ან ჩართავთ ¶ სიმბოლოს ჩვენებას.
+            </p>
+            <strong style="margin-top: 15px;">🎨 ახალი ფუნქცია</strong>
+            <p class="description-text">
+                პრობლემური პარაგრაფები (რომლებიც ვერ დამუშავდა) ავტომატურად მონიშნავს ყვითლად. ეს დაგეხმარებათ იხილოთ რა კონტენტი საჭიროებს ხელით შეცვლას.
+            </p>
+        </div>
+    </main>
     <script src="taskpane.js"></script>
 </body>
 </html>

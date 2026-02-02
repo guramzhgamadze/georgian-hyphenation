@@ -1,100 +1,73 @@
 /* global Office Word */
 
-/**
- * ✅ Georgian Hyphenation Library v3.8.3 (Formatting Preservation Fix)
- * Preserves spacing, indents, and paragraph formatting
- */
-class GeorgianHyphenator {
-    constructor(hyphenChar = '&shy;') {
-        this.hyphenChar = hyphenChar;
-        this.vowels = 'აეიოუ';
-        this.leftMin = 2; 
-        this.rightMin = 2; 
+const GEORGIAN_LANG_ID = "1079";
 
-        this.harmonicClusters = new Set([
-            'ბლ', 'ბრ', 'ბღ', 'ბზ', 'გდ', 'გლ', 'გმ', 'გნ', 'გვ', 'გზ', 'გრ',
-            'დრ', 'თლ', 'თრ', 'თღ', 'კლ', 'კმ', 'კნ', 'კრ', 'კვ', 'მტ', 'პლ', 
-            'პრ', 'ჟღ', 'რგ', 'რლ', 'რმ', 'სწ', 'სხ', 'ტკ', 'ტპ', 'ტრ', 'ფლ', 
-            'ფრ', 'ფქ', 'ფშ', 'ქლ', 'ქნ', 'ქვ', 'ქრ', 'ღლ', 'ღრ', 'ყლ', 'ყრ', 
-            'შთ', 'შპ', 'ჩქ', 'ჩრ', 'ცლ', 'ცნ', 'ცრ', 'ცვ', 'ძგ', 'ძვ', 'ძღ', 
-            'წლ', 'წრ', 'წნ', 'წკ', 'ჭკ', 'ჭრ', 'ჭყ', 'ხლ', 'ხმ', 'ხნ', 'ხვ', 'ჯგ'
-        ]);
-
-        this.dictionary = new Map();
-        this.dictionaryLoaded = false;
+function logActivity(message) {
+    const content = document.getElementById('error-log-content');
+    const container = document.getElementById('error-log-container');
+    if (container) container.style.display = 'block';
+    if (content) {
+        content.textContent += `> ${message}\n`;
+        content.scrollTop = content.scrollHeight;
     }
+}
 
-    _stripHyphens(text) {
-        if (!text) return '';
-        return text.replace(/[\u00AD\u200B]/g, '').replace(new RegExp(this.hyphenChar, 'g'), '');
-    }
+function clearLog() {
+    const content = document.getElementById('error-log-content');
+    const container = document.getElementById('error-log-container');
+    if (content) content.textContent = '';
+    if (container) container.style.display = 'none';
+}
 
-    loadLibrary(data) {
-        if (data && typeof data === 'object') {
-            Object.entries(data).forEach(([word, hyphenated]) => {
-                this.dictionary.set(word, hyphenated.replace(/-/g, this.hyphenChar));
-            });
-        }
-    }
+const Hyphenator = {
+    hyphenChar: '\u00AD', 
+    vowels: 'აეიოუ',
+    leftMin: 2,
+    rightMin: 2,
+    harmonicClusters: new Set([
+        'ბლ', 'ბრ', 'ბღ', 'ბზ', 'გდ', 'გლ', 'გმ', 'გნ', 'გვ', 'გზ', 'გრ',
+        'დრ', 'თლ', 'თრ', 'თღ', 'კლ', 'კმ', 'კნ', 'კრ', 'კვ', 'მტ', 'პლ', 
+        'პრ', 'ჟღ', 'რგ', 'რლ', 'რმ', 'სწ', 'სხ', 'ტკ', 'ტპ', 'ტრ', 'ფლ', 
+        'ფრ', 'ფქ', 'ფშ', 'ქლ', 'ქნ', 'ქვ', 'ქრ', 'ღლ', 'ღრ', 'ყლ', 'ყრ', 
+        'შთ', 'შპ', 'ჩქ', 'ჩრ', 'ცლ', 'ცნ', 'ცრ', 'ცვ', 'ძგ', 'ძვ', 'ძღ', 
+        'წლ', 'წრ', 'წნ', 'წკ', 'ჭკ', 'ჭრ', 'ჭყ', 'ხლ', 'ხმ', 'ხნ', 'ხვ', 'ჯგ'
+    ]),
+    dictionary: new Map(),
 
-    async loadDefaultLibrary() {
-        if (this.dictionaryLoaded) return;
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
+    async init() {
         try {
-            const response = await fetch('https://cdn.jsdelivr.net/npm/georgian-hyphenation@2.2.4/data/exceptions.json', { 
-                signal: controller.signal 
-            });
-            clearTimeout(timeoutId);
-            if (!response.ok) throw new Error();
-            const data = await response.json();
-            this.loadLibrary(data);
-            this.dictionaryLoaded = true;
-            console.log(`📚 Dictionary loaded (${this.dictionary.size} words)`);
-        } catch (error) {
-            console.warn('⚠️ Dictionary unavailable');
+            // გამოყენებულია v2.2.6-ის შესაბამისი CDN
+            const req = await fetch('https://cdn.jsdelivr.net/npm/georgian-hyphenation@2.2.6/data/exceptions.json');
+            if (req.ok) {
+                const data = await req.json();
+                Object.entries(data).forEach(([key, val]) => {
+                    // ლექსიკონში ტირეებს ვცვლით Word-ის Soft Hyphen-ით
+                    this.dictionary.set(key, val.replace(/-/g, this.hyphenChar));
+                });
+                logActivity(`✅ Dictionary loaded: ${this.dictionary.size} entries`);
+            }
+        } catch (e) { 
+            logActivity("⚠ Dictionary load failed - using algorithm only");
         }
-    }
+    },
 
-    hyphenate(word) {
-        const sanitizedWord = this._stripHyphens(word);
-        const cleanWord = sanitizedWord.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
-
-        let result = '';
-
-        if (this.dictionary.has(cleanWord)) {
-            result = this.dictionary.get(cleanWord);
-        } else {
-            result = this.applyAlgorithm(sanitizedWord);
-        }
-
-        return this.fixOrphans(result);
-    }
-
-    fixOrphans(hyphenatedWord) {
-        let parts = hyphenatedWord.split(this.hyphenChar);
-        if (parts.length <= 1) return hyphenatedWord;
-
-        if (parts[0].length === 1) {
-            parts[0] = parts[0] + parts[1];
-            parts.splice(1, 1);
-        }
-
-        if (parts.length > 1 && parts[parts.length - 1].length === 1) {
-            let lastIdx = parts.length - 1;
-            parts[lastIdx - 1] = parts[lastIdx - 1] + parts[lastIdx];
-            parts.pop();
-        }
-
-        return parts.join(this.hyphenChar);
-    }
+    getHyphenatedWord(word) {
+        // ლექსიკონის შემოწმება
+        if (this.dictionary.has(word)) return this.dictionary.get(word);
+        
+        // ალგორითმის გამოყენება
+        return this.applyAlgorithm(word);
+    },
 
     applyAlgorithm(word) {
+        // მინიმალური სიგრძის შემოწმება (leftMin + rightMin = 4)
         if (word.length < (this.leftMin + this.rightMin)) return word;
+
         const vowelIndices = [];
         for (let i = 0; i < word.length; i++) {
             if (this.vowels.includes(word[i])) vowelIndices.push(i);
         }
+
         if (vowelIndices.length < 2) return word;
 
         const insertPoints = [];
@@ -103,11 +76,14 @@ class GeorgianHyphenator {
             const v2 = vowelIndices[i + 1];
             const distance = v2 - v1 - 1;
             const betweenSubstring = word.substring(v1 + 1, v2);
+
             let candidatePos = -1;
 
             if (distance === 0 || distance === 1) {
+                // ორი ხმოვანი გვერდიგვერდ ან ერთი თანხმოვანი მათ შორის
                 candidatePos = v1 + 1;
             } else {
+                // Gemination (ორმაგი თანხმოვანი) შემოწმება
                 let doubleConsonantIndex = -1;
                 for (let j = 0; j < betweenSubstring.length - 1; j++) {
                     if (betweenSubstring[j] === betweenSubstring[j + 1]) {
@@ -115,259 +91,330 @@ class GeorgianHyphenator {
                         break;
                     }
                 }
+
                 if (doubleConsonantIndex !== -1) {
                     candidatePos = v1 + 1 + doubleConsonantIndex + 1;
                 } else {
+                    // Harmonic cluster (ჰარმონიული ჯგუფის) შემოწმება
                     let breakIndex = -1;
                     if (distance >= 2) {
                         const lastTwo = betweenSubstring.substring(distance - 2, distance);
-                        if (this.harmonicClusters.has(lastTwo)) breakIndex = distance - 2;
+                        if (this.harmonicClusters.has(lastTwo)) {
+                            breakIndex = distance - 2;
+                        }
                     }
                     candidatePos = (breakIndex !== -1) ? v1 + 1 + breakIndex : v1 + 2;
                 }
             }
+
+            // Anti-orphan protection: არ ვუშვებთ ობოლ ასოებს სიტყვის დასაწყისში ან ბოლოში
             if (candidatePos >= this.leftMin && (word.length - candidatePos) >= this.rightMin) {
                 insertPoints.push(candidatePos);
             }
         }
+
+        // სიმბოლოების ჩასმა უკუპროპორციული მიმდევრობით (რომ ინდექსები არ აირიოს)
         let result = word.split('');
         for (let i = insertPoints.length - 1; i >= 0; i--) {
             result.splice(insertPoints[i], 0, this.hyphenChar);
         }
         return result.join('');
     }
+};
 
-    hyphenateText(text) {
-        if (!text) return '';
-        const sanitizedText = this._stripHyphens(text);
-        
-        return sanitizedText.replace(/([ა-ჰ]+)/g, (word) => {
-            if (word.length >= 4) return this.hyphenate(word);
-            return word;
-        }).trim();
-    }
-}
-
-/**
- * ✅ Word Add-in Logic
- */
 Office.onReady((info) => {
     if (info.host === Office.HostType.Word) {
-        console.log('🇬🇪 Georgian Hyphenation Add-in Ready v3.8.3');
-
-        const docBtn = document.getElementById('hyphenate-document');
-        const selBtn = document.getElementById('hyphenate-selection');
-
-        if (docBtn) docBtn.onclick = hyphenateDocument;
-        if (selBtn) selBtn.onclick = hyphenateSelection;
+        logActivity("✅ Office.js loaded successfully");
+        logActivity(`Host: ${info.host}, Platform: ${info.platform}`);
+        logActivity("🔧 OOXML METHOD: Extract → Process → Replace");
+        Hyphenator.init();
         
-        showStatus('მზად არის (v3.8.3)', '');
+        document.getElementById('hyphenate-document').onclick = () => runSafe(hyphenateBody);
+        document.getElementById('hyphenate-selection').onclick = () => runSafe(hyphenateSelection);
+        document.getElementById('clear-log').onclick = clearLog;
+        
+        const clearHighlightBtn = document.getElementById('clear-highlighting');
+        if (clearHighlightBtn) {
+            clearHighlightBtn.onclick = () => runSafe(clearHighlighting);
+        }
+        
+        document.getElementById('status').textContent = "მზად არის (v5.1)";
+    } else {
+        logActivity("❌ ERROR: Not running in Word");
     }
 });
 
-/**
- * ✅ IMPROVED: Preserves paragraph formatting (spacing, indents, alignment)
- */
-async function preserveFormattingHyphenation(context, objectWithHtml) {
-    const hyphenator = new GeorgianHyphenator();
-    await hyphenator.loadDefaultLibrary();
+function setButtonsEnabled(enabled) {
+    const btns = [
+        document.getElementById('hyphenate-document'),
+        document.getElementById('hyphenate-selection'),
+        document.getElementById('clear-highlighting')
+    ];
+    btns.forEach(btn => {
+        if (btn) btn.disabled = !enabled;
+    });
+}
 
-    // Get all paragraphs in the range
-    const paragraphs = objectWithHtml.paragraphs;
-    paragraphs.load("items");
-    await context.sync();
-
-    // Process each paragraph individually to preserve formatting
-    for (let i = 0; i < paragraphs.items.length; i++) {
-        const para = paragraphs.items[i];
-        
-        // Load paragraph properties BEFORE getting HTML
-        para.load([
-            "text",
-            "leftIndent",
-            "rightIndent", 
-            "firstLineIndent",
-            "spaceAfter",
-            "spaceBefore",
-            "lineSpacing",
-            "alignment",
-            "style"
-        ]);
-        
-        await context.sync();
-
-        // Skip empty paragraphs
-        const paraText = para.text || '';
-        if (!paraText.trim()) continue;
-
-        // Store original formatting
-        const originalFormatting = {
-            leftIndent: para.leftIndent,
-            rightIndent: para.rightIndent,
-            firstLineIndent: para.firstLineIndent,
-            spaceAfter: para.spaceAfter,
-            spaceBefore: para.spaceBefore,
-            lineSpacing: para.lineSpacing,
-            alignment: para.alignment,
-            style: para.style
-        };
-
-        // Get HTML and process it
-        const htmlResult = para.getHtml();
-        await context.sync();
-
-        let rawHtml = htmlResult.value;
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(rawHtml, "text/html");
-        
-        walkAndHyphenate(doc.body, hyphenator);
-        
-        let newHtml = doc.body.innerHTML.trim();
-        
-        // Replace HTML
-        para.insertHtml(newHtml, Word.InsertLocation.replace);
-        await context.sync();
-
-        // CRITICAL: Restore original formatting after HTML replacement
-        para.leftIndent = originalFormatting.leftIndent;
-        para.rightIndent = originalFormatting.rightIndent;
-        para.firstLineIndent = originalFormatting.firstLineIndent;
-        para.spaceAfter = originalFormatting.spaceAfter;
-        para.spaceBefore = originalFormatting.spaceBefore;
-        para.lineSpacing = originalFormatting.lineSpacing;
-        para.alignment = originalFormatting.alignment;
-        
-        await context.sync();
+async function runSafe(fn) {
+    setButtonsEnabled(false);
+    try {
+        await fn();
+    } catch (err) {
+        logActivity(`❌ ERROR: ${err.message}`);
+        console.error(err);
+    } finally {
+        setButtonsEnabled(true);
     }
-
-    // Clean up trailing empty paragraphs
-    await cleanUpWordArtifacts(context, objectWithHtml);
-    await context.sync();
 }
 
 /**
- * ✅ Smart cleanup - finds last real paragraph and deletes everything after it
+ * ✅ HYPHENATE FULL DOCUMENT using OOXML method
  */
-async function cleanUpWordArtifacts(context, rangeObject) {
+async function hyphenateBody() {
+    await Word.run(async (context) => {
+        logActivity("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        logActivity("🚀 Starting FULL DOCUMENT hyphenation (OOXML Method)");
+        
+        const body = context.document.body;
+        const stats = await processRangeWithOOXML(context, body, "document");
+        
+        logActivity("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        logActivity(`✅ COMPLETED:`);
+        logActivity(`   Words processed: ${stats.processed}`);
+        logActivity(`   Words hyphenated: ${stats.success}`);
+        logActivity(`   Paragraphs processed: ${stats.paragraphs}`);
+    });
+}
+
+/**
+ * ✅ HYPHENATE SELECTION using OOXML method
+ */
+async function hyphenateSelection() {
+    await Word.run(async (context) => {
+        logActivity("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        logActivity("🎯 Starting SELECTION hyphenation (OOXML Method)");
+        
+        const selection = context.document.getSelection();
+        const stats = await processRangeWithOOXML(context, selection, "selection");
+        
+        logActivity("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        logActivity(`✅ COMPLETED:`);
+        logActivity(`   Words processed: ${stats.processed}`);
+        logActivity(`   Words hyphenated: ${stats.success}`);
+        logActivity(`   Paragraphs processed: ${stats.paragraphs}`);
+    });
+}
+
+/**
+ * 🔧 Process range using OOXML extraction and manipulation
+ * This is the ONLY reliable way to handle soft hyphens in Word JavaScript API
+ */
+async function processRangeWithOOXML(context, range, rangeType) {
+    let totalProcessed = 0;
+    let totalSuccess = 0;
+    let paragraphsProcessed = 0;
+    
     try {
-        const paragraphs = rangeObject.paragraphs;
+        // Get all paragraphs
+        const paragraphs = range.paragraphs;
         paragraphs.load("items");
         await context.sync();
-
-        const totalCount = paragraphs.items.length;
-        console.log(`📄 Total paragraphs: ${totalCount}`);
-
-        // Load all paragraph texts at once
-        paragraphs.items.forEach(para => para.load("text"));
-        await context.sync();
-
-        // Find last paragraph with real content
-        let lastRealParagraphIndex = -1;
         
-        for (let i = totalCount - 1; i >= 0; i--) {
-            const text = paragraphs.items[i].text || '';
-            const cleanText = text.replace(/[\u00A0\u200B\s\r\n\t]/g, '');
+        logActivity(`   📄 Processing ${paragraphs.items.length} paragraphs...`);
+        
+        // Process paragraphs in chunks to avoid memory issues
+        const CHUNK_SIZE = 10;
+        
+        for (let i = 0; i < paragraphs.items.length; i += CHUNK_SIZE) {
+            const endIdx = Math.min(i + CHUNK_SIZE, paragraphs.items.length);
             
-            if (cleanText.length > 0) {
-                lastRealParagraphIndex = i;
-                console.log(`✅ Last real paragraph: ${i + 1} ("${text.substring(0, 30)}...")`);
-                break;
+            for (let j = i; j < endIdx; j++) {
+                try {
+                    const para = paragraphs.items[j];
+                    
+                    // Load paragraph properties
+                    para.load("text, style, isListItem");
+                    await context.sync();
+                    
+                    // Skip empty paragraphs
+                    if (!para.text || para.text.trim().length < 4) {
+                        continue;
+                    }
+                    
+                    // Skip headings
+                    if (para.style) {
+                        const styleStr = para.style.toString().toLowerCase();
+                        if (styleStr.includes("heading") || styleStr.includes("title") || styleStr.includes("toc")) {
+                            continue;
+                        }
+                    }
+                    
+                    // Skip list items
+                    if (para.isListItem) {
+                        continue;
+                    }
+                    
+                    // Skip if no Georgian text
+                    if (!/[ა-ჰ]/.test(para.text)) {
+                        continue;
+                    }
+                    
+                    // Get paragraph OOXML
+                    const paraRange = para.getRange();
+                    const ooxml = paraRange.getOoxml();
+                    await context.sync();
+                    
+                    // Process OOXML to remove soft hyphens and add new ones
+                    const result = processOOXML(ooxml.value);
+                    
+                    if (result.changed) {
+                        // Replace paragraph with processed OOXML
+                        try {
+                            paraRange.insertOoxml(result.ooxml, Word.InsertLocation.replace);
+                            totalSuccess += result.wordsHyphenated;
+                            totalProcessed += result.wordsProcessed;
+                            paragraphsProcessed++;
+                            
+                            if (result.wordsHyphenated > 0) {
+                                logActivity(`   ✓ Para ${j}: ${result.wordsHyphenated} words hyphenated`);
+                            }
+                        } catch (insertErr) {
+                            logActivity(`   ✗ Para ${j}: Failed to insert OOXML - ${insertErr.message}`);
+                        }
+                    }
+                    
+                } catch (paraErr) {
+                    logActivity(`   ✗ Para ${j}: Error - ${paraErr.message}`);
+                    continue;
+                }
             }
-        }
-
-        // Delete trailing empty paragraphs
-        if (lastRealParagraphIndex !== -1 && lastRealParagraphIndex < totalCount - 1) {
-            const deleteCount = totalCount - 1 - lastRealParagraphIndex;
-            console.log(`🗑️ Deleting ${deleteCount} empty paragraphs`);
             
-            // Delete from end to avoid index confusion
-            for (let i = totalCount - 1; i > lastRealParagraphIndex; i--) {
-                console.log(`   Deleted paragraph ${i + 1}`);
-                paragraphs.items[i].delete();
-            }
-            
+            // Sync after each chunk
             await context.sync();
-            console.log(`✅ Cleanup complete!`);
-        } else {
-            console.log(`ℹ️ No empty paragraphs found`);
-        }
-
-    } catch (error) {
-        console.warn('⚠️ Cleanup warning:', error.message);
-    }
-}
-
-function walkAndHyphenate(node, hyphenator) {
-    if (node.nodeType === 3) { 
-        const originalText = node.nodeValue;
-        if (!originalText || !originalText.trim()) return;
-
-        const hyphenatedText = hyphenator.hyphenateText(originalText);
-
-        if (originalText !== hyphenatedText) {
-            const tempSpan = document.createElement('span');
-            tempSpan.innerHTML = hyphenatedText;
-            node.replaceWith(...tempSpan.childNodes);
-        }
-    } else if (node.nodeType === 1) { 
-        if (['SCRIPT', 'STYLE', 'CODE', 'PRE', 'svg', 'path'].includes(node.tagName)) return;
-        Array.from(node.childNodes).forEach(child => walkAndHyphenate(child, hyphenator));
-    }
-}
-
-async function hyphenateDocument() {
-    showStatus('⏳ მიმდინარეობს დამუშავება...', '');
-    try {
-        await Word.run(async (context) => {
-            const body = context.document.body;
-            await preserveFormattingHyphenation(context, body);
-            showStatus('✅ დოკუმენტი დამარცვლილია!', 'success');
-        });
-    } catch (error) {
-        showStatus('❌ შეცდომა: ' + error.message, 'error');
-        console.error('Full error:', error);
-    }
-}
-
-async function hyphenateSelection() {
-    showStatus('⏳ მიმდინარეობს დამუშავება...', '');
-    try {
-        await Word.run(async (context) => {
-            const selection = context.document.getSelection();
-            selection.load("text");
-            await context.sync();
-
-            if (!selection.text || !selection.text.trim()) {
-                showStatus('⚠️ ჯერ მონიშნეთ ტექსტი', 'error');
-                return;
+            
+            if ((i + CHUNK_SIZE) % 50 === 0) {
+                logActivity(`   ⏳ Progress: ${Math.min(i + CHUNK_SIZE, paragraphs.items.length)}/${paragraphs.items.length} paragraphs`);
             }
-
-            await preserveFormattingHyphenation(context, selection);
-            showStatus('✅ მონიშნული დამარცვლილია!', 'success');
-        });
-    } catch (error) {
-        showStatus('❌ შეცდომა: ' + error.message, 'error');
-        console.error('Full error:', error);
+        }
+        
+    } catch (err) {
+        logActivity(`   ⚠️ Error during processing: ${err.message}`);
     }
+    
+    return {
+        processed: totalProcessed,
+        success: totalSuccess,
+        paragraphs: paragraphsProcessed
+    };
 }
 
-function showStatus(message, type) {
-    const status = document.getElementById('status');
-    if (status) {
-        status.textContent = message;
-        if (type === 'error') {
-            status.style.backgroundColor = '#fde7e9';
-            status.style.borderBottom = '2px solid #a80000';
-            status.style.color = '#a80000';
-        } else if (type === 'success') {
-            status.style.backgroundColor = '#dff6dd';
-            status.style.borderBottom = '2px solid #107c10';
-            status.style.color = '#107c10';
-        } else {
-            status.style.backgroundColor = '#f3f2f1';
-            status.style.borderBottom = '2px solid #0078d4';
-            status.style.color = '#323130';
+/**
+ * 🔧 Process OOXML string to remove old soft hyphens and add new ones
+ */
+/**
+ * 🔧 განახლებული OOXML დამუშავება: 
+ * იყენებს \u00AD სიმბოლოს, რომელიც ვიზუალურად უხილავია (Soft Hyphen).
+ */
+function processOOXML(ooxmlString) {
+    let changed = false;
+    let wordsProcessed = 0;
+    let wordsHyphenated = 0;
+    
+    try {
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(ooxmlString, "text/xml");
+        const ns = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+        
+        // 1. ვშლით ყველა არსებულ რბილ დეფისს (თეგებსაც და სიმბოლოებსაც)
+        const existingSoftHyphens = xmlDoc.getElementsByTagNameNS(ns, 'softHyphen');
+        while (existingSoftHyphens.length > 0) {
+            existingSoftHyphens[0].parentNode.removeChild(existingSoftHyphens[0]);
+            changed = true;
         }
-        if (type) setTimeout(() => { showStatus('მზად არის (v3.8.3)', ''); }, 3000);
+
+        const textNodes = xmlDoc.getElementsByTagNameNS(ns, 't');
+        const marker = "[[SH]]"; // დროებითი მარკერი ალგორითმისთვის
+
+        for (let i = 0; i < textNodes.length; i++) {
+            const textNode = textNodes[i];
+            // ვშლით \u00AD სიმბოლოებს თუ სადმე დარჩა
+            let originalText = textNode.textContent.replace(/\u00AD/g, '');
+            
+            // ვიყენებთ მარკერს, რომ ალგორითმმა მონიშნოს დაყოფის ადგილები
+            const hyphenatedText = originalText.replace(/[ა-ჰ]{4,}/g, (word) => {
+                wordsProcessed++;
+                // დროებით ვცვლით ჰიფენის სიმბოლოს მარკერით
+                const result = Hyphenator.getHyphenatedWord(word).replace(/\u00AD/g, marker);
+                if (result.includes(marker)) wordsHyphenated++;
+                return result;
+            });
+
+            if (hyphenatedText.includes(marker)) {
+                changed = true;
+                const parent = textNode.parentNode;
+                const parts = hyphenatedText.split(marker);
+
+                // ვშლით ძველ ტექსტურ კვანძს და მის ნაცვლად ვსვამთ ტექსტი + <w:softHyphen/> კომბინაციას
+                parts.forEach((part, index) => {
+                    const newT = xmlDoc.createElementNS(ns, 'w:t');
+                    if (part.startsWith(' ') || part.endsWith(' ')) {
+                        newT.setAttribute('xml:space', 'preserve');
+                    }
+                    newT.textContent = part;
+                    parent.insertBefore(newT, textNode);
+
+                    if (index < parts.length - 1) {
+                        const sh = xmlDoc.createElementNS(ns, 'w:softHyphen');
+                        parent.insertBefore(sh, textNode);
+                    }
+                });
+                parent.removeChild(textNode);
+            } else {
+                textNode.textContent = originalText;
+            }
+        }
+        
+        const serializer = new XMLSerializer();
+        return {
+            ooxml: serializer.serializeToString(xmlDoc),
+            changed: changed,
+            wordsProcessed: wordsProcessed,
+            wordsHyphenated: wordsHyphenated
+        };
+        
+    } catch (err) {
+        console.error("OOXML error:", err);
+        return { ooxml: ooxmlString, changed: false, wordsProcessed: 0, wordsHyphenated: 0 };
     }
+}
+/**
+ * ✅ Clear all highlighting from the document
+ */
+async function clearHighlighting() {
+    await Word.run(async (context) => {
+        logActivity("🧹 Clearing all highlighting...");
+        
+        const body = context.document.body;
+        const paragraphs = body.paragraphs;
+        paragraphs.load("items");
+        await context.sync();
+        
+        let cleared = 0;
+        for (let i = 0; i < paragraphs.items.length; i++) {
+            try {
+                const para = paragraphs.items[i];
+                para.font.highlightColor = null;
+                cleared++;
+                
+                if (i % 50 === 0) {
+                    await context.sync();
+                }
+            } catch (err) {
+                continue;
+            }
+        }
+        
+        await context.sync();
+        logActivity(`✅ Cleared highlighting from ${cleared} paragraphs`);
+    });
 }
