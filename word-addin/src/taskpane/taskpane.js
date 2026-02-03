@@ -126,7 +126,7 @@ Office.onReady((info) => {
     if (info.host === Office.HostType.Word) {
         logActivity("✅ Office.js loaded successfully");
         logActivity(`Host: ${info.host}, Platform: ${info.platform}`);
-        logActivity("🔧 OOXML METHOD: Extract → Process → Replace");
+        logActivity("🔧 TWO-PASS METHOD: Remove ALL → Sync → Add NEW");
         Hyphenator.init();
         
         document.getElementById('hyphenate-document').onclick = () => runSafe(hyphenateBody);
@@ -138,7 +138,7 @@ Office.onReady((info) => {
             clearHighlightBtn.onclick = () => runSafe(clearHighlighting);
         }
         
-        document.getElementById('status').textContent = "მზად არის (v5.1)";
+        document.getElementById('status').textContent = "მზად არის (v6.0-TwoPass)";
     } else {
         logActivity("❌ ERROR: Not running in Word");
     }
@@ -168,15 +168,15 @@ async function runSafe(fn) {
 }
 
 /**
- * ✅ HYPHENATE FULL DOCUMENT using OOXML method
+ * ✅ HYPHENATE FULL DOCUMENT using TWO-PASS OOXML method
  */
 async function hyphenateBody() {
     await Word.run(async (context) => {
         logActivity("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        logActivity("🚀 Starting FULL DOCUMENT hyphenation (OOXML Method)");
+        logActivity("🚀 Starting FULL DOCUMENT hyphenation (TWO-PASS Method)");
         
         const body = context.document.body;
-        const stats = await processRangeWithOOXML(context, body, "document");
+        const stats = await processRangeWithTwoPass(context, body, "document");
         
         logActivity("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         logActivity(`✅ COMPLETED:`);
@@ -187,15 +187,15 @@ async function hyphenateBody() {
 }
 
 /**
- * ✅ HYPHENATE SELECTION using OOXML method
+ * ✅ HYPHENATE SELECTION using TWO-PASS OOXML method
  */
 async function hyphenateSelection() {
     await Word.run(async (context) => {
         logActivity("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        logActivity("🎯 Starting SELECTION hyphenation (OOXML Method)");
+        logActivity("🎯 Starting SELECTION hyphenation (TWO-PASS Method)");
         
         const selection = context.document.getSelection();
-        const stats = await processRangeWithOOXML(context, selection, "selection");
+        const stats = await processRangeWithTwoPass(context, selection, "selection");
         
         logActivity("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         logActivity(`✅ COMPLETED:`);
@@ -206,10 +206,10 @@ async function hyphenateSelection() {
 }
 
 /**
- * 🔧 Process range using OOXML extraction and manipulation
- * This is the ONLY reliable way to handle soft hyphens in Word JavaScript API
+ * 🔧 TWO-PASS APPROACH: First remove ALL hyphens, then add NEW ones
+ * This prevents mixing old and new hyphen positions
  */
-async function processRangeWithOOXML(context, range, rangeType) {
+async function processRangeWithTwoPass(context, range, rangeType) {
     let totalProcessed = 0;
     let totalSuccess = 0;
     let paragraphsProcessed = 0;
@@ -220,72 +220,145 @@ async function processRangeWithOOXML(context, range, rangeType) {
         paragraphs.load("items");
         await context.sync();
         
-        logActivity(`   📄 Processing ${paragraphs.items.length} paragraphs...`);
+        logActivity(`   📄 Found ${paragraphs.items.length} paragraphs`);
         
-        // Process paragraphs in chunks to avoid memory issues
+        // Filter paragraphs that need processing
+        const validParagraphs = [];
+        
+        for (let i = 0; i < paragraphs.items.length; i++) {
+            const para = paragraphs.items[i];
+            para.load("text, style, isListItem");
+        }
+        await context.sync();
+        
+        for (let i = 0; i < paragraphs.items.length; i++) {
+            const para = paragraphs.items[i];
+            
+            // Skip empty paragraphs
+            if (!para.text || para.text.trim().length < 4) continue;
+            
+            // Skip headings
+            if (para.style) {
+                const styleStr = para.style.toString().toLowerCase();
+                if (styleStr.includes("heading") || styleStr.includes("title") || styleStr.includes("toc")) {
+                    continue;
+                }
+            }
+            
+            // Skip list items
+            if (para.isListItem) continue;
+            
+            // Skip if no Georgian text
+            if (!/[ა-ჰ]/.test(para.text)) continue;
+            
+            validParagraphs.push(para);
+        }
+        
+        logActivity(`   ✓ ${validParagraphs.length} paragraphs contain Georgian text`);
+        
+        if (validParagraphs.length === 0) {
+            logActivity(`   ⚠️ No valid paragraphs to process`);
+            return { processed: 0, success: 0, paragraphs: 0 };
+        }
+        
+        // ═══════════════════════════════════════════════════════
+        // PASS 1: REMOVE ALL EXISTING HYPHENS
+        // ═══════════════════════════════════════════════════════
+        logActivity(`   🗑️  PASS 1: Removing all existing hyphens...`);
+        
         const CHUNK_SIZE = 10;
+        let removedCount = 0;
         
-        for (let i = 0; i < paragraphs.items.length; i += CHUNK_SIZE) {
-            const endIdx = Math.min(i + CHUNK_SIZE, paragraphs.items.length);
+        for (let i = 0; i < validParagraphs.length; i += CHUNK_SIZE) {
+            const endIdx = Math.min(i + CHUNK_SIZE, validParagraphs.length);
             
             for (let j = i; j < endIdx; j++) {
                 try {
-                    const para = paragraphs.items[j];
-                    
-                    // Load paragraph properties
-                    para.load("text, style, isListItem");
-                    await context.sync();
-                    
-                    // Skip empty paragraphs
-                    if (!para.text || para.text.trim().length < 4) {
-                        continue;
-                    }
-                    
-                    // Skip headings
-                    if (para.style) {
-                        const styleStr = para.style.toString().toLowerCase();
-                        if (styleStr.includes("heading") || styleStr.includes("title") || styleStr.includes("toc")) {
-                            continue;
-                        }
-                    }
-                    
-                    // Skip list items
-                    if (para.isListItem) {
-                        continue;
-                    }
-                    
-                    // Skip if no Georgian text
-                    if (!/[ა-ჰ]/.test(para.text)) {
-                        continue;
-                    }
-                    
-                    // Get paragraph OOXML
+                    const para = validParagraphs[j];
                     const paraRange = para.getRange();
                     const ooxml = paraRange.getOoxml();
                     await context.sync();
                     
-                    // Process OOXML to remove soft hyphens and add new ones
-                    const result = processOOXML(ooxml.value);
+                    const cleanedOOXML = removeAllHyphensFromOOXML(ooxml.value);
                     
-                    if (result.changed) {
-                        // Replace paragraph with processed OOXML
-                        try {
-                            paraRange.insertOoxml(result.ooxml, Word.InsertLocation.replace);
-                            totalSuccess += result.wordsHyphenated;
-                            totalProcessed += result.wordsProcessed;
-                            paragraphsProcessed++;
-                            
-                            if (result.wordsHyphenated > 0) {
-                                logActivity(`   ✓ Para ${j}: ${result.wordsHyphenated} words hyphenated`);
-                            }
-                        } catch (insertErr) {
-                            logActivity(`   ✗ Para ${j}: Failed to insert OOXML - ${insertErr.message}`);
+                    if (cleanedOOXML.changed) {
+                        paraRange.insertOoxml(cleanedOOXML.ooxml, Word.InsertLocation.replace);
+                        removedCount++;
+                    }
+                    
+                } catch (err) {
+                    logActivity(`   ✗ Pass1 Para ${j}: ${err.message}`);
+                }
+            }
+            
+            // Sync after each chunk
+            await context.sync();
+        }
+        
+        logActivity(`   ✓ PASS 1 Complete: ${removedCount} paragraphs cleaned`);
+        
+        // ═══════════════════════════════════════════════════════
+        // PASS 2: ADD NEW HYPHENS TO CLEAN TEXT
+        // ═══════════════════════════════════════════════════════
+        logActivity(`   ➕ PASS 2: Adding new hyphens...`);
+        
+        // Need to reload paragraphs after Pass 1 changes
+        const paragraphs2 = range.paragraphs;
+        paragraphs2.load("items");
+        await context.sync();
+        
+        // Re-filter valid paragraphs (indices may have changed)
+        const validParagraphs2 = [];
+        
+        for (let i = 0; i < paragraphs2.items.length; i++) {
+            const para = paragraphs2.items[i];
+            para.load("text, style, isListItem");
+        }
+        await context.sync();
+        
+        for (let i = 0; i < paragraphs2.items.length; i++) {
+            const para = paragraphs2.items[i];
+            
+            if (!para.text || para.text.trim().length < 4) continue;
+            
+            if (para.style) {
+                const styleStr = para.style.toString().toLowerCase();
+                if (styleStr.includes("heading") || styleStr.includes("title") || styleStr.includes("toc")) {
+                    continue;
+                }
+            }
+            
+            if (para.isListItem) continue;
+            if (!/[ა-ჰ]/.test(para.text)) continue;
+            
+            validParagraphs2.push(para);
+        }
+        
+        for (let i = 0; i < validParagraphs2.length; i += CHUNK_SIZE) {
+            const endIdx = Math.min(i + CHUNK_SIZE, validParagraphs2.length);
+            
+            for (let j = i; j < endIdx; j++) {
+                try {
+                    const para = validParagraphs2[j];
+                    const paraRange = para.getRange();
+                    const ooxml = paraRange.getOoxml();
+                    await context.sync();
+                    
+                    const hyphenatedOOXML = addHyphensToOOXML(ooxml.value);
+                    
+                    if (hyphenatedOOXML.changed) {
+                        paraRange.insertOoxml(hyphenatedOOXML.ooxml, Word.InsertLocation.replace);
+                        totalSuccess += hyphenatedOOXML.wordsHyphenated;
+                        totalProcessed += hyphenatedOOXML.wordsProcessed;
+                        paragraphsProcessed++;
+                        
+                        if (hyphenatedOOXML.wordsHyphenated > 0) {
+                            logActivity(`   ✓ Para ${j}: ${hyphenatedOOXML.wordsHyphenated} words hyphenated`);
                         }
                     }
                     
-                } catch (paraErr) {
-                    logActivity(`   ✗ Para ${j}: Error - ${paraErr.message}`);
-                    continue;
+                } catch (err) {
+                    logActivity(`   ✗ Pass2 Para ${j}: ${err.message}`);
                 }
             }
             
@@ -293,9 +366,11 @@ async function processRangeWithOOXML(context, range, rangeType) {
             await context.sync();
             
             if ((i + CHUNK_SIZE) % 50 === 0) {
-                logActivity(`   ⏳ Progress: ${Math.min(i + CHUNK_SIZE, paragraphs.items.length)}/${paragraphs.items.length} paragraphs`);
+                logActivity(`   ⏳ Progress: ${Math.min(i + CHUNK_SIZE, validParagraphs2.length)}/${validParagraphs2.length} paragraphs`);
             }
         }
+        
+        logActivity(`   ✓ PASS 2 Complete: ${paragraphsProcessed} paragraphs hyphenated`);
         
     } catch (err) {
         logActivity(`   ⚠️ Error during processing: ${err.message}`);
@@ -309,13 +384,54 @@ async function processRangeWithOOXML(context, range, rangeType) {
 }
 
 /**
- * 🔧 Process OOXML string to remove old soft hyphens and add new ones
+ * 🔧 PASS 1: Remove ALL soft hyphens from OOXML (both tags and characters)
+ * Returns clean OOXML with NO hyphens whatsoever
  */
+function removeAllHyphensFromOOXML(ooxmlString) {
+    let changed = false;
+    
+    try {
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(ooxmlString, "text/xml");
+        const ns = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+        
+        // Remove all <w:softHyphen/> XML tags
+        const existingSoftHyphens = xmlDoc.getElementsByTagNameNS(ns, 'softHyphen');
+        while (existingSoftHyphens.length > 0) {
+            existingSoftHyphens[0].parentNode.removeChild(existingSoftHyphens[0]);
+            changed = true;
+        }
+        
+        // Remove all \u00AD characters from text nodes
+        const textNodes = xmlDoc.getElementsByTagNameNS(ns, 't');
+        for (let i = 0; i < textNodes.length; i++) {
+            const textNode = textNodes[i];
+            const originalText = textNode.textContent;
+            const cleanedText = originalText.replace(/\u00AD/g, '');
+            
+            if (cleanedText !== originalText) {
+                textNode.textContent = cleanedText;
+                changed = true;
+            }
+        }
+        
+        const serializer = new XMLSerializer();
+        return {
+            ooxml: serializer.serializeToString(xmlDoc),
+            changed: changed
+        };
+        
+    } catch (err) {
+        console.error("OOXML Pass1 error:", err);
+        return { ooxml: ooxmlString, changed: false };
+    }
+}
+
 /**
- * 🔧 განახლებული OOXML დამუშავება: 
- * იყენებს \u00AD სიმბოლოს, რომელიც ვიზუალურად უხილავია (Soft Hyphen).
+ * 🔧 PASS 2: Add NEW soft hyphens to clean OOXML
+ * Expects OOXML with NO existing hyphens (from Pass 1)
  */
-function processOOXML(ooxmlString) {
+function addHyphensToOOXML(ooxmlString) {
     let changed = false;
     let wordsProcessed = 0;
     let wordsHyphenated = 0;
@@ -325,36 +441,27 @@ function processOOXML(ooxmlString) {
         const xmlDoc = parser.parseFromString(ooxmlString, "text/xml");
         const ns = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
         
-        // 1. ვშლით ყველა არსებულ რბილ დეფისს (თეგებსაც და სიმბოლოებსაც)
-        const existingSoftHyphens = xmlDoc.getElementsByTagNameNS(ns, 'softHyphen');
-        while (existingSoftHyphens.length > 0) {
-            existingSoftHyphens[0].parentNode.removeChild(existingSoftHyphens[0]);
-            changed = true;
-        }
-
         const textNodes = xmlDoc.getElementsByTagNameNS(ns, 't');
-        const marker = "[[SH]]"; // დროებითი მარკერი ალგორითმისთვის
-
+        const marker = "[[SH]]"; // დროებითი მარკერი
+        
         for (let i = 0; i < textNodes.length; i++) {
             const textNode = textNodes[i];
-            // ვშლით \u00AD სიმბოლოებს თუ სადმე დარჩა
-            let originalText = textNode.textContent.replace(/\u00AD/g, '');
+            const originalText = textNode.textContent;
             
-            // ვიყენებთ მარკერს, რომ ალგორითმმა მონიშნოს დაყოფის ადგილები
+            // Apply hyphenation algorithm to Georgian words
             const hyphenatedText = originalText.replace(/[ა-ჰ]{4,}/g, (word) => {
                 wordsProcessed++;
-                // დროებით ვცვლით ჰიფენის სიმბოლოს მარკერით
                 const result = Hyphenator.getHyphenatedWord(word).replace(/\u00AD/g, marker);
                 if (result.includes(marker)) wordsHyphenated++;
                 return result;
             });
-
+            
+            // If hyphenation was added, split and insert soft hyphen tags
             if (hyphenatedText.includes(marker)) {
                 changed = true;
                 const parent = textNode.parentNode;
                 const parts = hyphenatedText.split(marker);
-
-                // ვშლით ძველ ტექსტურ კვანძს და მის ნაცვლად ვსვამთ ტექსტი + <w:softHyphen/> კომბინაციას
+                
                 parts.forEach((part, index) => {
                     const newT = xmlDoc.createElementNS(ns, 'w:t');
                     if (part.startsWith(' ') || part.endsWith(' ')) {
@@ -362,15 +469,13 @@ function processOOXML(ooxmlString) {
                     }
                     newT.textContent = part;
                     parent.insertBefore(newT, textNode);
-
+                    
                     if (index < parts.length - 1) {
                         const sh = xmlDoc.createElementNS(ns, 'w:softHyphen');
                         parent.insertBefore(sh, textNode);
                     }
                 });
                 parent.removeChild(textNode);
-            } else {
-                textNode.textContent = originalText;
             }
         }
         
@@ -383,10 +488,11 @@ function processOOXML(ooxmlString) {
         };
         
     } catch (err) {
-        console.error("OOXML error:", err);
+        console.error("OOXML Pass2 error:", err);
         return { ooxml: ooxmlString, changed: false, wordsProcessed: 0, wordsHyphenated: 0 };
     }
 }
+
 /**
  * ✅ Clear all highlighting from the document
  */
