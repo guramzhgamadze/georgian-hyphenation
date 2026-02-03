@@ -3,26 +3,34 @@
   <Version>2.2.6</Version>
   <ProviderName>Guram Zhgamadze</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
+  
   <DisplayName DefaultValue="Georgian Hyphenation">
     <Override Locale="ka-GE" Value="ქართული დამარცვლა"/>
   </DisplayName>
+  
   <Description DefaultValue="Automatic hyphenation for Georgian text in Microsoft Word. Perfect for justified alignment and professional document formatting.">
     <Override Locale="ka-GE" Value="ავტომატური დამარცვლა ქართული ტექსტისთვის Microsoft Word-ში. იდეალურია გასწორებული განლაგებისა და პროფესიული დოკუმენტების ფორმატირებისთვის."/>
   </Description>
+  
   <IconUrl DefaultValue="https://guramzhgamadze.github.io/georgian-hyphenation/word-addin/assets/icon-32.png"/>
   <HighResolutionIconUrl DefaultValue="https://guramzhgamadze.github.io/georgian-hyphenation/word-addin/assets/icon-64.png"/>
   <SupportUrl DefaultValue="https://github.com/guramzhgamadze/georgian-hyphenation"/>
+  
   <AppDomains>
     <AppDomain>https://cdn.jsdelivr.net</AppDomain>
     <AppDomain>https://guramzhgamadze.github.io</AppDomain>
   </AppDomains>
+  
   <Hosts>
     <Host Name="Document"/>
   </Hosts>
+  
   <DefaultSettings>
     <SourceLocation DefaultValue="https://guramzhgamadze.github.io/georgian-hyphenation/word-addin/src/taskpane/taskpane.html"/>
   </DefaultSettings>
+  
   <Permissions>ReadWriteDocument</Permissions>
+  
   <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
     <Hosts>
       <Host xsi:type="Document">
@@ -64,6 +72,7 @@
         </DesktopFormFactor>
       </Host>
     </Hosts>
+    
     <Resources>
       <bt:Images>
         <bt:Image id="Icon.16x16" DefaultValue="https://guramzhgamadze.github.io/georgian-hyphenation/word-addin/assets/icon-16.png"/>
@@ -72,32 +81,23 @@
         <bt:Image id="Icon.128x128" DefaultValue="https://guramzhgamadze.github.io/georgian-hyphenation/word-addin/assets/icon-128.png"/>
         <bt:Image id="Icon.256x256" DefaultValue="https://guramzhgamadze.github.io/georgian-hyphenation/word-addin/assets/icon-256.png"/>
       </bt:Images>
+      
       <bt:Urls>
         <bt:Url id="Commands.Url" DefaultValue="https://guramzhgamadze.github.io/georgian-hyphenation/word-addin/src/commands/commands.html"/>
         <bt:Url id="Taskpane.Url" DefaultValue="https://guramzhgamadze.github.io/georgian-hyphenation/word-addin/src/taskpane/taskpane.html"/>
         <bt:Url id="GetStarted.LearnMoreUrl" DefaultValue="https://github.com/guramzhgamadze/georgian-hyphenation"/>
       </bt:Urls>
+      
       <bt:ShortStrings>
-        <bt:String id="GetStarted.Title" DefaultValue="Georgian Hyphenation">
-          <bt:Override Locale="ka-GE" Value="ქართული დამარცვლა"/>
-        </bt:String>
-        <bt:String id="CommandsGroup.Label" DefaultValue="Georgian">
-          <bt:Override Locale="ka-GE" Value="ქართული"/>
-        </bt:String>
-        <bt:String id="TaskpaneButton.Label" DefaultValue="Hyphenate">
-          <bt:Override Locale="ka-GE" Value="დამარცვლა"/>
-        </bt:String>
-        <bt:String id="TaskpaneButton.SupertipTitle" DefaultValue="Georgian Hyphenation">
-          <bt:Override Locale="ka-GE" Value="ქართული დამარცვლა"/>
-        </bt:String>
+        <bt:String id="GetStarted.Title" DefaultValue="Georgian Hyphenation"/>
+        <bt:String id="CommandsGroup.Label" DefaultValue="Georgian"/>
+        <bt:String id="TaskpaneButton.Label" DefaultValue="Hyphenate"/>
+        <bt:String id="TaskpaneButton.SupertipTitle" DefaultValue="Georgian Hyphenation"/>
       </bt:ShortStrings>
+      
       <bt:LongStrings>
-        <bt:String id="GetStarted.Description" DefaultValue="Add automatic hyphenation to Georgian text for professional document formatting.">
-          <bt:Override Locale="ka-GE" Value="დაამატეთ ავტომატური დამარცვლა ქართულ ტექსტს პროფესიული დოკუმენტების ფორმატირებისთვის."/>
-        </bt:String>
-        <bt:String id="TaskpaneButton.SupertipDescription" DefaultValue="Click to open the Georgian Hyphenation panel. Automatically adds soft hyphens to Georgian text for perfect justified alignment.">
-          <bt:Override Locale="ka-GE" Value="დააწკაპუნეთ ქართული დამარცვლის პანელის გასახსნელად. ავტომატურად ამატებს უხილავ ტირეებს(soft hyphens) ტექსტის სრულყოფილი გასწორებული განლაგებისთვის."/>
-        </bt:String>
+        <bt:String id="GetStarted.Description" DefaultValue="Add automatic hyphenation to Georgian text for professional document formatting."/>
+        <bt:String id="TaskpaneButton.SupertipDescription" DefaultValue="Click to open the Georgian Hyphenation panel. Automatically adds soft hyphens to Georgian text for perfect justified alignment."/>
       </bt:LongStrings>
     </Resources>
   </VersionOverrides>
