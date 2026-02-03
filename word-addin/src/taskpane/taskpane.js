@@ -14,6 +14,92 @@ function timerEnd(label) {
     return start != null ? (performance.now() - start).toFixed(0) : '?';
 }
 
+// ─── Office theme detection ──────────────────────────────
+function applyOfficeTheme() {
+    if (typeof Office === 'undefined' || !Office.context || !Office.context.officeTheme) {
+        return; // Office.js not loaded or theme API unavailable
+    }
+    
+    const theme = Office.context.officeTheme;
+    const root = document.documentElement;
+    
+    // Office theme provides bodyBackgroundColor, bodyForegroundColor, controlBackgroundColor, controlForegroundColor
+    // We map these to our CSS variables
+    
+    if (theme.bodyBackgroundColor) {
+        root.style.setProperty('--bg-primary', theme.bodyBackgroundColor);
+    }
+    
+    if (theme.bodyForegroundColor) {
+        root.style.setProperty('--text-primary', theme.bodyForegroundColor);
+    }
+    
+    if (theme.controlBackgroundColor) {
+        root.style.setProperty('--bg-secondary', theme.controlBackgroundColor);
+    }
+    
+    if (theme.controlForegroundColor) {
+        root.style.setProperty('--text-secondary', theme.controlForegroundColor);
+    }
+    
+    // Detect if we're in dark mode by checking background brightness
+    if (theme.bodyBackgroundColor) {
+        const rgb = parseColor(theme.bodyBackgroundColor);
+        if (rgb) {
+            const brightness = (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000;
+            const isDark = brightness < 128;
+            
+            if (isDark) {
+                // Dark theme adjustments
+                root.style.setProperty('--bg-header', '#1f4788');
+                root.style.setProperty('--accent-primary', '#4a9eff');
+                root.style.setProperty('--accent-hover', '#6bb0ff');
+                root.style.setProperty('--border-color', '#3b3b3b');
+                root.style.setProperty('--shadow-color', 'rgba(0,0,0,0.3)');
+                root.style.setProperty('--shadow-strong', 'rgba(0,0,0,0.5)');
+                root.style.setProperty('--text-on-accent', '#ffffff');
+            } else {
+                // Light theme (default values work, but we can fine-tune)
+                root.style.setProperty('--bg-header', '#2b579a');
+                root.style.setProperty('--accent-primary', '#0078d4');
+                root.style.setProperty('--accent-hover', '#106ebe');
+                root.style.setProperty('--border-color', '#edebe9');
+                root.style.setProperty('--shadow-color', 'rgba(0,0,0,0.1)');
+                root.style.setProperty('--shadow-strong', 'rgba(0,0,0,0.2)');
+                root.style.setProperty('--text-on-accent', '#ffffff');
+            }
+        }
+    }
+    
+    logActivity(`Theme applied: ${theme.bodyBackgroundColor ? 'Custom' : 'Default'}`);
+}
+
+function parseColor(color) {
+    // Parse colors like "#FFFFFF" or "rgb(255,255,255)"
+    if (!color) return null;
+    
+    if (color.startsWith('#')) {
+        const hex = color.slice(1);
+        if (hex.length === 6) {
+            return {
+                r: parseInt(hex.substr(0, 2), 16),
+                g: parseInt(hex.substr(2, 2), 16),
+                b: parseInt(hex.substr(4, 2), 16)
+            };
+        }
+    } else if (color.startsWith('rgb')) {
+        const match = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+        if (match) {
+            return {
+                r: parseInt(match[1]),
+                g: parseInt(match[2]),
+                b: parseInt(match[3])
+            };
+        }
+    }
+    return null;
+}
+
 function logActivity(message, level = LOG.INFO) {
     const content = document.getElementById('error-log-content');
     const container = document.getElementById('error-log-container');
@@ -42,6 +128,34 @@ function logActivity(message, level = LOG.INFO) {
 function clearLog() {
     const content = document.getElementById('error-log-content');
     if (content) content.textContent = '';
+}
+
+function downloadLog() {
+    const content = document.getElementById('error-log-content');
+    if (!content || !content.textContent.trim()) {
+        logActivity("Log is empty — nothing to download", LOG.WARN);
+        return;
+    }
+    
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+    const filename = `georgian-hyphenation-log-${timestamp}.txt`;
+    
+    const blob = new Blob([content.textContent], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    
+    // Cleanup
+    setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }, 100);
+    
+    logActivity(`Log downloaded: ${filename}`);
 }
 
 // Progress bar functions
@@ -174,11 +288,24 @@ Office.onReady((info) => {
         logActivity("Office.js loaded successfully");
         logActivity(`Host: ${info.host} | Platform: ${info.platform}`);
         logActivity("Two-pass method active: Remove ALL → Sync → Add NEW");
+        
+        // Apply Office theme
+        applyOfficeTheme();
+        
+        // Listen for theme changes
+        if (Office.context.document && Office.context.document.settings) {
+            Office.context.document.settings.addHandlerAsync(
+                Office.EventType.SettingsChanged,
+                applyOfficeTheme
+            );
+        }
+        
         Hyphenator.init();
         
         document.getElementById('hyphenate-document').onclick = () => runSafe(hyphenateBody);
         document.getElementById('hyphenate-selection').onclick = () => runSafe(hyphenateSelection);
         document.getElementById('clear-log').onclick = clearLog;
+        document.getElementById('download-log').onclick = downloadLog;
         
         const clearHighlightBtn = document.getElementById('clear-highlighting');
         if (clearHighlightBtn) {
