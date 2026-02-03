@@ -325,7 +325,7 @@ Office.onReady((info) => {
             });
         }
         
-        document.getElementById('status').textContent = "მზად არის (v6.0-TwoPass)";
+        document.getElementById('status').textContent = "მზად არის";
     } else {
         logActivity("Not running in Word", LOG.ERROR);
     }
