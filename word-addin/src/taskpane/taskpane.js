@@ -188,6 +188,7 @@ async function hyphenateBody() {
 
 /**
  * ✅ HYPHENATE SELECTION using TWO-PASS OOXML method
+ * Works directly on the selection range, not on paragraphs
  */
 async function hyphenateSelection() {
     await Word.run(async (context) => {
@@ -195,13 +196,74 @@ async function hyphenateSelection() {
         logActivity("🎯 Starting SELECTION hyphenation (TWO-PASS Method)");
         
         const selection = context.document.getSelection();
-        const stats = await processRangeWithTwoPass(context, selection, "selection");
         
-        logActivity("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        logActivity(`✅ COMPLETED:`);
-        logActivity(`   Words processed: ${stats.processed}`);
-        logActivity(`   Words hyphenated: ${stats.success}`);
-        logActivity(`   Paragraphs processed: ${stats.paragraphs}`);
+        // Load selection text to check if it contains Georgian
+        selection.load("text");
+        await context.sync();
+        
+        if (!selection.text || selection.text.trim().length < 4) {
+            logActivity("⚠️ Selection is too short or empty");
+            return;
+        }
+        
+        if (!/[ა-ჰ]/.test(selection.text)) {
+            logActivity("⚠️ Selection contains no Georgian text");
+            return;
+        }
+        
+        logActivity(`   📝 Selection text length: ${selection.text.length} characters`);
+        
+        // ═══════════════════════════════════════════════════════
+        // PASS 1: REMOVE ALL EXISTING HYPHENS FROM SELECTION
+        // ═══════════════════════════════════════════════════════
+        logActivity(`   🗑️  PASS 1: Removing existing hyphens from selection...`);
+        
+        try {
+            const ooxml1 = selection.getOoxml();
+            await context.sync();
+            
+            const cleanedOOXML = removeAllHyphensFromOOXML(ooxml1.value);
+            
+            if (cleanedOOXML.changed) {
+                selection.insertOoxml(cleanedOOXML.ooxml, Word.InsertLocation.replace);
+                await context.sync();
+                logActivity(`   ✓ PASS 1 Complete: Hyphens removed`);
+            } else {
+                logActivity(`   ✓ PASS 1 Complete: No hyphens found`);
+            }
+        } catch (err) {
+            logActivity(`   ✗ PASS 1 Failed: ${err.message}`);
+            return;
+        }
+        
+        // ═══════════════════════════════════════════════════════
+        // PASS 2: ADD NEW HYPHENS TO CLEAN SELECTION
+        // ═══════════════════════════════════════════════════════
+        logActivity(`   ➕ PASS 2: Adding new hyphens to selection...`);
+        
+        try {
+            // Get selection again after Pass 1 changes
+            const selection2 = context.document.getSelection();
+            const ooxml2 = selection2.getOoxml();
+            await context.sync();
+            
+            const hyphenatedOOXML = addHyphensToOOXML(ooxml2.value);
+            
+            if (hyphenatedOOXML.changed) {
+                selection2.insertOoxml(hyphenatedOOXML.ooxml, Word.InsertLocation.replace);
+                await context.sync();
+                
+                logActivity("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+                logActivity(`✅ COMPLETED:`);
+                logActivity(`   Words processed: ${hyphenatedOOXML.wordsProcessed}`);
+                logActivity(`   Words hyphenated: ${hyphenatedOOXML.wordsHyphenated}`);
+            } else {
+                logActivity("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+                logActivity(`⚠️ No words needed hyphenation`);
+            }
+        } catch (err) {
+            logActivity(`   ✗ PASS 2 Failed: ${err.message}`);
+        }
     });
 }
 
