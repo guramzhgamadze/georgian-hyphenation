@@ -40,7 +40,6 @@
             <Description resid="GetStarted.Description"/>
             <LearnMoreUrl resid="GetStarted.LearnMoreUrl"/>
           </GetStarted>
-          <FunctionFile resid="Commands.Url"/>
           <ExtensionPoint xsi:type="PrimaryCommandSurface">
             <OfficeTab id="TabHome">
               <Group id="CommandsGroup">
@@ -53,8 +52,8 @@
                 <Control xsi:type="Button" id="TaskpaneButton">
                   <Label resid="TaskpaneButton.Label"/>
                   <Supertip>
-                    <Title resid="TaskpaneButton.SupertipTitle"/>
-                    <Description resid="TaskpaneButton.SupertipDescription"/>
+                    <Title resid="TaskpaneButton.Title"/>
+                    <Description resid="TaskpaneButton.Tip"/>
                   </Supertip>
                   <Icon>
                     <bt:Image size="16" resid="Icon.16x16"/>
@@ -83,7 +82,6 @@
       </bt:Images>
       
       <bt:Urls>
-        <bt:Url id="Commands.Url" DefaultValue="https://guramzhgamadze.github.io/georgian-hyphenation/word-addin/src/commands/commands.html"/>
         <bt:Url id="Taskpane.Url" DefaultValue="https://guramzhgamadze.github.io/georgian-hyphenation/word-addin/src/taskpane/taskpane.html"/>
         <bt:Url id="GetStarted.LearnMoreUrl" DefaultValue="https://github.com/guramzhgamadze/georgian-hyphenation"/>
       </bt:Urls>
@@ -92,12 +90,12 @@
         <bt:String id="GetStarted.Title" DefaultValue="Georgian Hyphenation"/>
         <bt:String id="CommandsGroup.Label" DefaultValue="Georgian"/>
         <bt:String id="TaskpaneButton.Label" DefaultValue="Hyphenate"/>
-        <bt:String id="TaskpaneButton.SupertipTitle" DefaultValue="Georgian Hyphenation"/>
+        <bt:String id="TaskpaneButton.Title" DefaultValue="Georgian Hyphenation"/>
       </bt:ShortStrings>
       
       <bt:LongStrings>
         <bt:String id="GetStarted.Description" DefaultValue="Add automatic hyphenation to Georgian text for professional document formatting."/>
-        <bt:String id="TaskpaneButton.SupertipDescription" DefaultValue="Click to open the Georgian Hyphenation panel. Automatically adds soft hyphens to Georgian text for perfect justified alignment."/>
+        <bt:String id="TaskpaneButton.Tip" DefaultValue="Click to open the Georgian Hyphenation panel. Automatically adds soft hyphens to Georgian text for perfect justified alignment."/>
       </bt:LongStrings>
     </Resources>
   </VersionOverrides>
