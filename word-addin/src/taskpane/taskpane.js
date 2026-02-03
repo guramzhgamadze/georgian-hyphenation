@@ -19,6 +19,28 @@ function clearLog() {
     if (container) container.style.display = 'none';
 }
 
+// Progress bar functions
+function showProgress() {
+    const container = document.getElementById('progress-container');
+    if (container) container.style.display = 'block';
+}
+
+function hideProgress() {
+    const container = document.getElementById('progress-container');
+    if (container) container.style.display = 'none';
+    updateProgress(0, '');
+}
+
+function updateProgress(percent, label) {
+    const bar = document.getElementById('progress-bar');
+    const percentLabel = document.getElementById('progress-percent');
+    const textLabel = document.getElementById('progress-label');
+    
+    if (bar) bar.style.width = `${Math.min(100, Math.max(0, percent))}%`;
+    if (percentLabel) percentLabel.textContent = `${Math.round(percent)}%`;
+    if (textLabel && label) textLabel.textContent = label;
+}
+
 const Hyphenator = {
     hyphenChar: '\u00AD', 
     vowels: 'აეიოუ',
@@ -171,6 +193,7 @@ async function runSafe(fn) {
  * ✅ HYPHENATE FULL DOCUMENT using TWO-PASS OOXML method
  */
 async function hyphenateBody() {
+    showProgress();
     await Word.run(async (context) => {
         logActivity("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         logActivity("🚀 Starting FULL DOCUMENT hyphenation (TWO-PASS Method)");
@@ -184,6 +207,7 @@ async function hyphenateBody() {
         logActivity(`   Words hyphenated: ${stats.success}`);
         logActivity(`   Paragraphs processed: ${stats.paragraphs}`);
     });
+    hideProgress();
 }
 
 /**
@@ -191,6 +215,7 @@ async function hyphenateBody() {
  * Works directly on the selection range, not on paragraphs
  */
 async function hyphenateSelection() {
+    showProgress();
     await Word.run(async (context) => {
         logActivity("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         logActivity("🎯 Starting SELECTION hyphenation (TWO-PASS Method)");
@@ -203,11 +228,13 @@ async function hyphenateSelection() {
         
         if (!selection.text || selection.text.trim().length < 4) {
             logActivity("⚠️ Selection is too short or empty");
+            hideProgress();
             return;
         }
         
         if (!/[ა-ჰ]/.test(selection.text)) {
             logActivity("⚠️ Selection contains no Georgian text");
+            hideProgress();
             return;
         }
         
@@ -216,12 +243,14 @@ async function hyphenateSelection() {
         // ═══════════════════════════════════════════════════════
         // PASS 1: REMOVE ALL EXISTING HYPHENS FROM SELECTION
         // ═══════════════════════════════════════════════════════
+        updateProgress(10, '🗑️ მოძველებული ნიშნების წაშლა...');
         logActivity(`   🗑️  PASS 1: Removing existing hyphens from selection...`);
         
         try {
             const ooxml1 = selection.getOoxml();
             await context.sync();
             
+            updateProgress(30, '🗑️ მოძველებული ნიშნების წაშლა...');
             const cleanedOOXML = removeAllHyphensFromOOXML(ooxml1.value);
             
             if (cleanedOOXML.changed) {
@@ -233,12 +262,14 @@ async function hyphenateSelection() {
             }
         } catch (err) {
             logActivity(`   ✗ PASS 1 Failed: ${err.message}`);
+            hideProgress();
             return;
         }
         
         // ═══════════════════════════════════════════════════════
         // PASS 2: ADD NEW HYPHENS TO CLEAN SELECTION
         // ═══════════════════════════════════════════════════════
+        updateProgress(60, '➕ ახალი ნიშნების დამატება...');
         logActivity(`   ➕ PASS 2: Adding new hyphens to selection...`);
         
         try {
@@ -247,17 +278,20 @@ async function hyphenateSelection() {
             const ooxml2 = selection2.getOoxml();
             await context.sync();
             
+            updateProgress(80, '➕ ახალი ნიშნების დამატება...');
             const hyphenatedOOXML = addHyphensToOOXML(ooxml2.value);
             
             if (hyphenatedOOXML.changed) {
                 selection2.insertOoxml(hyphenatedOOXML.ooxml, Word.InsertLocation.replace);
                 await context.sync();
                 
+                updateProgress(100, '✅ დასრულდა');
                 logActivity("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
                 logActivity(`✅ COMPLETED:`);
                 logActivity(`   Words processed: ${hyphenatedOOXML.wordsProcessed}`);
                 logActivity(`   Words hyphenated: ${hyphenatedOOXML.wordsHyphenated}`);
             } else {
+                updateProgress(100, '✅ დასრულდა');
                 logActivity("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
                 logActivity(`⚠️ No words needed hyphenation`);
             }
@@ -265,6 +299,8 @@ async function hyphenateSelection() {
             logActivity(`   ✗ PASS 2 Failed: ${err.message}`);
         }
     });
+    
+    setTimeout(hideProgress, 1000); // Keep progress visible for 1 second
 }
 
 /**
@@ -283,6 +319,7 @@ async function processRangeWithTwoPass(context, range, rangeType) {
         await context.sync();
         
         logActivity(`   📄 Found ${paragraphs.items.length} paragraphs`);
+        updateProgress(5, 'პარაგრაფების მომზადება...');
         
         // Filter paragraphs that need processing
         const validParagraphs = [];
@@ -317,6 +354,7 @@ async function processRangeWithTwoPass(context, range, rangeType) {
         }
         
         logActivity(`   ✓ ${validParagraphs.length} paragraphs contain Georgian text`);
+        updateProgress(10, `${validParagraphs.length} პარაგრაფი მოიძებნა`);
         
         if (validParagraphs.length === 0) {
             logActivity(`   ⚠️ No valid paragraphs to process`);
@@ -327,6 +365,7 @@ async function processRangeWithTwoPass(context, range, rangeType) {
         // PASS 1: REMOVE ALL EXISTING HYPHENS
         // ═══════════════════════════════════════════════════════
         logActivity(`   🗑️  PASS 1: Removing all existing hyphens...`);
+        updateProgress(15, '🗑️ ძველი ნიშნების წაშლა...');
         
         const CHUNK_SIZE = 10;
         let removedCount = 0;
@@ -353,16 +392,22 @@ async function processRangeWithTwoPass(context, range, rangeType) {
                 }
             }
             
+            // Update progress
+            const progress = 15 + ((i + CHUNK_SIZE) / validParagraphs.length) * 35; // 15% to 50%
+            updateProgress(progress, `🗑️ წაშლა: ${Math.min(i + CHUNK_SIZE, validParagraphs.length)}/${validParagraphs.length}`);
+            
             // Sync after each chunk
             await context.sync();
         }
         
         logActivity(`   ✓ PASS 1 Complete: ${removedCount} paragraphs cleaned`);
+        updateProgress(50, '✓ ძველი ნიშნები წაშლილია');
         
         // ═══════════════════════════════════════════════════════
         // PASS 2: ADD NEW HYPHENS TO CLEAN TEXT
         // ═══════════════════════════════════════════════════════
         logActivity(`   ➕ PASS 2: Adding new hyphens...`);
+        updateProgress(55, '➕ ახალი ნიშნების დამატება...');
         
         // Need to reload paragraphs after Pass 1 changes
         const paragraphs2 = range.paragraphs;
@@ -424,6 +469,10 @@ async function processRangeWithTwoPass(context, range, rangeType) {
                 }
             }
             
+            // Update progress
+            const progress = 55 + ((i + CHUNK_SIZE) / validParagraphs2.length) * 40; // 55% to 95%
+            updateProgress(progress, `➕ დამატება: ${Math.min(i + CHUNK_SIZE, validParagraphs2.length)}/${validParagraphs2.length}`);
+            
             // Sync after each chunk
             await context.sync();
             
@@ -433,6 +482,7 @@ async function processRangeWithTwoPass(context, range, rangeType) {
         }
         
         logActivity(`   ✓ PASS 2 Complete: ${paragraphsProcessed} paragraphs hyphenated`);
+        updateProgress(100, '✅ დასრულდა');
         
     } catch (err) {
         logActivity(`   ⚠️ Error during processing: ${err.message}`);

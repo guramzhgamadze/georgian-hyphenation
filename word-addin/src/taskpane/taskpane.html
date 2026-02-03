@@ -39,6 +39,43 @@
             background-color: #f3f2f1; border-bottom: 3px solid #0078d4;
             font-size: 13px; text-align: center; box-sizing: border-box;
         }
+        .progress-container {
+            width: 100%; max-width: 300px; margin: 15px 0;
+            display: none;
+        }
+        .progress-header {
+            display: flex; justify-content: space-between; 
+            margin-bottom: 5px; font-size: 12px; color: #605e5c;
+        }
+        .progress-track {
+            width: 100%; height: 8px; 
+            background-color: #edebe9; 
+            border-radius: 4px; 
+            overflow: hidden;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+        }
+        .progress-bar {
+            width: 0%; height: 100%; 
+            background: linear-gradient(90deg, #0078d4 0%, #106ebe 100%);
+            transition: width 0.3s ease;
+            position: relative;
+        }
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255,255,255,0.3),
+                transparent
+            );
+            animation: shimmer 2s infinite;
+        }
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
         .ms-Button {
             width: 100%; max-width: 300px; height: 48px; margin-bottom: 12px;
             border-radius: 4px; border: 1px solid #2b579a;
@@ -102,40 +139,50 @@
 <body class="ms-Fabric">
     <header class="header">
         <h1 class="ms-font-xl">Georgian Hyphenation</h1>
-        <div class="version-badge">Version 3.0.1-Debug</div>
+        <div class="version-badge">Version 6.0-TwoPass+Progress</div>
     </header>
 
     <main class="content-main">
-        <div id="status">მზად არის სამუშაოდ</div>
+        <div id="status">მზად არის სა­მუ­შა­ოდ</div>
+        
+        <div id="progress-container" class="progress-container">
+            <div class="progress-header">
+                <span id="progress-label">მუ­შავ­დე­ბა...</span>
+                <span id="progress-percent">0%</span>
+            </div>
+            <div class="progress-track">
+                <div id="progress-bar" class="progress-bar"></div>
+            </div>
+        </div>
         
         <button id="hyphenate-document" class="ms-Button">
-            <span class="ms-Button-label">მთლიანი დოკუმენტის დამარცვლა</span>
+            <span class="ms-Button-label">მთლი­ა­ნი დო­კუ­მენ­ტის და­მარ­ცვლა</span>
         </button>
         
         <button id="hyphenate-selection" class="ms-Button">
-            <span class="ms-Button-label">მონიშნული ტექსტის დამარცვლა</span>
+            <span class="ms-Button-label">მო­ნიშ­ნუ­ლი ტექ­სტის და­მარ­ცვლა</span>
         </button>
         
         <button id="clear-highlighting" class="ms-Button ms-Button-secondary">
-            <span class="ms-Button-label">🧹 ფერების გასუფთავება</span>
+            <span class="ms-Button-label">🧹 ფე­რე­ბის გა­სუფ­თა­ვე­ბა</span>
         </button>
         
         <div id="error-log-container" class="error-log-container">
             <div class="error-log-header">
-                <span>📋 აქტივობის ლოგი</span>
-                <button id="clear-log" class="error-log-clear">გასუფთავება</button>
+                <span>📋 აქ­ტი­ვო­ბის ლო­გი</span>
+                <button id="clear-log" class="error-log-clear">გა­სუფ­თა­ვე­ბა</button>
             </div>
             <div id="error-log-content"></div>
         </div>
         
         <div class="features-card">
-            <strong>📌 როგორ მუშაობს</strong>
+            <strong>📌 რო­გორ მუ­შა­ობს</strong>
             <p class="description-text">
-                პროგრამა ავტომატურად ამატებს გადატანის ნიშნებს ქართულ ტექსტში. გადატანის ნიშნები გამოჩნდება როდესაც გამოიყენებთ Justify გასწორებას ან ჩართავთ ¶ სიმბოლოს ჩვენებას.
+                პროგ­რა­მა ავ­ტო­მა­ტუ­რად ამა­ტებს გა­და­ტა­ნის ნიშ­ნებს ქარ­თულ ტექ­სტში. გა­და­ტა­ნის ნიშ­ნე­ბი გა­მოჩ­ნდე­ბა რო­დე­საც გა­მო­ი­ყე­ნებთ Justify გას­წო­რე­ბას ან ჩარ­თავთ ¶ სიმ­ბო­ლოს ჩვე­ნე­ბას.
             </p>
-            <strong style="margin-top: 15px;">🎨 ახალი ფუნქცია</strong>
+            <strong style="margin-top: 15px;">🎨 ახა­ლი ფუნ­ქცია</strong>
             <p class="description-text">
-                პრობლემური პარაგრაფები (რომლებიც ვერ დამუშავდა) ავტომატურად მონიშნავს ყვითლად. ეს დაგეხმარებათ იხილოთ რა კონტენტი საჭიროებს ხელით შეცვლას.
+                პრობ­ლე­მუ­რი პა­რაგ­რა­ფე­ბი (რომ­ლე­ბიც ვერ და­მუ­შავ­და) ავ­ტო­მა­ტუ­რად მო­ნიშ­ნავს ყვით­ლად. ეს და­გეხ­მა­რე­ბათ იხი­ლოთ რა კონ­ტენ­ტი საჭი­რო­ებს ხე­ლით შეც­ვლას.
             </p>
         </div>
     </main>
