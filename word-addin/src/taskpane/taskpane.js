@@ -5,18 +5,22 @@ const GEORGIAN_LANG_ID = "1079";
 function logActivity(message) {
     const content = document.getElementById('error-log-content');
     const container = document.getElementById('error-log-container');
-    if (container) container.style.display = 'block';
+    const toggle = document.getElementById('toggle-log');
+    
     if (content) {
         content.textContent += `> ${message}\n`;
         content.scrollTop = content.scrollHeight;
+    }
+    
+    // Show container only if toggle is checked
+    if (container && toggle && toggle.checked) {
+        container.style.display = 'block';
     }
 }
 
 function clearLog() {
     const content = document.getElementById('error-log-content');
-    const container = document.getElementById('error-log-container');
     if (content) content.textContent = '';
-    if (container) container.style.display = 'none';
 }
 
 // Progress bar functions
@@ -158,6 +162,19 @@ Office.onReady((info) => {
         const clearHighlightBtn = document.getElementById('clear-highlighting');
         if (clearHighlightBtn) {
             clearHighlightBtn.onclick = () => runSafe(clearHighlighting);
+        }
+        
+        // Toggle log visibility
+        const toggleLog = document.getElementById('toggle-log');
+        const logContainer = document.getElementById('error-log-container');
+        if (toggleLog && logContainer) {
+            toggleLog.addEventListener('change', function() {
+                if (this.checked) {
+                    logContainer.style.display = 'block';
+                } else {
+                    logContainer.style.display = 'none';
+                }
+            });
         }
         
         document.getElementById('status').textContent = "მზად არის (v6.0-TwoPass)";
