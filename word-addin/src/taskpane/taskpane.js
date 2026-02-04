@@ -15,12 +15,22 @@ function timerEnd(label) {
 }
 
 // ─── Office theme detection ──────────────────────────────
+let lastThemeColors = null;
+
 function applyOfficeTheme() {
     if (typeof Office === 'undefined' || !Office.context || !Office.context.officeTheme) {
         return; // Office.js not loaded or theme API unavailable
     }
     
     const theme = Office.context.officeTheme;
+    
+    // Check if theme actually changed
+    const currentColors = JSON.stringify(theme);
+    if (lastThemeColors === currentColors) {
+        return; // No change, skip update
+    }
+    lastThemeColors = currentColors;
+    
     const root = document.documentElement;
     
     // Office theme provides bodyBackgroundColor, bodyForegroundColor, controlBackgroundColor, controlForegroundColor
@@ -293,11 +303,12 @@ Office.onReady((info) => {
         applyOfficeTheme();
         
         // Listen for theme changes
-        if (Office.context.document && Office.context.document.settings) {
-            Office.context.document.settings.addHandlerAsync(
-                Office.EventType.SettingsChanged,
-                applyOfficeTheme
-            );
+        if (Office.context && Office.context.officeTheme) {
+            // Monitor theme changes by checking periodically
+            // Office.js doesn't provide a direct theme change event
+            setInterval(() => {
+                applyOfficeTheme();
+            }, 1000); // Check every second for theme changes
         }
         
         Hyphenator.init();
