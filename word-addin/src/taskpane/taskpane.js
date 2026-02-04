@@ -59,29 +59,38 @@ function applyOfficeTheme() {
             const brightness = (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000;
             
             if (brightness < 100) {
-                // Black/Dark Gray theme (like Image 1) - Golden Yellow theme
+                // Black/Dark Gray theme - Golden Yellow theme
                 root.style.setProperty('--bg-header', '#f7ba36');
                 root.style.setProperty('--accent-primary', '#f7ba36');
                 root.style.setProperty('--accent-hover', '#e5a825');
+                root.style.setProperty('--bg-tertiary', '#3a3a3a');
+                root.style.setProperty('--text-tertiary', '#a0a0a0');
                 root.style.setProperty('--border-color', '#5a5a5a');
+                root.style.setProperty('--border-strong', '#707070');
                 root.style.setProperty('--shadow-color', 'rgba(0,0,0,0.4)');
                 root.style.setProperty('--shadow-strong', 'rgba(0,0,0,0.6)');
                 root.style.setProperty('--text-on-accent', '#000000');
             } else if (brightness >= 100 && brightness < 180) {
-                // Medium Gray theme (like Image 2) - Green theme
+                // Medium Gray theme - Green theme
                 root.style.setProperty('--bg-header', '#16a34a');
                 root.style.setProperty('--accent-primary', '#15803d');
                 root.style.setProperty('--accent-hover', '#166534');
+                root.style.setProperty('--bg-tertiary', '#4b5563');
+                root.style.setProperty('--text-tertiary', '#9ca3af');
                 root.style.setProperty('--border-color', '#6b7280');
+                root.style.setProperty('--border-strong', '#4b5563');
                 root.style.setProperty('--shadow-color', 'rgba(0,0,0,0.2)');
                 root.style.setProperty('--shadow-strong', 'rgba(0,0,0,0.3)');
                 root.style.setProperty('--text-on-accent', '#ffffff');
             } else {
-                // White/Light theme (like Image 3) - Modern Microsoft 365 Blue
+                // White/Light theme - Modern Microsoft 365 Blue
                 root.style.setProperty('--bg-header', '#115EA3');
                 root.style.setProperty('--accent-primary', '#0F6CBD');
                 root.style.setProperty('--accent-hover', '#115EA3');
+                root.style.setProperty('--bg-tertiary', '#fafafa');
+                root.style.setProperty('--text-tertiary', '#8a8886');
                 root.style.setProperty('--border-color', '#e1dfdd');
+                root.style.setProperty('--border-strong', '#c8c6c4');
                 root.style.setProperty('--shadow-color', 'rgba(0,0,0,0.1)');
                 root.style.setProperty('--shadow-strong', 'rgba(0,0,0,0.14)');
                 root.style.setProperty('--text-on-accent', '#ffffff');
