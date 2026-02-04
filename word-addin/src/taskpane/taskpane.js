@@ -72,10 +72,13 @@ function applyOfficeTheme() {
                 root.style.setProperty('--text-on-accent', '#000000');
             } else if (brightness >= 100 && brightness < 180) {
                 // Medium Gray theme - Green theme
-                root.style.setProperty('--bg-header', '#16a34a');
+                root.style.setProperty('--bg-header', '#15803d');
                 root.style.setProperty('--accent-primary', '#15803d');
                 root.style.setProperty('--accent-hover', '#166534');
-                root.style.setProperty('--bg-tertiary', '#4b5563');
+                root.style.setProperty('--bg-secondary', '#4b5563');
+                root.style.setProperty('--bg-tertiary', '#374151');
+                root.style.setProperty('--text-primary', '#f3f4f6');
+                root.style.setProperty('--text-secondary', '#d1d5db');
                 root.style.setProperty('--text-tertiary', '#9ca3af');
                 root.style.setProperty('--border-color', '#6b7280');
                 root.style.setProperty('--border-strong', '#4b5563');
