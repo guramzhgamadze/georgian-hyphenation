@@ -60,22 +60,22 @@ function applyOfficeTheme() {
             const isDark = brightness < 128;
             
             if (isDark) {
-                // Dark theme adjustments
-                root.style.setProperty('--bg-header', '#a93210');
-                root.style.setProperty('--accent-primary', '#F25022');
-                root.style.setProperty('--accent-hover', '#ff6f47');
-                root.style.setProperty('--border-color', '#3b3b3b');
-                root.style.setProperty('--shadow-color', 'rgba(0,0,0,0.3)');
-                root.style.setProperty('--shadow-strong', 'rgba(0,0,0,0.5)');
-                root.style.setProperty('--text-on-accent', '#ffffff');
+                // Dark theme adjustments - Golden Yellow theme
+                root.style.setProperty('--bg-header', '#f7ba36');
+                root.style.setProperty('--accent-primary', '#f7ba36');
+                root.style.setProperty('--accent-hover', '#e5a825');
+                root.style.setProperty('--border-color', '#5a5a5a');
+                root.style.setProperty('--shadow-color', 'rgba(0,0,0,0.4)');
+                root.style.setProperty('--shadow-strong', 'rgba(0,0,0,0.6)');
+                root.style.setProperty('--text-on-accent', '#000000');
             } else {
-                // Light theme (default values work, but we can fine-tune)
-                root.style.setProperty('--bg-header', '#2b579a');
-                root.style.setProperty('--accent-primary', '#0078d4');
-                root.style.setProperty('--accent-hover', '#106ebe');
-                root.style.setProperty('--border-color', '#edebe9');
+                // Light theme - Modern Microsoft 365 colors
+                root.style.setProperty('--bg-header', '#115EA3');
+                root.style.setProperty('--accent-primary', '#0F6CBD');
+                root.style.setProperty('--accent-hover', '#115EA3');
+                root.style.setProperty('--border-color', '#e1dfdd');
                 root.style.setProperty('--shadow-color', 'rgba(0,0,0,0.1)');
-                root.style.setProperty('--shadow-strong', 'rgba(0,0,0,0.2)');
+                root.style.setProperty('--shadow-strong', 'rgba(0,0,0,0.14)');
                 root.style.setProperty('--text-on-accent', '#ffffff');
             }
         }
