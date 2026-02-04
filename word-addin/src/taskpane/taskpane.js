@@ -61,9 +61,9 @@ function applyOfficeTheme() {
             
             if (isDark) {
                 // Dark theme adjustments
-                root.style.setProperty('--bg-header', '#1f4788');
-                root.style.setProperty('--accent-primary', '#4a9eff');
-                root.style.setProperty('--accent-hover', '#6bb0ff');
+                root.style.setProperty('--bg-header', '#a93210');
+                root.style.setProperty('--accent-primary', '#F25022');
+                root.style.setProperty('--accent-hover', '#ff6f47');
                 root.style.setProperty('--border-color', '#3b3b3b');
                 root.style.setProperty('--shadow-color', 'rgba(0,0,0,0.3)');
                 root.style.setProperty('--shadow-strong', 'rgba(0,0,0,0.5)');
