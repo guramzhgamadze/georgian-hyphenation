@@ -52,15 +52,14 @@ function applyOfficeTheme() {
         root.style.setProperty('--text-secondary', theme.controlForegroundColor);
     }
     
-    // Detect if we're in dark mode by checking background brightness
+    // Detect theme by checking background brightness (3 options: white, gray, black)
     if (theme.bodyBackgroundColor) {
         const rgb = parseColor(theme.bodyBackgroundColor);
         if (rgb) {
             const brightness = (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000;
-            const isDark = brightness < 128;
             
-            if (isDark) {
-                // Dark theme adjustments - Golden Yellow theme
+            if (brightness < 100) {
+                // Black/Dark Gray theme (like Image 1) - Golden Yellow theme
                 root.style.setProperty('--bg-header', '#f7ba36');
                 root.style.setProperty('--accent-primary', '#f7ba36');
                 root.style.setProperty('--accent-hover', '#e5a825');
@@ -68,8 +67,17 @@ function applyOfficeTheme() {
                 root.style.setProperty('--shadow-color', 'rgba(0,0,0,0.4)');
                 root.style.setProperty('--shadow-strong', 'rgba(0,0,0,0.6)');
                 root.style.setProperty('--text-on-accent', '#000000');
+            } else if (brightness >= 100 && brightness < 180) {
+                // Medium Gray theme (like Image 2) - Green theme
+                root.style.setProperty('--bg-header', '#16a34a');
+                root.style.setProperty('--accent-primary', '#15803d');
+                root.style.setProperty('--accent-hover', '#166534');
+                root.style.setProperty('--border-color', '#6b7280');
+                root.style.setProperty('--shadow-color', 'rgba(0,0,0,0.2)');
+                root.style.setProperty('--shadow-strong', 'rgba(0,0,0,0.3)');
+                root.style.setProperty('--text-on-accent', '#ffffff');
             } else {
-                // Light theme - Modern Microsoft 365 colors
+                // White/Light theme (like Image 3) - Modern Microsoft 365 Blue
                 root.style.setProperty('--bg-header', '#115EA3');
                 root.style.setProperty('--accent-primary', '#0F6CBD');
                 root.style.setProperty('--accent-hover', '#115EA3');
