@@ -137,12 +137,14 @@
             display: none; 
         }
         .error-log-header {
-            padding: 8px 12px;
-            background-color: var(--accent-primary);
-            color: var(--text-on-accent);
-            font-size: 12px; font-weight: 600;
-            display: flex; justify-content: space-between; align-items: center;
-        }
+			padding: 10px 12px;
+			background-color: var(--accent-primary);
+			color: var(--text-on-accent);
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			gap: 8px;
+}
         .error-log-clear {
             background: none; border: none;
             color: var(--text-on-accent);
@@ -265,10 +267,10 @@
             
             <div id="error-log-container" class="error-log-container">
                 <div class="error-log-header">
-                    <div style="text-align: center; margin-bottom: 8px;">აქ­ტი­ვო­ბის ლო­გი</div>
-                    <div style="display: flex; gap: 8px; justify-content: center;">
-                        <button id="download-log" class="error-log-clear">ჩამოტვირთვა</button>
-                        <button id="clear-log" class="error-log-clear">გა­სუფ­თა­ვე­ბა</button>
+                    <div style="font-weight: 700; font-size: 13px;">აქ­ტი­ვო­ბის ლო­გი</div>
+                    <div style="display: flex; gap: 20px;">
+						<button id="download-log" class="error-log-clear">ჩამოტვირთვა</button>
+						<button id="clear-log" class="error-log-clear">გა­სუფ­თა­ვე­ბა</button>
                     </div>
                 </div>
                 <div id="error-log-content"></div>
