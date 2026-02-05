@@ -704,15 +704,21 @@ async function processRangeWithTwoPass(context, range, rangeType) {
                 } catch (err) {
                     // Capture detailed error information
                     const para = validParagraphs2[j];
+                    let paraText = '';
+                    let paraStyle = 'unknown';
+                    
                     try {
                         para.load('text,style,styleBuiltIn,alignment,firstLineIndent,leftIndent,rightIndent,spaceAfter,spaceBefore,lineSpacing,outlineLevel');
                         await context.sync();
                         
+                        paraText = para.text || '';
+                        paraStyle = para.style || 'unknown';
+                        
                         const errorDetails = {
                             paraNum: j,
-                            textLength: para.text ? para.text.length : 0,
-                            textPreview: para.text ? para.text.substring(0, 50) + (para.text.length > 50 ? '...' : '') : '',
-                            style: para.style || 'unknown',
+                            textLength: paraText.length,
+                            textPreview: paraText.substring(0, 50) + (paraText.length > 50 ? '...' : ''),
+                            style: paraStyle,
                             alignment: para.alignment || 'unknown',
                             error: err.message
                         };
@@ -721,13 +727,41 @@ async function processRangeWithTwoPass(context, range, rangeType) {
                         logActivity(`Error details: Length=${errorDetails.textLength}, Style=${errorDetails.style}, Alignment=${errorDetails.alignment}`, LOG.WARN);
                     } catch (loadErr) {
                         pass2Errors.push(`para ${j}: ${err.message}`);
+                        logActivity(`Could not load paragraph details: ${loadErr.message}`, LOG.WARN);
                     }
                     
-                    // Highlight the problematic content
+                    // Highlight the problematic content using search
+                    // This avoids stale object references
                     try {
-                        await highlightProblematicContent(context, para);
+                        if (paraText && paraText.length > 10) {
+                            // Search for a unique portion of the text (first 50 chars should be unique enough)
+                            const searchText = paraText.substring(0, Math.min(50, paraText.length));
+                            const searchResults = range.search(searchText, { matchCase: true, matchWholeWord: false });
+                            searchResults.load('items');
+                            await context.sync();
+                            
+                            if (searchResults.items.length > 0) {
+                                // Get the full paragraph containing this text
+                                const foundRange = searchResults.items[0];
+                                const foundPara = foundRange.paragraphs.getFirst();
+                                foundPara.load('text');
+                                await context.sync();
+                                
+                                // Verify it's the right paragraph
+                                if (foundPara.text === paraText) {
+                                    await highlightProblematicContent(context, foundPara);
+                                } else {
+                                    // Just highlight what we found
+                                    foundRange.font.highlightColor = "yellow";
+                                    await context.sync();
+                                    logActivity(`Highlighted approximate location of error`, LOG.WARN);
+                                }
+                            } else {
+                                logActivity(`Could not find paragraph text for highlighting`, LOG.WARN);
+                            }
+                        }
                     } catch (highlightErr) {
-                        // If highlighting fails, just continue
+                        logActivity(`Could not highlight paragraph: ${highlightErr.message}`, LOG.WARN);
                     }
                 }
             }
