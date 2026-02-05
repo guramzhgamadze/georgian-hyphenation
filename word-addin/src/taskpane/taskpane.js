@@ -838,32 +838,39 @@ async function processRangeWithTwoPass(context, range, rangeType) {
                     // Check if OOXML contains problematic elements BEFORE attempting modification
                     const problematicElements = checkProblematicOOXMLElements(ooxml.value);
                     
-                    // Skip paragraphs with track changes, fields, or very large OOXML
-                    const shouldSkip = (
-                        problematicElements.some(elem => 
-                            elem.includes('ins(') || 
-                            elem.includes('del(') || 
-                            elem.includes('moveFrom(') || 
-                            elem.includes('moveTo(')
-                        ) ||
-                        problematicElements.some(elem => 
-                            elem.includes('fldChar(') || 
-                            elem.includes('fldSimple(')
-                        ) ||
-                        ooxml.value.length > 50000 // Skip very large OOXML (likely TOC or complex tables)
+                    // Skip paragraphs with track changes or complex fields
+                    // Note: We allow hyperlinks and large OOXML unless there are OTHER issues
+                    const hasTrackChanges = problematicElements.some(elem => 
+                        elem.includes('ins(') || 
+                        elem.includes('del(') || 
+                        elem.includes('moveFrom(') || 
+                        elem.includes('moveTo(')
                     );
+                    
+                    const hasComplexFields = problematicElements.some(elem => 
+                        elem.includes('fldChar(') || 
+                        elem.includes('fldSimple(')
+                    );
+                    
+                    const hasContentControls = problematicElements.some(elem => 
+                        elem.includes('contentControl(')
+                    );
+                    
+                    const hasPermissions = problematicElements.some(elem => 
+                        elem.includes('permStart(') || 
+                        elem.includes('permEnd(')
+                    );
+                    
+                    // Only skip if it has genuinely problematic elements
+                    // Large OOXML with just hyperlinks is OK to process
+                    const shouldSkip = hasTrackChanges || hasComplexFields || hasContentControls || hasPermissions;
                     
                     if (shouldSkip) {
                         const reason = [];
-                        if (problematicElements.some(e => e.includes('ins(') || e.includes('del('))) {
-                            reason.push('track changes');
-                        }
-                        if (problematicElements.some(e => e.includes('fldChar(') || e.includes('fldSimple('))) {
-                            reason.push('fields (TOC/Index)');
-                        }
-                        if (ooxml.value.length > 50000) {
-                            reason.push(`large OOXML (${(ooxml.value.length/1000).toFixed(1)}KB)`);
-                        }
+                        if (hasTrackChanges) reason.push('track changes');
+                        if (hasComplexFields) reason.push('fields (TOC/Index)');
+                        if (hasContentControls) reason.push('content controls');
+                        if (hasPermissions) reason.push('protected content');
                         
                         skippedParagraphs.push({
                             index: j,
