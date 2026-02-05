@@ -458,6 +458,13 @@ async function hyphenateSelection() {
             }
         } catch (err) {
             logActivity(`Pass 1 failed: ${err.message}`, LOG.ERROR);
+            // Highlight the problematic selection
+            try {
+                selection.font.highlightColor = "yellow";
+                await context.sync();
+            } catch (highlightErr) {
+                // If highlighting fails, just continue
+            }
             hideProgress();
             return;
         }
@@ -490,6 +497,14 @@ async function hyphenateSelection() {
             }
         } catch (err) {
             logActivity(`Pass 2 failed: ${err.message}`, LOG.ERROR);
+            // Highlight the problematic selection
+            try {
+                const selection2 = context.document.getSelection();
+                selection2.font.highlightColor = "yellow";
+                await context.sync();
+            } catch (highlightErr) {
+                // If highlighting fails, just continue
+            }
         }
 
         logActivity("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", LOG.SEP);
@@ -587,6 +602,13 @@ async function processRangeWithTwoPass(context, range, rangeType) {
                     
                 } catch (err) {
                     pass1Errors.push(`para ${j}: ${err.message}`);
+                    // Highlight the problematic content
+                    try {
+                        const para = validParagraphs[j];
+                        await highlightProblematicContent(context, para);
+                    } catch (highlightErr) {
+                        // If highlighting fails, just continue
+                    }
                 }
             }
             
@@ -666,6 +688,13 @@ async function processRangeWithTwoPass(context, range, rangeType) {
                     
                 } catch (err) {
                     pass2Errors.push(`para ${j}: ${err.message}`);
+                    // Highlight the problematic content
+                    try {
+                        const para = validParagraphs2[j];
+                        await highlightProblematicContent(context, para);
+                    } catch (highlightErr) {
+                        // If highlighting fails, just continue
+                    }
                 }
             }
             
@@ -692,6 +721,111 @@ async function processRangeWithTwoPass(context, range, rangeType) {
         success: totalSuccess,
         paragraphs: paragraphsProcessed
     };
+}
+
+/**
+ * 🔍 Find and highlight problematic content in a paragraph
+ * Searches for patterns that commonly cause OOXML errors
+ * Highlights entire words containing problematic characters
+ */
+async function highlightProblematicContent(context, para) {
+    try {
+        // Load paragraph text
+        para.load('text');
+        await context.sync();
+        
+        const text = para.text;
+        let foundSpecificIssues = false;
+        
+        // Patterns for problematic characters
+        const problematicChars = [
+            '\u200B', '\u200C', '\u200D', '\u200E', '\u200F', // Zero-width chars
+            '\uFEFF', // Zero-width no-break space
+            '\uFFFD', // Replacement character (�)
+            '\u0000', '\u0001', '\u0002', '\u0003', '\u0004', '\u0005', '\u0006', '\u0007',
+            '\u0008', '\u0009', '\u000B', '\u000C', '\u000E', '\u000F', // Control chars
+            '\u0010', '\u0011', '\u0012', '\u0013', '\u0014', '\u0015', '\u0016', '\u0017',
+            '\u0018', '\u0019', '\u001A', '\u001B', '\u001C', '\u001D', '\u001E', '\u001F'
+        ];
+        
+        // Check if text contains any problematic characters
+        let problematicPositions = [];
+        for (let i = 0; i < text.length; i++) {
+            if (problematicChars.includes(text[i])) {
+                problematicPositions.push(i);
+            }
+        }
+        
+        if (problematicPositions.length > 0) {
+            foundSpecificIssues = true;
+            logActivity(`Found ${problematicPositions.length} problematic character(s) in paragraph`, LOG.WARN);
+            
+            // For each problematic character position, find the word boundaries
+            const wordsToHighlight = new Set();
+            
+            for (const pos of problematicPositions) {
+                // Find word boundaries (start and end)
+                let wordStart = pos;
+                let wordEnd = pos;
+                
+                // Move back to find word start (stop at space, punctuation, or start of text)
+                while (wordStart > 0 && /[^\s.,!?;:()\[\]{}'"«»—\-]/.test(text[wordStart - 1])) {
+                    wordStart--;
+                }
+                
+                // Move forward to find word end (stop at space, punctuation, or end of text)
+                while (wordEnd < text.length && /[^\s.,!?;:()\[\]{}'"«»—\-]/.test(text[wordEnd])) {
+                    wordEnd++;
+                }
+                
+                // Store the word to highlight
+                if (wordStart < wordEnd) {
+                    const word = text.substring(wordStart, wordEnd);
+                    wordsToHighlight.add(word);
+                }
+            }
+            
+            // Now search and highlight each problematic word
+            const paraRange = para.getRange();
+            
+            for (const word of wordsToHighlight) {
+                try {
+                    const searchResults = paraRange.search(word, { 
+                        matchCase: true,
+                        matchWholeWord: false 
+                    });
+                    searchResults.load('items');
+                    await context.sync();
+                    
+                    if (searchResults.items.length > 0) {
+                        for (let i = 0; i < searchResults.items.length; i++) {
+                            searchResults.items[i].font.highlightColor = "red";
+                        }
+                        logActivity(`Highlighted problematic word: "${word.replace(/[\u0000-\u001F\u200B-\u200F\uFEFF\uFFFD]/g, '�')}"`, LOG.WARN);
+                    }
+                } catch (searchErr) {
+                    logActivity(`Could not highlight word: ${searchErr.message}`, LOG.WARN);
+                }
+            }
+            
+            await context.sync();
+        }
+        
+        // Always highlight the entire paragraph in yellow for context
+        para.font.highlightColor = "yellow";
+        await context.sync();
+        
+        if (!foundSpecificIssues) {
+            logActivity(`Highlighted entire paragraph (structural OOXML error, no specific characters found)`, LOG.WARN);
+        }
+        
+        return foundSpecificIssues;
+        
+    } catch (err) {
+        // If highlighting fails completely, just log it
+        logActivity(`Could not highlight problematic content: ${err.message}`, LOG.WARN);
+        return false;
+    }
 }
 
 /**
@@ -812,26 +946,9 @@ async function clearHighlighting() {
         logActivity("Clearing all highlighting…");
         
         const body = context.document.body;
-        const paragraphs = body.paragraphs;
-        paragraphs.load("items");
-        await context.sync();
-        
-        let cleared = 0;
-        for (let i = 0; i < paragraphs.items.length; i++) {
-            try {
-                const para = paragraphs.items[i];
-                para.font.highlightColor = null;
-                cleared++;
-                
-                if (i % 50 === 0) {
-                    await context.sync();
-                }
-            } catch (err) {
-                continue;
-            }
-        }
+        body.font.highlightColor = null;
         
         await context.sync();
-        logActivity(`Highlighting cleared from ${cleared} paragraphs`);
+        logActivity(`All highlighting cleared from document`);
     });
 }
