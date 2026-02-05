@@ -681,6 +681,7 @@ async function processRangeWithTwoPass(context, range, rangeType) {
         }
         
         const pass2Errors = [];
+        const skippedParagraphs = [];
         
         for (let i = 0; i < validParagraphs2.length; i += CHUNK_SIZE) {
             const endIdx = Math.min(i + CHUNK_SIZE, validParagraphs2.length);
@@ -834,6 +835,50 @@ async function processRangeWithTwoPass(context, range, rangeType) {
                     const ooxml = paraRange.getOoxml();
                     await context.sync();
                     
+                    // Check if OOXML contains problematic elements BEFORE attempting modification
+                    const problematicElements = checkProblematicOOXMLElements(ooxml.value);
+                    
+                    // Skip paragraphs with track changes, fields, or very large OOXML
+                    const shouldSkip = (
+                        problematicElements.some(elem => 
+                            elem.includes('ins(') || 
+                            elem.includes('del(') || 
+                            elem.includes('moveFrom(') || 
+                            elem.includes('moveTo(')
+                        ) ||
+                        problematicElements.some(elem => 
+                            elem.includes('fldChar(') || 
+                            elem.includes('fldSimple(')
+                        ) ||
+                        ooxml.value.length > 50000 // Skip very large OOXML (likely TOC or complex tables)
+                    );
+                    
+                    if (shouldSkip) {
+                        const reason = [];
+                        if (problematicElements.some(e => e.includes('ins(') || e.includes('del('))) {
+                            reason.push('track changes');
+                        }
+                        if (problematicElements.some(e => e.includes('fldChar(') || e.includes('fldSimple('))) {
+                            reason.push('fields (TOC/Index)');
+                        }
+                        if (ooxml.value.length > 50000) {
+                            reason.push(`large OOXML (${(ooxml.value.length/1000).toFixed(1)}KB)`);
+                        }
+                        
+                        skippedParagraphs.push({
+                            index: j,
+                            text: paraText.substring(0, 50),
+                            reason: reason.join(', '),
+                            elements: problematicElements.join(', ')
+                        });
+                        
+                        logActivity(`⏭️  SKIPPED paragraph ${j}: ${reason.join(', ')}`, LOG.INFO);
+                        logActivity(`   Text: "${paraText.substring(0, 50)}${paraText.length > 50 ? '...' : ''}"`, LOG.INFO);
+                        logActivity(`   Elements: ${problematicElements.join(', ')}`, LOG.INFO);
+                        
+                        continue; // Skip this paragraph
+                    }
+                    
                     const hyphenatedOOXML = addHyphensToOOXML(ooxml.value);
                     
                     if (hyphenatedOOXML.changed) {
@@ -940,6 +985,17 @@ async function processRangeWithTwoPass(context, range, rangeType) {
         logActivity(`Pass 2 done in ${timerEnd('pass2')} ms — ${paragraphsProcessed} paragraphs hyphenated`);
         if (pass2Errors.length) {
             logActivity(`Pass 2 errors (${pass2Errors.length}): ${pass2Errors.join(' | ')}`, LOG.ERROR);
+        }
+        if (skippedParagraphs.length > 0) {
+            logActivity(`═══════════════════════════════════════════════`, LOG.SEP);
+            logActivity(`SKIPPED PARAGRAPHS SUMMARY (${skippedParagraphs.length} total)`, LOG.INFO);
+            logActivity(`These paragraphs were intentionally skipped to avoid errors:`, LOG.INFO);
+            skippedParagraphs.forEach(skip => {
+                logActivity(`  • Para ${skip.index}: ${skip.reason}`, LOG.INFO);
+                logActivity(`    Text: "${skip.text}..."`, LOG.INFO);
+                logActivity(`    Elements: ${skip.elements}`, LOG.INFO);
+            });
+            logActivity(`═══════════════════════════════════════════════`, LOG.SEP);
         }
         updateProgress(100, '✅ დასრულდა');
         
