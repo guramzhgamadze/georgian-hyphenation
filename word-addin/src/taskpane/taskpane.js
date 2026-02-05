@@ -693,6 +693,7 @@ async function processRangeWithTwoPass(context, range, rangeType) {
                 let paraStyle = 'unknown';
                 let paraAlignment = 'unknown';
                 let paraLength = 0;
+                let preLoadFailed = false;
                 
                 try {
                     para.load('text,style,alignment');
@@ -702,7 +703,130 @@ async function processRangeWithTwoPass(context, range, rangeType) {
                     paraAlignment = para.alignment || 'unknown';
                     paraLength = paraText.length;
                 } catch (preLoadErr) {
-                    logActivity(`Could not pre-load paragraph ${j}: ${preLoadErr.message}`, LOG.WARN);
+                    preLoadFailed = true;
+                    logActivity(`═══════════════════════════════════════════════`, LOG.SEP);
+                    logActivity(`PRE-LOAD ERROR on paragraph ${j}`, LOG.ERROR);
+                    logActivity(`Error type: ${preLoadErr.name || 'unknown'}`, LOG.ERROR);
+                    logActivity(`Error message: ${preLoadErr.message}`, LOG.ERROR);
+                    logActivity(`Error code: ${preLoadErr.code || 'N/A'}`, LOG.ERROR);
+                    
+                    // Try to get ANY information we can about this paragraph
+                    try {
+                        logActivity(`Attempting to load minimal paragraph info...`, LOG.INFO);
+                        
+                        // Try loading just text first
+                        try {
+                            const textOnlyPara = validParagraphs2[j];
+                            textOnlyPara.load('text');
+                            await context.sync();
+                            paraText = textOnlyPara.text || '';
+                            paraLength = paraText.length;
+                            logActivity(`✓ Got text: length=${paraLength}`, LOG.INFO);
+                            logActivity(`✓ Text preview: "${paraText.substring(0, 100)}${paraText.length > 100 ? '...' : ''}"`, LOG.INFO);
+                        } catch (textErr) {
+                            logActivity(`✗ Cannot load text: ${textErr.message}`, LOG.ERROR);
+                        }
+                        
+                        // Try loading style separately
+                        try {
+                            const stylePara = validParagraphs2[j];
+                            stylePara.load('style');
+                            await context.sync();
+                            paraStyle = stylePara.style || 'unknown';
+                            logActivity(`✓ Got style: ${paraStyle}`, LOG.INFO);
+                        } catch (styleErr) {
+                            logActivity(`✗ Cannot load style: ${styleErr.message}`, LOG.ERROR);
+                        }
+                        
+                        // Try loading other properties one by one
+                        const propertiesToTest = [
+                            'isListItem',
+                            'leftIndent',
+                            'rightIndent',
+                            'firstLineIndent',
+                            'alignment',
+                            'lineSpacing',
+                            'spaceAfter',
+                            'spaceBefore',
+                            'outlineLevel'
+                        ];
+                        
+                        logActivity(`Testing individual properties...`, LOG.INFO);
+                        for (const prop of propertiesToTest) {
+                            try {
+                                const testPara = validParagraphs2[j];
+                                testPara.load(prop);
+                                await context.sync();
+                                logActivity(`  ✓ ${prop}: ${testPara[prop]}`, LOG.INFO);
+                            } catch (propErr) {
+                                logActivity(`  ✗ ${prop}: FAILED - ${propErr.message}`, LOG.WARN);
+                            }
+                        }
+                        
+                        // Try to get the paragraph's range
+                        try {
+                            const rangePara = validParagraphs2[j];
+                            const testRange = rangePara.getRange();
+                            testRange.load('text');
+                            await context.sync();
+                            logActivity(`✓ Can get range, range text length: ${testRange.text.length}`, LOG.INFO);
+                        } catch (rangeErr) {
+                            logActivity(`✗ Cannot get range: ${rangeErr.message}`, LOG.ERROR);
+                        }
+                        
+                        // Try to get OOXML
+                        try {
+                            const ooxmlPara = validParagraphs2[j];
+                            const testOoxml = ooxmlPara.getRange().getOoxml();
+                            await context.sync();
+                            const ooxmlLength = testOoxml.value.length;
+                            logActivity(`✓ Can get OOXML, length: ${ooxmlLength} chars`, LOG.INFO);
+                            
+                            // Check if OOXML contains any suspicious elements
+                            const ooxmlStr = testOoxml.value;
+                            const suspiciousElements = [
+                                'contentControl',
+                                'sdt',
+                                'permStart',
+                                'permEnd',
+                                'proofErr',
+                                'bookmarkStart',
+                                'bookmarkEnd',
+                                'commentRangeStart',
+                                'commentRangeEnd',
+                                'moveFrom',
+                                'moveTo',
+                                'del',
+                                'ins',
+                                'smartTag',
+                                'fldSimple',
+                                'fldChar',
+                                'hyperlink'
+                            ];
+                            
+                            const foundElements = [];
+                            for (const elem of suspiciousElements) {
+                                if (ooxmlStr.includes(`w:${elem}`)) {
+                                    const count = (ooxmlStr.match(new RegExp(`w:${elem}`, 'g')) || []).length;
+                                    foundElements.push(`${elem}(${count})`);
+                                }
+                            }
+                            
+                            if (foundElements.length > 0) {
+                                logActivity(`⚠️  OOXML contains: ${foundElements.join(', ')}`, LOG.WARN);
+                            } else {
+                                logActivity(`✓ OOXML looks clean (no special elements)`, LOG.INFO);
+                            }
+                            
+                        } catch (ooxmlErr) {
+                            logActivity(`✗ Cannot get OOXML: ${ooxmlErr.message}`, LOG.ERROR);
+                        }
+                        
+                    } catch (diagErr) {
+                        logActivity(`Diagnostic analysis failed: ${diagErr.message}`, LOG.ERROR);
+                    }
+                    
+                    logActivity(`═══════════════════════════════════════════════`, LOG.SEP);
                 }
                 
                 try {
@@ -713,10 +837,55 @@ async function processRangeWithTwoPass(context, range, rangeType) {
                     const hyphenatedOOXML = addHyphensToOOXML(ooxml.value);
                     
                     if (hyphenatedOOXML.changed) {
-                        paraRange.insertOoxml(hyphenatedOOXML.ooxml, Word.InsertLocation.replace);
-                        totalSuccess += hyphenatedOOXML.wordsHyphenated;
-                        totalProcessed += hyphenatedOOXML.wordsProcessed;
-                        paragraphsProcessed++;
+                        // Validate OOXML before attempting insertion
+                        const ooxmlValid = validateOOXML(hyphenatedOOXML.ooxml);
+                        if (!ooxmlValid.valid) {
+                            throw new Error(`Invalid OOXML generated: ${ooxmlValid.reason}`);
+                        }
+                        
+                        // Try to insert the OOXML
+                        try {
+                            paraRange.insertOoxml(hyphenatedOOXML.ooxml, Word.InsertLocation.replace);
+                            await context.sync();
+                            
+                            totalSuccess += hyphenatedOOXML.wordsHyphenated;
+                            totalProcessed += hyphenatedOOXML.wordsProcessed;
+                            paragraphsProcessed++;
+                        } catch (insertErr) {
+                            // OOXML insertion failed - log details
+                            logActivity(`═══════════════════════════════════════════════`, LOG.SEP);
+                            logActivity(`OOXML INSERTION FAILED on paragraph ${j}`, LOG.ERROR);
+                            logActivity(`Error: ${insertErr.message}`, LOG.ERROR);
+                            logActivity(`Error code: ${insertErr.code || 'N/A'}`, LOG.ERROR);
+                            logActivity(`Original OOXML length: ${ooxml.value.length}`, LOG.INFO);
+                            logActivity(`Modified OOXML length: ${hyphenatedOOXML.ooxml.length}`, LOG.INFO);
+                            logActivity(`Words to hyphenate: ${hyphenatedOOXML.wordsHyphenated}`, LOG.INFO);
+                            
+                            // Check if original and modified OOXML differ significantly
+                            const sizeDiff = Math.abs(hyphenatedOOXML.ooxml.length - ooxml.value.length);
+                            const sizeDiffPercent = (sizeDiff / ooxml.value.length * 100).toFixed(2);
+                            logActivity(`Size difference: ${sizeDiff} chars (${sizeDiffPercent}%)`, LOG.INFO);
+                            
+                            // Try to identify what changed
+                            const originalSoftHyphens = (ooxml.value.match(/w:softHyphen/g) || []).length;
+                            const modifiedSoftHyphens = (hyphenatedOOXML.ooxml.match(/w:softHyphen/g) || []).length;
+                            logActivity(`Soft hyphens: ${originalSoftHyphens} → ${modifiedSoftHyphens} (${modifiedSoftHyphens - originalSoftHyphens > 0 ? '+' : ''}${modifiedSoftHyphens - originalSoftHyphens})`, LOG.INFO);
+                            
+                            // Save both OOXMLs to log for comparison
+                            if (paraText.length < 200) {
+                                logActivity(`Paragraph text: "${paraText}"`, LOG.INFO);
+                            }
+                            
+                            // Check for problematic OOXML elements
+                            const problematicElements = checkProblematicOOXMLElements(ooxml.value);
+                            if (problematicElements.length > 0) {
+                                logActivity(`⚠️  Original OOXML contains: ${problematicElements.join(', ')}`, LOG.WARN);
+                            }
+                            
+                            logActivity(`═══════════════════════════════════════════════`, LOG.SEP);
+                            
+                            throw insertErr; // Re-throw to be caught by outer catch
+                        }
                     }
                     
                 } catch (err) {
@@ -1136,6 +1305,88 @@ async function highlightProblematicContent(context, para) {
         logActivity(`Stack trace: ${err.stack || 'not available'}`, LOG.ERROR);
         return false;
     }
+}
+
+/**
+ * 🔍 Validate OOXML structure before insertion
+ * Based on Microsoft's Word OOXML documentation
+ */
+function validateOOXML(ooxmlString) {
+    try {
+        // Basic validation
+        if (!ooxmlString || ooxmlString.trim().length === 0) {
+            return { valid: false, reason: 'Empty OOXML' };
+        }
+        
+        // Check if it's valid XML
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(ooxmlString, "text/xml");
+        
+        // Check for parser errors
+        const parserError = xmlDoc.getElementsByTagName("parsererror");
+        if (parserError.length > 0) {
+            return { valid: false, reason: 'XML parsing error: ' + parserError[0].textContent };
+        }
+        
+        // Check for required namespace
+        const ns = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+        if (!ooxmlString.includes(ns)) {
+            return { valid: false, reason: 'Missing required Word namespace' };
+        }
+        
+        // Check for balanced w:t and w:r tags
+        const openT = (ooxmlString.match(/<w:t[>\s]/g) || []).length;
+        const closeT = (ooxmlString.match(/<\/w:t>/g) || []).length;
+        if (openT !== closeT) {
+            return { valid: false, reason: `Unbalanced w:t tags: ${openT} open, ${closeT} close` };
+        }
+        
+        const openR = (ooxmlString.match(/<w:r[>\s]/g) || []).length;
+        const closeR = (ooxmlString.match(/<\/w:r>/g) || []).length;
+        if (openR !== closeR) {
+            return { valid: false, reason: `Unbalanced w:r tags: ${openR} open, ${closeR} close` };
+        }
+        
+        return { valid: true };
+        
+    } catch (err) {
+        return { valid: false, reason: 'Validation error: ' + err.message };
+    }
+}
+
+/**
+ * 🔍 Check for problematic OOXML elements that might cause insertion to fail
+ */
+function checkProblematicOOXMLElements(ooxmlString) {
+    const problematicElements = [];
+    
+    const elementsToCheck = {
+        'contentControl': 'w:sdt',
+        'permStart': 'w:permStart',
+        'permEnd': 'w:permEnd',
+        'bookmarkStart': 'w:bookmarkStart',
+        'bookmarkEnd': 'w:bookmarkEnd',
+        'commentRangeStart': 'w:commentRangeStart',
+        'commentRangeEnd': 'w:commentRangeEnd',
+        'moveFrom': 'w:moveFrom',
+        'moveTo': 'w:moveTo',
+        'del': 'w:del',
+        'ins': 'w:ins',
+        'smartTag': 'w:smartTag',
+        'fldSimple': 'w:fldSimple',
+        'fldChar': 'w:fldChar',
+        'hyperlink': 'w:hyperlink',
+        'proofErr': 'w:proofErr'
+    };
+    
+    for (const [name, tag] of Object.entries(elementsToCheck)) {
+        if (ooxmlString.includes(tag)) {
+            const count = (ooxmlString.match(new RegExp(tag, 'g')) || []).length;
+            problematicElements.push(`${name}(${count})`);
+        }
+    }
+    
+    return problematicElements;
 }
 
 /**
