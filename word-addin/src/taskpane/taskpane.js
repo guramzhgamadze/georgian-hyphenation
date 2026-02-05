@@ -686,8 +686,26 @@ async function processRangeWithTwoPass(context, range, rangeType) {
             const endIdx = Math.min(i + CHUNK_SIZE, validParagraphs2.length);
             
             for (let j = i; j < endIdx; j++) {
+                // Pre-load paragraph text and properties BEFORE attempting OOXML operations
+                // This ensures we have the data even if the paragraph becomes invalid
+                const para = validParagraphs2[j];
+                let paraText = '';
+                let paraStyle = 'unknown';
+                let paraAlignment = 'unknown';
+                let paraLength = 0;
+                
                 try {
-                    const para = validParagraphs2[j];
+                    para.load('text,style,alignment');
+                    await context.sync();
+                    paraText = para.text || '';
+                    paraStyle = para.style || 'unknown';
+                    paraAlignment = para.alignment || 'unknown';
+                    paraLength = paraText.length;
+                } catch (preLoadErr) {
+                    logActivity(`Could not pre-load paragraph ${j}: ${preLoadErr.message}`, LOG.WARN);
+                }
+                
+                try {
                     const paraRange = para.getRange();
                     const ooxml = paraRange.getOoxml();
                     await context.sync();
@@ -702,66 +720,42 @@ async function processRangeWithTwoPass(context, range, rangeType) {
                     }
                     
                 } catch (err) {
-                    // Capture detailed error information
-                    const para = validParagraphs2[j];
-                    let paraText = '';
-                    let paraStyle = 'unknown';
+                    // We have the text from pre-loading above
+                    const textPreview = paraText.substring(0, 50) + (paraText.length > 50 ? '...' : '');
                     
-                    try {
-                        para.load('text,style,styleBuiltIn,alignment,firstLineIndent,leftIndent,rightIndent,spaceAfter,spaceBefore,lineSpacing,outlineLevel');
-                        await context.sync();
-                        
-                        paraText = para.text || '';
-                        paraStyle = para.style || 'unknown';
-                        
-                        const errorDetails = {
-                            paraNum: j,
-                            textLength: paraText.length,
-                            textPreview: paraText.substring(0, 50) + (paraText.length > 50 ? '...' : ''),
-                            style: paraStyle,
-                            alignment: para.alignment || 'unknown',
-                            error: err.message
-                        };
-                        
-                        pass2Errors.push(`para ${j}: ${err.message} | text: "${errorDetails.textPreview}" | style: ${errorDetails.style}`);
-                        logActivity(`Error details: Length=${errorDetails.textLength}, Style=${errorDetails.style}, Alignment=${errorDetails.alignment}`, LOG.WARN);
-                    } catch (loadErr) {
-                        pass2Errors.push(`para ${j}: ${err.message}`);
-                        logActivity(`Could not load paragraph details: ${loadErr.message}`, LOG.WARN);
-                    }
+                    pass2Errors.push(`para ${j}: ${err.message} | text: "${textPreview}" | style: ${paraStyle}`);
+                    logActivity(`Error details: Length=${paraLength}, Style=${paraStyle}, Alignment=${paraAlignment}`, LOG.WARN);
                     
                     // Highlight the problematic content using search
                     // This avoids stale object references
                     try {
                         if (paraText && paraText.length > 10) {
-                            // Search for a unique portion of the text (first 50 chars should be unique enough)
-                            const searchText = paraText.substring(0, Math.min(50, paraText.length));
+                            // Search for a unique portion of the text (first 30 chars should be unique enough)
+                            const searchText = paraText.substring(0, Math.min(30, paraText.length));
                             const searchResults = range.search(searchText, { matchCase: true, matchWholeWord: false });
                             searchResults.load('items');
                             await context.sync();
                             
                             if (searchResults.items.length > 0) {
-                                // Get the full paragraph containing this text
+                                logActivity(`Found problematic text via search, getting paragraph...`, LOG.INFO);
+                                
+                                // Get the paragraph containing this text
                                 const foundRange = searchResults.items[0];
                                 const foundPara = foundRange.paragraphs.getFirst();
                                 foundPara.load('text');
                                 await context.sync();
                                 
-                                // Verify it's the right paragraph
-                                if (foundPara.text === paraText) {
-                                    await highlightProblematicContent(context, foundPara);
-                                } else {
-                                    // Just highlight what we found
-                                    foundRange.font.highlightColor = "yellow";
-                                    await context.sync();
-                                    logActivity(`Highlighted approximate location of error`, LOG.WARN);
-                                }
+                                logActivity(`Running comprehensive analysis on paragraph...`, LOG.INFO);
+                                await highlightProblematicContent(context, foundPara);
                             } else {
-                                logActivity(`Could not find paragraph text for highlighting`, LOG.WARN);
+                                logActivity(`Could not find paragraph text for highlighting (searched for: "${searchText.substring(0, 20)}...")`, LOG.WARN);
                             }
+                        } else {
+                            logActivity(`Paragraph text too short or empty for search-based highlighting`, LOG.WARN);
                         }
                     } catch (highlightErr) {
                         logActivity(`Could not highlight paragraph: ${highlightErr.message}`, LOG.WARN);
+                        logActivity(`Highlight error stack: ${highlightErr.stack || 'not available'}`, LOG.WARN);
                     }
                 }
             }
