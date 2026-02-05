@@ -601,10 +601,25 @@ async function processRangeWithTwoPass(context, range, rangeType) {
                     }
                     
                 } catch (err) {
-                    pass1Errors.push(`para ${j}: ${err.message}`);
+                    // Capture detailed error information
+                    const para = validParagraphs[j];
+                    try {
+                        para.load('text,style,styleBuiltIn');
+                        await context.sync();
+                        
+                        const errorDetails = {
+                            paraNum: j,
+                            textPreview: para.text ? para.text.substring(0, 50) + (para.text.length > 50 ? '...' : '') : '',
+                            style: para.style || 'unknown'
+                        };
+                        
+                        pass1Errors.push(`para ${j}: ${err.message} | text: "${errorDetails.textPreview}" | style: ${errorDetails.style}`);
+                    } catch (loadErr) {
+                        pass1Errors.push(`para ${j}: ${err.message}`);
+                    }
+                    
                     // Highlight the problematic content
                     try {
-                        const para = validParagraphs[j];
                         await highlightProblematicContent(context, para);
                     } catch (highlightErr) {
                         // If highlighting fails, just continue
@@ -687,10 +702,29 @@ async function processRangeWithTwoPass(context, range, rangeType) {
                     }
                     
                 } catch (err) {
-                    pass2Errors.push(`para ${j}: ${err.message}`);
+                    // Capture detailed error information
+                    const para = validParagraphs2[j];
+                    try {
+                        para.load('text,style,styleBuiltIn,alignment,firstLineIndent,leftIndent,rightIndent,spaceAfter,spaceBefore,lineSpacing,outlineLevel');
+                        await context.sync();
+                        
+                        const errorDetails = {
+                            paraNum: j,
+                            textLength: para.text ? para.text.length : 0,
+                            textPreview: para.text ? para.text.substring(0, 50) + (para.text.length > 50 ? '...' : '') : '',
+                            style: para.style || 'unknown',
+                            alignment: para.alignment || 'unknown',
+                            error: err.message
+                        };
+                        
+                        pass2Errors.push(`para ${j}: ${err.message} | text: "${errorDetails.textPreview}" | style: ${errorDetails.style}`);
+                        logActivity(`Error details: Length=${errorDetails.textLength}, Style=${errorDetails.style}, Alignment=${errorDetails.alignment}`, LOG.WARN);
+                    } catch (loadErr) {
+                        pass2Errors.push(`para ${j}: ${err.message}`);
+                    }
+                    
                     // Highlight the problematic content
                     try {
-                        const para = validParagraphs2[j];
                         await highlightProblematicContent(context, para);
                     } catch (highlightErr) {
                         // If highlighting fails, just continue
@@ -724,69 +758,311 @@ async function processRangeWithTwoPass(context, range, rangeType) {
 }
 
 /**
- * 🔍 Find and highlight problematic content in a paragraph
- * Searches for patterns that commonly cause OOXML errors
- * Highlights entire words containing problematic characters
+ * 🔍 COMPREHENSIVE error detection and highlighting
+ * Captures EVERY possible detail about problematic paragraphs
  */
 async function highlightProblematicContent(context, para) {
     try {
-        // Load paragraph text
-        para.load('text');
+        // Load ALL available paragraph properties for comprehensive analysis
+        para.load('text,font,style,styleBuiltIn,alignment,isListItem,leftIndent,rightIndent,firstLineIndent,lineSpacing,spaceAfter,spaceBefore,outlineLevel,listItem');
         await context.sync();
         
         const text = para.text;
         let foundSpecificIssues = false;
+        let diagnosticInfo = [];
         
-        // Patterns for problematic characters
-        const problematicChars = [
-            '\u200B', '\u200C', '\u200D', '\u200E', '\u200F', // Zero-width chars
-            '\uFEFF', // Zero-width no-break space
-            '\uFFFD', // Replacement character (�)
-            '\u0000', '\u0001', '\u0002', '\u0003', '\u0004', '\u0005', '\u0006', '\u0007',
-            '\u0008', '\u0009', '\u000B', '\u000C', '\u000E', '\u000F', // Control chars
-            '\u0010', '\u0011', '\u0012', '\u0013', '\u0014', '\u0015', '\u0016', '\u0017',
-            '\u0018', '\u0019', '\u001A', '\u001B', '\u001C', '\u001D', '\u001E', '\u001F'
-        ];
+        logActivity("═══════════════════════════════════════════════", LOG.SEP);
+        logActivity("DETAILED PARAGRAPH ANALYSIS", LOG.INFO);
+        logActivity("═══════════════════════════════════════════════", LOG.SEP);
         
-        // Check if text contains any problematic characters
-        let problematicPositions = [];
+        // ═══ BASIC INFO ═══
+        diagnosticInfo.push(`Text length: ${text.length} characters`);
+        diagnosticInfo.push(`Style: ${para.style || 'unknown'}`);
+        diagnosticInfo.push(`Built-in style: ${para.styleBuiltIn || 'unknown'}`);
+        diagnosticInfo.push(`Alignment: ${para.alignment || 'unknown'}`);
+        diagnosticInfo.push(`Is list item: ${para.isListItem ? 'YES' : 'NO'}`);
+        diagnosticInfo.push(`Left indent: ${para.leftIndent || 0}pt`);
+        diagnosticInfo.push(`Right indent: ${para.rightIndent || 0}pt`);
+        diagnosticInfo.push(`First line indent: ${para.firstLineIndent || 0}pt`);
+        diagnosticInfo.push(`Line spacing: ${para.lineSpacing || 'default'}`);
+        diagnosticInfo.push(`Space after: ${para.spaceAfter || 0}pt`);
+        diagnosticInfo.push(`Space before: ${para.spaceBefore || 0}pt`);
+        diagnosticInfo.push(`Outline level: ${para.outlineLevel || 'none'}`);
+        
+        logActivity("Basic Properties:", LOG.INFO);
+        diagnosticInfo.forEach(info => logActivity(`  - ${info}`, LOG.INFO));
+        diagnosticInfo = [];
+        
+        // ═══ TEXT PREVIEW ═══
+        const preview = text.length > 100 ? text.substring(0, 100) + '...' : text;
+        logActivity(`Text preview: "${preview}"`, LOG.INFO);
+        
+        // ═══ CHARACTER-BY-CHARACTER ANALYSIS ═══
+        logActivity("Character Analysis:", LOG.INFO);
+        
+        // Count character types
+        let georgianCount = 0;
+        let latinCount = 0;
+        let digitCount = 0;
+        let spaceCount = 0;
+        let punctuationCount = 0;
+        let otherCount = 0;
+        
         for (let i = 0; i < text.length; i++) {
-            if (problematicChars.includes(text[i])) {
+            const char = text[i];
+            const code = text.charCodeAt(i);
+            
+            if (code >= 0x10A0 && code <= 0x10FF) georgianCount++; // Georgian
+            else if (code >= 0x1C90 && code <= 0x1CBF) georgianCount++; // Georgian Extended
+            else if ((code >= 0x41 && code <= 0x5A) || (code >= 0x61 && code <= 0x7A)) latinCount++; // Latin
+            else if (code >= 0x30 && code <= 0x39) digitCount++; // Digits
+            else if (code === 0x20 || code === 0xA0 || code === 0x09) spaceCount++; // Spaces
+            else if (/[.,!?;:()\[\]{}'"«»—\-]/.test(char)) punctuationCount++;
+            else otherCount++;
+        }
+        
+        logActivity(`  - Georgian characters: ${georgianCount}`, LOG.INFO);
+        logActivity(`  - Latin characters: ${latinCount}`, LOG.INFO);
+        logActivity(`  - Digits: ${digitCount}`, LOG.INFO);
+        logActivity(`  - Spaces: ${spaceCount}`, LOG.INFO);
+        logActivity(`  - Punctuation: ${punctuationCount}`, LOG.INFO);
+        logActivity(`  - Other characters: ${otherCount}`, LOG.INFO);
+        
+        // ═══ PROBLEMATIC CHARACTERS DETECTION ═══
+        logActivity("Scanning for Problematic Characters:", LOG.INFO);
+        
+        const problematicChars = {
+            // Zero-width characters
+            '\u200B': 'ZERO WIDTH SPACE',
+            '\u200C': 'ZERO WIDTH NON-JOINER',
+            '\u200D': 'ZERO WIDTH JOINER',
+            '\u200E': 'LEFT-TO-RIGHT MARK',
+            '\u200F': 'RIGHT-TO-LEFT MARK',
+            '\uFEFF': 'ZERO WIDTH NO-BREAK SPACE (BOM)',
+            // Replacement and special
+            '\uFFFD': 'REPLACEMENT CHARACTER',
+            '\uFFFC': 'OBJECT REPLACEMENT CHARACTER',
+            // Control characters
+            '\u0000': 'NULL',
+            '\u0001': 'START OF HEADING',
+            '\u0002': 'START OF TEXT',
+            '\u0003': 'END OF TEXT',
+            '\u0004': 'END OF TRANSMISSION',
+            '\u0005': 'ENQUIRY',
+            '\u0006': 'ACKNOWLEDGE',
+            '\u0007': 'BELL',
+            '\u0008': 'BACKSPACE',
+            '\u0009': 'TAB',
+            '\u000B': 'VERTICAL TAB',
+            '\u000C': 'FORM FEED',
+            '\u000E': 'SHIFT OUT',
+            '\u000F': 'SHIFT IN',
+            '\u0010': 'DATA LINK ESCAPE',
+            '\u0011': 'DEVICE CONTROL 1',
+            '\u0012': 'DEVICE CONTROL 2',
+            '\u0013': 'DEVICE CONTROL 3',
+            '\u0014': 'DEVICE CONTROL 4',
+            '\u0015': 'NEGATIVE ACKNOWLEDGE',
+            '\u0016': 'SYNCHRONOUS IDLE',
+            '\u0017': 'END OF TRANSMISSION BLOCK',
+            '\u0018': 'CANCEL',
+            '\u0019': 'END OF MEDIUM',
+            '\u001A': 'SUBSTITUTE',
+            '\u001B': 'ESCAPE',
+            '\u001C': 'FILE SEPARATOR',
+            '\u001D': 'GROUP SEPARATOR',
+            '\u001E': 'RECORD SEPARATOR',
+            '\u001F': 'UNIT SEPARATOR'
+        };
+        
+        let problematicPositions = [];
+        let problematicCharDetails = [];
+        
+        for (let i = 0; i < text.length; i++) {
+            const char = text[i];
+            if (problematicChars[char]) {
                 problematicPositions.push(i);
+                const charCode = text.charCodeAt(i).toString(16).toUpperCase().padStart(4, '0');
+                const charName = problematicChars[char];
+                problematicCharDetails.push({
+                    position: i,
+                    code: charCode,
+                    name: charName,
+                    context: text.substring(Math.max(0, i - 10), Math.min(text.length, i + 11))
+                });
+                logActivity(`  ⚠️  Found U+${charCode} (${charName}) at position ${i}`, LOG.WARN);
+                logActivity(`      Context: "${text.substring(Math.max(0, i - 10), Math.min(text.length, i + 11))}"`, LOG.WARN);
+                foundSpecificIssues = true;
             }
         }
         
+        if (problematicPositions.length === 0) {
+            logActivity("  ✓ No problematic characters found", LOG.INFO);
+        } else {
+            logActivity(`  ⚠️  TOTAL: ${problematicPositions.length} problematic character(s) detected`, LOG.WARN);
+        }
+        
+        // ═══ UNUSUAL UNICODE RANGES ═══
+        logActivity("Scanning Unicode Ranges:", LOG.INFO);
+        
+        const unicodeRanges = {
+            'Georgian (U+10A0-U+10FF)': /[\u10A0-\u10FF]/g,
+            'Georgian Extended (U+1C90-U+1CBF)': /[\u1C90-\u1CBF]/g,
+            'Combining Diacritics (U+0300-U+036F)': /[\u0300-\u036F]/g,
+            'General Punctuation (U+2000-U+206F)': /[\u2000-\u206F]/g,
+            'Superscripts/Subscripts (U+2070-U+209F)': /[\u2070-\u209F]/g,
+            'Currency Symbols (U+20A0-U+20CF)': /[\u20A0-\u20CF]/g,
+            'Mathematical Operators (U+2200-U+22FF)': /[\u2200-\u22FF]/g,
+            'Box Drawing (U+2500-U+257F)': /[\u2500-\u257F]/g,
+            'Cyrillic (U+0400-U+04FF)': /[\u0400-\u04FF]/g,
+            'Latin Extended-A (U+0100-U+017F)': /[\u0100-\u017F]/g,
+            'Latin Extended-B (U+0180-U+024F)': /[\u0180-\u024F]/g,
+            'Private Use Area (U+E000-U+F8FF)': /[\uE000-\uF8FF]/g,
+            'Specials (U+FFF0-U+FFFF)': /[\uFFF0-\uFFFF]/g
+        };
+        
+        for (const [rangeName, regex] of Object.entries(unicodeRanges)) {
+            const matches = text.match(regex);
+            if (matches && matches.length > 0) {
+                logActivity(`  - ${rangeName}: ${matches.length} character(s)`, LOG.INFO);
+                if (rangeName.includes('Private Use') || rangeName.includes('Specials')) {
+                    logActivity(`    ⚠️  WARNING: This range may cause compatibility issues`, LOG.WARN);
+                    foundSpecificIssues = true;
+                }
+            }
+        }
+        
+        // ═══ UNUSUAL SPACING PATTERNS ═══
+        logActivity("Spacing Pattern Analysis:", LOG.INFO);
+        
+        const spacingIssues = {
+            'Multiple consecutive spaces': /  +/g,
+            'Tab characters': /\t/g,
+            'Non-breaking spaces': /\u00A0/g,
+            'En space': /\u2002/g,
+            'Em space': /\u2003/g,
+            'Thin space': /\u2009/g,
+            'Hair space': /\u200A/g,
+            'Line separator': /\u2028/g,
+            'Paragraph separator': /\u2029/g,
+            'Narrow no-break space': /\u202F/g
+        };
+        
+        for (const [issueName, regex] of Object.entries(spacingIssues)) {
+            const matches = text.match(regex);
+            if (matches && matches.length > 0) {
+                logActivity(`  - ${issueName}: ${matches.length} occurrence(s)`, LOG.WARN);
+                foundSpecificIssues = true;
+            }
+        }
+        
+        // ═══ BIDIRECTIONAL TEXT MARKERS ═══
+        const bidiMarkers = {
+            '\u200E': 'LEFT-TO-RIGHT MARK',
+            '\u200F': 'RIGHT-TO-LEFT MARK',
+            '\u202A': 'LEFT-TO-RIGHT EMBEDDING',
+            '\u202B': 'RIGHT-TO-LEFT EMBEDDING',
+            '\u202C': 'POP DIRECTIONAL FORMATTING',
+            '\u202D': 'LEFT-TO-RIGHT OVERRIDE',
+            '\u202E': 'RIGHT-TO-LEFT OVERRIDE',
+            '\u2066': 'LEFT-TO-RIGHT ISOLATE',
+            '\u2067': 'RIGHT-TO-LEFT ISOLATE',
+            '\u2068': 'FIRST STRONG ISOLATE',
+            '\u2069': 'POP DIRECTIONAL ISOLATE'
+        };
+        
+        let bidiFound = false;
+        for (const [char, name] of Object.entries(bidiMarkers)) {
+            if (text.includes(char)) {
+                if (!bidiFound) {
+                    logActivity("Bidirectional Text Markers:", LOG.INFO);
+                    bidiFound = true;
+                }
+                const count = (text.match(new RegExp(char, 'g')) || []).length;
+                logActivity(`  - ${name}: ${count} occurrence(s)`, LOG.WARN);
+                foundSpecificIssues = true;
+            }
+        }
+        
+        // ═══ WORD BOUNDARY ANALYSIS ═══
+        const words = text.split(/\s+/).filter(w => w.length > 0);
+        logActivity(`Word Analysis: ${words.length} words total`, LOG.INFO);
+        
+        // Check for very long words (possible concatenation issues)
+        const longWords = words.filter(w => w.length > 30);
+        if (longWords.length > 0) {
+            logActivity(`  ⚠️  Found ${longWords.length} unusually long word(s) (>30 chars):`, LOG.WARN);
+            longWords.forEach(word => {
+                logActivity(`      "${word.substring(0, 50)}${word.length > 50 ? '...' : ''}"`, LOG.WARN);
+            });
+        }
+        
+        // Check for mixed script words
+        const mixedScriptWords = words.filter(word => {
+            const hasGeorgian = /[\u10A0-\u10FF\u1C90-\u1CBF]/.test(word);
+            const hasLatin = /[a-zA-Z]/.test(word);
+            const hasCyrillic = /[\u0400-\u04FF]/.test(word);
+            return (hasGeorgian && hasLatin) || (hasGeorgian && hasCyrillic) || (hasLatin && hasCyrillic);
+        });
+        
+        if (mixedScriptWords.length > 0) {
+            logActivity(`  ⚠️  Found ${mixedScriptWords.length} mixed-script word(s):`, LOG.WARN);
+            mixedScriptWords.slice(0, 5).forEach(word => {
+                logActivity(`      "${word}"`, LOG.WARN);
+            });
+            if (mixedScriptWords.length > 5) {
+                logActivity(`      ... and ${mixedScriptWords.length - 5} more`, LOG.WARN);
+            }
+        }
+        
+        // ═══ FONT PROPERTIES ═══
+        logActivity("Font Properties:", LOG.INFO);
+        try {
+            para.font.load('name,size,bold,italic,underline,color,highlightColor');
+            await context.sync();
+            
+            logActivity(`  - Font name: ${para.font.name || 'default'}`, LOG.INFO);
+            logActivity(`  - Font size: ${para.font.size || 'default'}pt`, LOG.INFO);
+            logActivity(`  - Bold: ${para.font.bold ? 'YES' : 'NO'}`, LOG.INFO);
+            logActivity(`  - Italic: ${para.font.italic ? 'YES' : 'NO'}`, LOG.INFO);
+            logActivity(`  - Underline: ${para.font.underline || 'NONE'}`, LOG.INFO);
+            logActivity(`  - Color: ${para.font.color || 'default'}`, LOG.INFO);
+            if (para.font.highlightColor) {
+                logActivity(`  - Highlight: ${para.font.highlightColor}`, LOG.INFO);
+            }
+        } catch (fontErr) {
+            logActivity(`  ⚠️  Could not load font properties: ${fontErr.message}`, LOG.WARN);
+        }
+        
+        // ═══ HIGHLIGHT PROBLEMATIC WORDS ═══
         if (problematicPositions.length > 0) {
-            foundSpecificIssues = true;
-            logActivity(`Found ${problematicPositions.length} problematic character(s) in paragraph`, LOG.WARN);
+            logActivity("Attempting to highlight problematic words...", LOG.INFO);
             
             // For each problematic character position, find the word boundaries
             const wordsToHighlight = new Set();
             
             for (const pos of problematicPositions) {
-                // Find word boundaries (start and end)
+                // Find word boundaries
                 let wordStart = pos;
                 let wordEnd = pos;
                 
-                // Move back to find word start (stop at space, punctuation, or start of text)
                 while (wordStart > 0 && /[^\s.,!?;:()\[\]{}'"«»—\-]/.test(text[wordStart - 1])) {
                     wordStart--;
                 }
                 
-                // Move forward to find word end (stop at space, punctuation, or end of text)
                 while (wordEnd < text.length && /[^\s.,!?;:()\[\]{}'"«»—\-]/.test(text[wordEnd])) {
                     wordEnd++;
                 }
                 
-                // Store the word to highlight
                 if (wordStart < wordEnd) {
                     const word = text.substring(wordStart, wordEnd);
                     wordsToHighlight.add(word);
                 }
             }
             
-            // Now search and highlight each problematic word
+            // Search and highlight each problematic word
             const paraRange = para.getRange();
+            let highlightedCount = 0;
             
             for (const word of wordsToHighlight) {
                 try {
@@ -800,30 +1076,36 @@ async function highlightProblematicContent(context, para) {
                     if (searchResults.items.length > 0) {
                         for (let i = 0; i < searchResults.items.length; i++) {
                             searchResults.items[i].font.highlightColor = "red";
+                            highlightedCount++;
                         }
-                        logActivity(`Highlighted problematic word: "${word.replace(/[\u0000-\u001F\u200B-\u200F\uFEFF\uFFFD]/g, '�')}"`, LOG.WARN);
+                        const cleanWord = word.replace(/[\u0000-\u001F\u200B-\u200F\uFEFF\uFFFD]/g, '�');
+                        logActivity(`  ✓ Highlighted word: "${cleanWord}"`, LOG.INFO);
                     }
                 } catch (searchErr) {
-                    logActivity(`Could not highlight word: ${searchErr.message}`, LOG.WARN);
+                    logActivity(`  ✗ Could not highlight word: ${searchErr.message}`, LOG.WARN);
                 }
             }
             
-            await context.sync();
+            logActivity(`Total words highlighted in red: ${highlightedCount}`, LOG.INFO);
         }
         
-        // Always highlight the entire paragraph in yellow for context
+        // ═══ FINAL VERDICT ═══
         para.font.highlightColor = "yellow";
         await context.sync();
         
-        if (!foundSpecificIssues) {
-            logActivity(`Highlighted entire paragraph (structural OOXML error, no specific characters found)`, LOG.WARN);
+        logActivity("═══════════════════════════════════════════════", LOG.SEP);
+        if (foundSpecificIssues) {
+            logActivity("VERDICT: Specific issues detected and highlighted", LOG.WARN);
+        } else {
+            logActivity("VERDICT: No specific characters found - structural OOXML error", LOG.WARN);
         }
+        logActivity("═══════════════════════════════════════════════", LOG.SEP);
         
         return foundSpecificIssues;
         
     } catch (err) {
-        // If highlighting fails completely, just log it
-        logActivity(`Could not highlight problematic content: ${err.message}`, LOG.WARN);
+        logActivity(`CRITICAL: Highlighting function failed: ${err.message}`, LOG.ERROR);
+        logActivity(`Stack trace: ${err.stack || 'not available'}`, LOG.ERROR);
         return false;
     }
 }
