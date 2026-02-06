@@ -587,8 +587,19 @@ async function processRangeWithTwoPass(context, range, rangeType) {
             const endIdx = Math.min(i + CHUNK_SIZE, validParagraphs.length);
             
             for (let j = i; j < endIdx; j++) {
+                // Pre-capture text for potential highlighting
+                const para = validParagraphs[j];
+                let paraText = '';
+                
                 try {
-                    const para = validParagraphs[j];
+                    para.load('text');
+                    await context.sync();
+                    paraText = para.text || '';
+                } catch (preloadErr) {
+                    // Continue even if pre-load fails
+                }
+                
+                try {
                     const paraRange = para.getRange();
                     const ooxml = paraRange.getOoxml();
                     await context.sync();
@@ -602,14 +613,16 @@ async function processRangeWithTwoPass(context, range, rangeType) {
                     
                 } catch (err) {
                     // Capture detailed error information
-                    const para = validParagraphs[j];
                     try {
-                        para.load('text,style,styleBuiltIn');
-                        await context.sync();
+                        if (!paraText) {
+                            para.load('text,style,styleBuiltIn');
+                            await context.sync();
+                            paraText = para.text || '';
+                        }
                         
                         const errorDetails = {
                             paraNum: j,
-                            textPreview: para.text ? para.text.substring(0, 50) + (para.text.length > 50 ? '...' : '') : '',
+                            textPreview: paraText.substring(0, 50) + (paraText.length > 50 ? '...' : ''),
                             style: para.style || 'unknown'
                         };
                         
@@ -618,11 +631,13 @@ async function processRangeWithTwoPass(context, range, rangeType) {
                         pass1Errors.push(`para ${j}: ${err.message}`);
                     }
                     
-                    // Highlight the problematic content
+                    // Highlight the problematic paragraph using search
                     try {
-                        await highlightProblematicContent(context, para);
+                        if (paraText) {
+                            await highlightErrorParagraph(context, paraText);
+                        }
                     } catch (highlightErr) {
-                        // If highlighting fails, just continue
+                        logActivity(`Highlight failed: ${highlightErr.message}`, LOG.WARN);
                     }
                 }
             }
@@ -974,36 +989,15 @@ async function processRangeWithTwoPass(context, range, rangeType) {
                     pass2Errors.push(`para ${j}: ${err.message} | text: "${textPreview}" | style: ${paraStyle}`);
                     logActivity(`Error details: Length=${paraLength}, Style=${paraStyle}, Alignment=${paraAlignment}`, LOG.WARN);
                     
-                    // Highlight the problematic content using search
-                    // This avoids stale object references
+                    // Highlight the problematic paragraph using search-based method
                     try {
                         if (paraText && paraText.length > 10) {
-                            // Search for a unique portion of the text (first 30 chars should be unique enough)
-                            const searchText = paraText.substring(0, Math.min(30, paraText.length));
-                            const searchResults = range.search(searchText, { matchCase: true, matchWholeWord: false });
-                            searchResults.load('items');
-                            await context.sync();
-                            
-                            if (searchResults.items.length > 0) {
-                                logActivity(`Found problematic text via search, getting paragraph...`, LOG.INFO);
-                                
-                                // Get the paragraph containing this text
-                                const foundRange = searchResults.items[0];
-                                const foundPara = foundRange.paragraphs.getFirst();
-                                foundPara.load('text');
-                                await context.sync();
-                                
-                                logActivity(`Running comprehensive analysis on paragraph...`, LOG.INFO);
-                                await highlightProblematicContent(context, foundPara);
-                            } else {
-                                logActivity(`Could not find paragraph text for highlighting (searched for: "${searchText.substring(0, 20)}...")`, LOG.WARN);
-                            }
+                            await highlightErrorParagraph(context, paraText);
                         } else {
-                            logActivity(`Paragraph text too short or empty for search-based highlighting`, LOG.WARN);
+                            logActivity(`Paragraph text too short for highlighting`, LOG.WARN);
                         }
                     } catch (highlightErr) {
-                        logActivity(`Could not highlight paragraph: ${highlightErr.message}`, LOG.WARN);
-                        logActivity(`Highlight error stack: ${highlightErr.stack || 'not available'}`, LOG.WARN);
+                        logActivity(`Highlighting failed: ${highlightErr.message}`, LOG.WARN);
                     }
                 }
             }
@@ -1045,10 +1039,243 @@ async function processRangeWithTwoPass(context, range, rangeType) {
 }
 
 /**
- * 🔍 COMPREHENSIVE error detection and highlighting
- * Captures EVERY possible detail about problematic paragraphs
+ * 🔍 Highlight error paragraph using search (avoids stale reference issues)
+ * Based on Microsoft Word API best practices
  */
-async function highlightProblematicContent(context, para) {
+async function highlightErrorParagraph(context, paraText) {
+    try {
+        if (!paraText || paraText.length < 10) {
+            logActivity(`Text too short for reliable search-based highlighting`, LOG.WARN);
+            return false;
+        }
+        
+        // Use first 50 characters as unique search key
+        const searchKey = paraText.substring(0, Math.min(50, paraText.length));
+        
+        logActivity(`Searching for error paragraph...`, LOG.INFO);
+        logActivity(`Search key: "${searchKey.substring(0, 30)}..."`, LOG.INFO);
+        
+        // Search for the paragraph text
+        const searchResults = context.document.body.search(searchKey, {
+            matchCase: true,
+            matchWholeWord: false
+        });
+        searchResults.load('items');
+        await context.sync();
+        
+        if (searchResults.items.length === 0) {
+            logActivity(`Could not find paragraph for highlighting`, LOG.WARN);
+            return false;
+        }
+        
+        if (searchResults.items.length > 1) {
+            logActivity(`Found ${searchResults.items.length} matches - highlighting first occurrence`, LOG.WARN);
+        }
+        
+        // Get the paragraph from the search result
+        const foundRange = searchResults.items[0];
+        const foundPara = foundRange.paragraphs.getFirst();
+        foundPara.load('text');
+        await context.sync();
+        
+        // Verify it's the correct paragraph
+        if (foundPara.text !== paraText) {
+            logActivity(`⚠️  Found paragraph text doesn't match exactly`, LOG.WARN);
+            logActivity(`Expected length: ${paraText.length}, Found: ${foundPara.text.length}`, LOG.WARN);
+        }
+        
+        // Highlight the paragraph in yellow
+        foundPara.font.highlightColor = "yellow";
+        await context.sync();
+        
+        logActivity(`✅ Successfully highlighted paragraph in yellow`, LOG.INFO);
+        
+        // Now analyze and highlight problematic characters if any
+        await analyzeAndHighlightProblematicCharacters(context, foundPara, paraText);
+        
+        return true;
+        
+    } catch (err) {
+        logActivity(`❌ Highlighting failed: ${err.message}`, LOG.ERROR);
+        logActivity(`Stack: ${err.stack || 'not available'}`, LOG.ERROR);
+        return false;
+    }
+}
+
+/**
+ * 🔬 Analyze paragraph and highlight specific problematic characters in red
+ */
+async function analyzeAndHighlightProblematicCharacters(context, para, text) {
+    try {
+        logActivity("═══════════════════════════════════════════════", LOG.SEP);
+        logActivity("DETAILED PARAGRAPH ANALYSIS", LOG.INFO);
+        logActivity("═══════════════════════════════════════════════", LOG.SEP);
+        
+        let foundSpecificIssues = false;
+        
+        // ═══ BASIC INFO ═══
+        logActivity(`Text length: ${text.length} characters`, LOG.INFO);
+        const preview = text.length > 100 ? text.substring(0, 100) + '...' : text;
+        logActivity(`Text preview: "${preview}"`, LOG.INFO);
+        
+        // ═══ CHARACTER ANALYSIS ═══
+        let georgianCount = 0;
+        let latinCount = 0;
+        let digitCount = 0;
+        let spaceCount = 0;
+        let punctuationCount = 0;
+        let otherCount = 0;
+        
+        for (let i = 0; i < text.length; i++) {
+            const code = text.charCodeAt(i);
+            
+            if (code >= 0x10A0 && code <= 0x10FF) georgianCount++;
+            else if (code >= 0x1C90 && code <= 0x1CBF) georgianCount++;
+            else if ((code >= 0x41 && code <= 0x5A) || (code >= 0x61 && code <= 0x7A)) latinCount++;
+            else if (code >= 0x30 && code <= 0x39) digitCount++;
+            else if (code === 0x20 || code === 0xA0 || code === 0x09) spaceCount++;
+            else if (/[.,!?;:()\[\]{}'"«»—\-]/.test(text[i])) punctuationCount++;
+            else otherCount++;
+        }
+        
+        logActivity("Character Breakdown:", LOG.INFO);
+        logActivity(`  Georgian: ${georgianCount}, Latin: ${latinCount}, Digits: ${digitCount}`, LOG.INFO);
+        logActivity(`  Spaces: ${spaceCount}, Punctuation: ${punctuationCount}, Other: ${otherCount}`, LOG.INFO);
+        
+        // ═══ PROBLEMATIC CHARACTERS DETECTION ═══
+        const problematicChars = {
+            '\u200B': 'ZERO WIDTH SPACE',
+            '\u200C': 'ZERO WIDTH NON-JOINER',
+            '\u200D': 'ZERO WIDTH JOINER',
+            '\u200E': 'LEFT-TO-RIGHT MARK',
+            '\u200F': 'RIGHT-TO-LEFT MARK',
+            '\uFEFF': 'ZERO WIDTH NO-BREAK SPACE',
+            '\uFFFD': 'REPLACEMENT CHARACTER',
+            '\u0000': 'NULL', '\u0001': 'SOH', '\u0002': 'STX',
+            '\u0003': 'ETX', '\u0004': 'EOT', '\u0005': 'ENQ',
+            '\u0006': 'ACK', '\u0007': 'BEL', '\u0008': 'BS',
+            '\u0009': 'TAB', '\u000B': 'VT', '\u000C': 'FF',
+            '\u000E': 'SO', '\u000F': 'SI'
+        };
+        
+        const problematicPositions = [];
+        const problematicWords = new Set();
+        
+        logActivity("Scanning for problematic characters:", LOG.INFO);
+        
+        for (let i = 0; i < text.length; i++) {
+            const char = text[i];
+            if (problematicChars[char]) {
+                problematicPositions.push(i);
+                const charCode = text.charCodeAt(i).toString(16).toUpperCase().padStart(4, '0');
+                const charName = problematicChars[char];
+                
+                logActivity(`  ⚠️  U+${charCode} (${charName}) at position ${i}`, LOG.WARN);
+                
+                // Find word boundaries around this character
+                let wordStart = i;
+                let wordEnd = i;
+                
+                while (wordStart > 0 && /[^\s.,!?;:()\[\]{}'"«»—\-]/.test(text[wordStart - 1])) {
+                    wordStart--;
+                }
+                
+                while (wordEnd < text.length && /[^\s.,!?;:()\[\]{}'"«»—\-]/.test(text[wordEnd])) {
+                    wordEnd++;
+                }
+                
+                if (wordStart < wordEnd) {
+                    const word = text.substring(wordStart, wordEnd);
+                    problematicWords.add(word);
+                    logActivity(`      Context: "${text.substring(Math.max(0, i - 10), Math.min(text.length, i + 11))}"`, LOG.WARN);
+                }
+                
+                foundSpecificIssues = true;
+            }
+        }
+        
+        if (problematicPositions.length === 0) {
+            logActivity("  ✓ No problematic characters found", LOG.INFO);
+        } else {
+            logActivity(`  ⚠️  Total: ${problematicPositions.length} problematic character(s)`, LOG.WARN);
+            
+            // Highlight problematic words in red
+            if (problematicWords.size > 0) {
+                logActivity(`Highlighting ${problematicWords.size} problematic word(s) in red...`, LOG.INFO);
+                
+                const paraRange = para.getRange();
+                let highlightedCount = 0;
+                
+                for (const word of problematicWords) {
+                    try {
+                        const wordResults = paraRange.search(word, {
+                            matchCase: true,
+                            matchWholeWord: false
+                        });
+                        wordResults.load('items');
+                        await context.sync();
+                        
+                        for (let i = 0; i < wordResults.items.length; i++) {
+                            wordResults.items[i].font.highlightColor = "red";
+                            highlightedCount++;
+                        }
+                        
+                        const cleanWord = word.replace(/[\u0000-\u001F\u200B-\u200F\uFEFF\uFFFD]/g, '�');
+                        logActivity(`  ✓ Highlighted word: "${cleanWord}"`, LOG.INFO);
+                        
+                    } catch (wordErr) {
+                        logActivity(`  ✗ Could not highlight word: ${wordErr.message}`, LOG.WARN);
+                    }
+                }
+                
+                await context.sync();
+                logActivity(`✅ Highlighted ${highlightedCount} word instance(s) in red`, LOG.INFO);
+            }
+        }
+        
+        // ═══ UNICODE RANGE ANALYSIS ═══
+        const suspiciousRanges = {
+            'Georgian Extended': /[\u1C90-\u1CBF]/g,
+            'Combining Diacritics': /[\u0300-\u036F]/g,
+            'Private Use Area': /[\uE000-\uF8FF]/g,
+            'Specials': /[\uFFF0-\uFFFF]/g
+        };
+        
+        let foundSuspiciousRanges = false;
+        for (const [rangeName, regex] of Object.entries(suspiciousRanges)) {
+            const matches = text.match(regex);
+            if (matches && matches.length > 0) {
+                if (!foundSuspiciousRanges) {
+                    logActivity("Suspicious Unicode Ranges:", LOG.INFO);
+                    foundSuspiciousRanges = true;
+                }
+                logActivity(`  - ${rangeName}: ${matches.length} character(s)`, LOG.WARN);
+                foundSpecificIssues = true;
+            }
+        }
+        
+        logActivity("═══════════════════════════════════════════════", LOG.SEP);
+        
+        if (foundSpecificIssues) {
+            logActivity("VERDICT: Specific character issues detected and highlighted", LOG.WARN);
+        } else {
+            logActivity("VERDICT: No specific character issues - likely structural OOXML error", LOG.WARN);
+        }
+        
+        logActivity("═══════════════════════════════════════════════", LOG.SEP);
+        
+        return foundSpecificIssues;
+        
+    } catch (err) {
+        logActivity(`Analysis error: ${err.message}`, LOG.ERROR);
+        return false;
+    }
+}
+
+/**
+ * 🔧 PASS 1: Remove ALL soft hyphens from OOXML (both tags and characters)
+ * Returns clean OOXML with NO hyphens whatsoever
+ */
     try {
         // Load ALL available paragraph properties for comprehensive analysis
         para.load('text,font,style,styleBuiltIn,alignment,isListItem,leftIndent,rightIndent,firstLineIndent,lineSpacing,spaceAfter,spaceBefore,outlineLevel,listItem');
