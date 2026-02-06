@@ -844,12 +844,17 @@ async function processRangeWithTwoPass(context, range, rangeType) {
                         elem.includes('ins(') || 
                         elem.includes('del(') || 
                         elem.includes('moveFrom(') || 
-                        elem.includes('moveTo(')
+                        elem.includes('moveTo(') ||
+                        elem.includes('moveFromRangeStart(') ||
+                        elem.includes('moveFromRangeEnd(') ||
+                        elem.includes('moveToRangeStart(') ||
+                        elem.includes('moveToRangeEnd(')
                     );
                     
                     const hasComplexFields = problematicElements.some(elem => 
                         elem.includes('fldChar(') || 
-                        elem.includes('fldSimple(')
+                        elem.includes('fldSimple(') ||
+                        elem.includes('fldData(')
                     );
                     
                     const hasContentControls = problematicElements.some(elem => 
@@ -861,9 +866,27 @@ async function processRangeWithTwoPass(context, range, rangeType) {
                         elem.includes('permEnd(')
                     );
                     
+                    const hasCustomXml = problematicElements.some(elem =>
+                        elem.includes('customXml(') ||
+                        elem.includes('customXmlInsRangeStart(') ||
+                        elem.includes('customXmlDelRangeStart(') ||
+                        elem.includes('customXmlMoveFromRangeStart(') ||
+                        elem.includes('customXmlMoveToRangeStart(')
+                    );
+                    
+                    const hasMathEquations = problematicElements.some(elem =>
+                        elem.includes('oMath(') ||
+                        elem.includes('oMathPara(')
+                    );
+                    
+                    const hasSubDocuments = problematicElements.some(elem =>
+                        elem.includes('subDoc(')
+                    );
+                    
                     // Only skip if it has genuinely problematic elements
-                    // Large OOXML with just hyperlinks is OK to process
-                    const shouldSkip = hasTrackChanges || hasComplexFields || hasContentControls || hasPermissions;
+                    // Large OOXML with just hyperlinks/bookmarks is OK to process
+                    const shouldSkip = hasTrackChanges || hasComplexFields || hasContentControls || 
+                                     hasPermissions || hasCustomXml || hasMathEquations || hasSubDocuments;
                     
                     if (shouldSkip) {
                         const reason = [];
@@ -871,6 +894,10 @@ async function processRangeWithTwoPass(context, range, rangeType) {
                         if (hasComplexFields) reason.push('fields (TOC/Index)');
                         if (hasContentControls) reason.push('content controls');
                         if (hasPermissions) reason.push('protected content');
+                        if (hasCustomXml) reason.push('custom XML data binding');
+                        if (hasMathEquations) reason.push('math equations');
+                        if (hasSubDocuments) reason.push('subdocuments');
+
                         
                         skippedParagraphs.push({
                             index: j,
@@ -1424,27 +1451,55 @@ function checkProblematicOOXMLElements(ooxmlString) {
     const problematicElements = [];
     
     const elementsToCheck = {
+        // Track Changes (MUST SKIP)
+        'ins': 'w:ins',
+        'del': 'w:del',
+        'moveFrom': 'w:moveFrom',
+        'moveTo': 'w:moveTo',
+        'moveFromRangeStart': 'w:moveFromRangeStart',
+        'moveFromRangeEnd': 'w:moveFromRangeEnd',
+        'moveToRangeStart': 'w:moveToRangeStart',
+        'moveToRangeEnd': 'w:moveToRangeEnd',
+        
+        // Content Controls (MUST SKIP)
         'contentControl': 'w:sdt',
+        
+        // Fields - TOC/Index/Cross-refs (MUST SKIP)
+        'fldChar': 'w:fldChar',
+        'fldSimple': 'w:fldSimple',
+        'fldData': 'w:fldData',
+        
+        // Permissions/Protection (MUST SKIP)
         'permStart': 'w:permStart',
         'permEnd': 'w:permEnd',
+        
+        // Custom XML (RECOMMENDED SKIP for data-bound documents)
+        'customXml': 'w:customXml',
+        'customXmlInsRangeStart': 'w:customXmlInsRangeStart',
+        'customXmlDelRangeStart': 'w:customXmlDelRangeStart',
+        'customXmlMoveFromRangeStart': 'w:customXmlMoveFromRangeStart',
+        'customXmlMoveToRangeStart': 'w:customXmlMoveToRangeStart',
+        
+        // Math Equations (RECOMMENDED SKIP - can be complex)
+        'oMath': 'm:oMath',
+        'oMathPara': 'm:oMathPara',
+        
+        // Subdocuments (RECOMMENDED SKIP)
+        'subDoc': 'w:subDoc',
+        
+        // Safe elements (for detection only, won't skip)
         'bookmarkStart': 'w:bookmarkStart',
         'bookmarkEnd': 'w:bookmarkEnd',
         'commentRangeStart': 'w:commentRangeStart',
         'commentRangeEnd': 'w:commentRangeEnd',
-        'moveFrom': 'w:moveFrom',
-        'moveTo': 'w:moveTo',
-        'del': 'w:del',
-        'ins': 'w:ins',
-        'smartTag': 'w:smartTag',
-        'fldSimple': 'w:fldSimple',
-        'fldChar': 'w:fldChar',
         'hyperlink': 'w:hyperlink',
+        'smartTag': 'w:smartTag',
         'proofErr': 'w:proofErr'
     };
     
     for (const [name, tag] of Object.entries(elementsToCheck)) {
         if (ooxmlString.includes(tag)) {
-            const count = (ooxmlString.match(new RegExp(tag, 'g')) || []).length;
+            const count = (ooxmlString.match(new RegExp(tag.replace(/:/g, '\\:'), 'g')) || []).length;
             problematicElements.push(`${name}(${count})`);
         }
     }
