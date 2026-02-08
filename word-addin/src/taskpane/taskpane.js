@@ -537,28 +537,17 @@ async function processRangeWithTwoPass(context, range, rangeType) {
         
         for (let i = 0; i < paragraphs.items.length; i++) {
             const para = paragraphs.items[i];
-            para.load("text, style, isListItem");
+            para.load("text");
         }
         await context.sync();
         
         for (let i = 0; i < paragraphs.items.length; i++) {
             const para = paragraphs.items[i];
             
-            // Skip empty paragraphs
+            // Skip empty paragraphs (nothing to hyphenate)
             if (!para.text || para.text.trim().length < 4) continue;
             
-            // Skip headings
-            if (para.style) {
-                const styleStr = para.style.toString().toLowerCase();
-                if (styleStr.includes("heading") || styleStr.includes("title") || styleStr.includes("toc")) {
-                    continue;
-                }
-            }
-            
-            // Skip list items
-            if (para.isListItem) continue;
-            
-            // Skip if no Georgian text
+            // Skip if no Georgian text (only hyphenate Georgian)
             if (!/[ა-ჰ]/.test(para.text)) continue;
             
             validParagraphs.push(para);
@@ -673,23 +662,17 @@ async function processRangeWithTwoPass(context, range, rangeType) {
         
         for (let i = 0; i < paragraphs2.items.length; i++) {
             const para = paragraphs2.items[i];
-            para.load("text, style, isListItem");
+            para.load("text");
         }
         await context.sync();
         
         for (let i = 0; i < paragraphs2.items.length; i++) {
             const para = paragraphs2.items[i];
             
+            // Skip empty paragraphs (nothing to hyphenate)
             if (!para.text || para.text.trim().length < 4) continue;
             
-            if (para.style) {
-                const styleStr = para.style.toString().toLowerCase();
-                if (styleStr.includes("heading") || styleStr.includes("title") || styleStr.includes("toc")) {
-                    continue;
-                }
-            }
-            
-            if (para.isListItem) continue;
+            // Skip if no Georgian text (only hyphenate Georgian)
             if (!/[ა-ჰ]/.test(para.text)) continue;
             
             validParagraphs2.push(para);
@@ -853,8 +836,12 @@ async function processRangeWithTwoPass(context, range, rangeType) {
                     // Check if OOXML contains problematic elements BEFORE attempting modification
                     const problematicElements = checkProblematicOOXMLElements(ooxml.value);
                     
-                    // Skip paragraphs with track changes or complex fields
-                    // Note: We allow hyperlinks and large OOXML unless there are OTHER issues
+                    // Only skip elements that are PROVEN to cause errors:
+                    // 1. Track changes - causes GeneralException (confirmed)
+                    // 2. Content controls - causes errors (confirmed)
+                    // 3. Complex fields (TOC/Index) - causes errors when combined with track changes (confirmed)
+                    // 4. Permissions - causes access denied (confirmed)
+                    
                     const hasTrackChanges = problematicElements.some(elem => 
                         elem.includes('ins(') || 
                         elem.includes('del(') || 
@@ -866,14 +853,14 @@ async function processRangeWithTwoPass(context, range, rangeType) {
                         elem.includes('moveToRangeEnd(')
                     );
                     
+                    const hasContentControls = problematicElements.some(elem => 
+                        elem.includes('contentControl(')
+                    );
+                    
                     const hasComplexFields = problematicElements.some(elem => 
                         elem.includes('fldChar(') || 
                         elem.includes('fldSimple(') ||
                         elem.includes('fldData(')
-                    );
-                    
-                    const hasContentControls = problematicElements.some(elem => 
-                        elem.includes('contentControl(')
                     );
                     
                     const hasPermissions = problematicElements.some(elem => 
@@ -881,37 +868,15 @@ async function processRangeWithTwoPass(context, range, rangeType) {
                         elem.includes('permEnd(')
                     );
                     
-                    const hasCustomXml = problematicElements.some(elem =>
-                        elem.includes('customXml(') ||
-                        elem.includes('customXmlInsRangeStart(') ||
-                        elem.includes('customXmlDelRangeStart(') ||
-                        elem.includes('customXmlMoveFromRangeStart(') ||
-                        elem.includes('customXmlMoveToRangeStart(')
-                    );
-                    
-                    const hasMathEquations = problematicElements.some(elem =>
-                        elem.includes('oMath(') ||
-                        elem.includes('oMathPara(')
-                    );
-                    
-                    const hasSubDocuments = problematicElements.some(elem =>
-                        elem.includes('subDoc(')
-                    );
-                    
-                    // Only skip if it has genuinely problematic elements
-                    // Large OOXML with just hyperlinks/bookmarks is OK to process
-                    const shouldSkip = hasTrackChanges || hasComplexFields || hasContentControls || 
-                                     hasPermissions || hasCustomXml || hasMathEquations || hasSubDocuments;
+                    // Skip only if it has CONFIRMED error-causing elements
+                    const shouldSkip = hasTrackChanges || hasContentControls || hasComplexFields || hasPermissions;
                     
                     if (shouldSkip) {
                         const reason = [];
                         if (hasTrackChanges) reason.push('track changes');
-                        if (hasComplexFields) reason.push('fields (TOC/Index)');
                         if (hasContentControls) reason.push('content controls');
+                        if (hasComplexFields) reason.push('fields (TOC/Index)');
                         if (hasPermissions) reason.push('protected content');
-                        if (hasCustomXml) reason.push('custom XML data binding');
-                        if (hasMathEquations) reason.push('math equations');
-                        if (hasSubDocuments) reason.push('subdocuments');
 
                         
                         skippedParagraphs.push({

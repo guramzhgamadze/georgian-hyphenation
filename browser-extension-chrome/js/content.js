@@ -1,4 +1,4 @@
-// Content Script v2.2.6 - Fixed Warnings & Facebook Compatibility
+// Content Script v2.2.7 - Enhanced Facebook & SPA Compatibility
 (function() {
   'use strict';
 
@@ -14,18 +14,28 @@
   let stats = { processed: 0, hyphenated: 0 };
   let processedNodes = new WeakSet();
   let isProcessing = false;
+  let processingQueue = [];
+  let debounceTimer = null;
 
-  console.log('Georgian Hyphenation v2.2.6: Extension started');
+  console.log('Georgian Hyphenation v2.2.7: Extension started');
 
   // Blacklist
   const blacklistedHosts = ['claude.ai', 'chat.openai.com', 'gemini.google.com'];
   if (blacklistedHosts.some(host => window.location.hostname.includes(host))) {
-    console.log('Georgian Hyphenation v2.2.6: Skipping blacklisted site');
+    console.log('Georgian Hyphenation v2.2.7: Skipping blacklisted site');
     return;
   }
 
+  // Simple Meta platform detection
+  const hostname = window.location.hostname;
+  const isMetaPlatform = hostname.includes('facebook.com') || 
+                         hostname.includes('instagram.com') || 
+                         hostname.includes('threads.net') || 
+                         hostname.includes('messenger.com') ||
+                         hostname.includes('fb.com');
+
   function isGeorgianText(text) {
-    return /[ა-ჰ]/.test(text);
+    return /[\u10D0-\u10F0]/.test(text);
   }
 
   function shouldSkipElement(element) {
@@ -36,9 +46,7 @@
     const skipTags = [
       'script', 'style', 'noscript', 'iframe', 'object', 'embed',
       'input', 'textarea', 'select', 'code', 'pre',
-      'nav', 'header', 'footer', 'aside',
-      'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-      'button'
+      'nav', 'button'
     ];
     
     if (skipTags.includes(tagName)) return true;
@@ -48,17 +56,13 @@
     }
     
     const role = element.getAttribute('role');
-    if (role === 'heading' || role === 'navigation' || 
-        role === 'button' || role === 'textbox') {
+    if (role === 'button' || role === 'textbox' || role === 'combobox') {
       return true;
     }
     
-    if (element.hasAttribute('aria-level')) return true;
-    
-    try {
-      const fontSize = parseFloat(window.getComputedStyle(element).fontSize);
-      if (fontSize > 20) return true;
-    } catch (e) {}
+    if (element.hasAttribute('aria-label') && !element.hasAttribute('data-process-text')) {
+      return true;
+    }
     
     return false;
   }
@@ -67,7 +71,7 @@
     let currentElement = node.parentElement;
     let depth = 0;
     
-    while (currentElement && depth < 5) {
+    while (currentElement && depth < 8) {
       if (shouldSkipElement(currentElement)) {
         return true;
       }
@@ -86,7 +90,7 @@
     if (!isGeorgianText(text)) return;
 
     if (shouldSkipNode(node)) return;
-    if (!/[ა-ჰ]{4,}/.test(text)) return;
+    if (!/[\u10D0-\u10F0]{4,}/.test(text)) return;
 
     try {
       const words = text.split(/(\s+)/);
@@ -117,7 +121,7 @@
         processedNodes.add(node);
       }
     } catch (error) {
-      // Silent error - don't log to avoid spam
+      // Silent error
     }
   }
 
@@ -125,17 +129,6 @@
     if (!isEnabled || depth > 30) return;
 
     if (node.nodeType === Node.ELEMENT_NODE) {
-      const tagName = node.tagName.toLowerCase();
-      
-      const skipTags = [
-        'script', 'style', 'noscript', 'iframe', 'object', 'embed',
-        'input', 'textarea', 'select', 'code', 'pre',
-        'nav', 'header', 'footer', 'aside',
-        'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-        'button'
-      ];
-      
-      if (skipTags.includes(tagName)) return;
       if (shouldSkipElement(node)) return;
       if (processedNodes.has(node)) return;
       
@@ -152,36 +145,41 @@
     }
   }
 
-  let lastProcessTime = 0;
-  function processPage() {
-    if (!isEnabled || isProcessing) return;
+  function queueProcessing(node) {
+    if (!isEnabled) return;
     
-    const now = Date.now();
-    if (now - lastProcessTime < 1000) return;
+    processingQueue.push(node);
     
-    lastProcessTime = now;
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+    
+    debounceTimer = setTimeout(() => {
+      processBatchedQueue();
+    }, 300);
+  }
+
+  function processBatchedQueue() {
+    if (!isEnabled || isProcessing || processingQueue.length === 0) return;
+    
     isProcessing = true;
-    
-    // Reset stats for this processing cycle
     const oldStats = { ...stats };
-    stats = { processed: 0, hyphenated: 0 };
     
     const process = () => {
       try {
-        processNode(document.body);
+        const nodesToProcess = [...processingQueue];
+        processingQueue = [];
         
-        // ✅ FIXED: Only log if we actually found Georgian text
-        if (stats.processed > 0) {
-          console.log(`Georgian Hyphenation v2.2.6: Processed ${stats.processed} words, hyphenated ${stats.hyphenated}`);
-          
-          // Use sync storage to match popup
+        for (const node of nodesToProcess) {
+          processNode(node);
+        }
+        
+        if (stats.processed > oldStats.processed) {
+          console.log(`Georgian Hyphenation v2.2.7: Processed ${stats.processed - oldStats.processed} new words, hyphenated ${stats.hyphenated - oldStats.hyphenated}`);
           chrome.storage.sync.set({ stats: stats });
-        } else {
-          // Keep old stats if no new content found
-          stats = oldStats;
         }
       } catch (error) {
-        console.error('Georgian Hyphenation v2.2.6 error:', error);
+        console.error('Georgian Hyphenation v2.2.7 error:', error);
       } finally {
         isProcessing = false;
       }
@@ -194,50 +192,59 @@
     }
   }
 
-  let mutationTimeout;
   const observer = new MutationObserver((mutations) => {
     if (!isEnabled || isProcessing) return;
     
-    clearTimeout(mutationTimeout);
-    mutationTimeout = setTimeout(() => {
-      let hasNewContent = false;
-      
-      for (let mutation of mutations) {
-        for (let node of mutation.addedNodes) {
-          if (!processedNodes.has(node)) {
-            // ✅ Only process if it might contain Georgian text
-            if (node.nodeType === Node.TEXT_NODE) {
-              if (isGeorgianText(node.textContent)) {
-                processNode(node);
-                hasNewContent = true;
-              }
-            } else if (node.nodeType === Node.ELEMENT_NODE) {
-              const text = node.textContent || '';
-              if (isGeorgianText(text)) {
-                processNode(node);
-                hasNewContent = true;
-              }
-            }
+    const relevantMutations = mutations.filter(mutation => {
+      if (mutation.target && shouldSkipElement(mutation.target)) {
+        return false;
+      }
+      return mutation.type === 'childList' && mutation.addedNodes.length > 0;
+    });
+    
+    if (relevantMutations.length === 0) return;
+    
+    for (let mutation of relevantMutations) {
+      for (let node of mutation.addedNodes) {
+        if (processedNodes.has(node)) continue;
+        
+        if (node.nodeType === Node.TEXT_NODE) {
+          if (isGeorgianText(node.textContent)) {
+            queueProcessing(node);
+          }
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+          const text = node.textContent || '';
+          if (isGeorgianText(text)) {
+            queueProcessing(node);
           }
         }
       }
-      
-      // Update storage only if we processed new content
-      if (hasNewContent && stats.processed > 0) {
-        chrome.storage.sync.set({ stats: stats });
-      }
-    }, 500);
+    }
   });
 
   function startObserving() {
     if (!document.body) return;
-    observer.observe(document.body, { childList: true, subtree: true });
-    console.log('Georgian Hyphenation v2.2.6: Observer started');
+    
+    // Simple approach: use body for all sites, but disable attributes on Meta platforms
+    if (isMetaPlatform) {
+      observer.observe(document.body, { 
+        childList: true, 
+        subtree: true,
+        attributes: false  // Skip attribute changes on Meta platforms
+      });
+      console.log('Georgian Hyphenation v2.2.7: Observer started (Meta platform mode)');
+    } else {
+      observer.observe(document.body, { 
+        childList: true, 
+        subtree: true 
+      });
+      console.log('Georgian Hyphenation v2.2.7: Observer started');
+    }
   }
 
   function stopObserving() {
     observer.disconnect();
-    console.log('Georgian Hyphenation v2.2.6: Observer stopped');
+    console.log('Georgian Hyphenation v2.2.7: Observer stopped');
   }
 
   function addHyphenationCSS() {
@@ -246,7 +253,6 @@
     const style = document.createElement('style');
     style.id = 'georgian-hyphenation-css';
     style.textContent = `
-      /* Force manual hyphenation mode */
       body, p, div, span, article, section, li, td, th, blockquote, figcaption {
         hyphens: manual !important;
         -webkit-hyphens: manual !important;
@@ -254,26 +260,24 @@
         -ms-hyphens: manual !important;
       }
       
-      /* Hide soft hyphens when NOT at line break */
       body, p, div, span, article, section, li, td, th, blockquote, figcaption {
         overflow-wrap: break-word !important;
         word-wrap: break-word !important;
       }
       
-      /* Fix for fonts that show soft hyphens as visible dashes */
       * {
         font-feature-settings: normal !important;
       }
     `;
     document.head.appendChild(style);
-    console.log('Georgian Hyphenation v2.2.6: CSS injected');
+    console.log('Georgian Hyphenation v2.2.7: CSS injected');
   }
 
   function removeHyphenationCSS() {
     const styleElement = document.getElementById('georgian-hyphenation-css');
     if (styleElement) {
       styleElement.remove();
-      console.log('Georgian Hyphenation v2.2.6: CSS removed');
+      console.log('Georgian Hyphenation v2.2.7: CSS removed');
     }
   }
 
@@ -283,28 +287,54 @@
     const style = document.createElement('style');
     style.id = 'georgian-smart-justify-css';
     style.textContent = `
-      p, div.content, article, section {
+      /* Apply justify to readable content */
+      p:not([contenteditable="true"]), 
+      article:not([contenteditable="true"]), 
+      section:not([contenteditable="true"]),
+      div.content:not([contenteditable="true"]),
+      [role="article"]:not([contenteditable="true"]),
+      div[dir="auto"]:not([contenteditable="true"]):not([role="textbox"]) {
         text-align: justify !important;
+      }
+      
+      /* EXCLUDE: All input areas */
+      [contenteditable="true"],
+      [contenteditable="true"] *,
+      [role="textbox"],
+      [role="textbox"] *,
+      [role="combobox"],
+      textarea,
+      input,
+      [aria-label*="comment" i],
+      [aria-label*="write" i],
+      [aria-label*="message" i],
+      [aria-label*="reply" i],
+      [aria-label*="post" i],
+      [placeholder*="write" i],
+      [data-pagelet*="composer"] *,
+      ._1mf *,
+      ._5rpb * {
+        text-align: left !important;
       }
     `;
     document.head.appendChild(style);
-    console.log('Georgian Hyphenation v2.2.6: Smart Justify CSS injected');
+    console.log('Georgian Hyphenation v2.2.7: Smart Justify CSS injected');
   }
 
   function removeSmartJustifyCSS() {
     const styleElement = document.getElementById('georgian-smart-justify-css');
     if (styleElement) {
       styleElement.remove();
-      console.log('Georgian Hyphenation v2.2.6: Smart Justify CSS removed');
+      console.log('Georgian Hyphenation v2.2.7: Smart Justify CSS removed');
     }
   }
 
   function enable() {
     isEnabled = true;
-    console.log('Georgian Hyphenation v2.2.6: ENABLED');
+    console.log('Georgian Hyphenation v2.2.7: ENABLED');
     
     addHyphenationCSS();
-    processPage();
+    queueProcessing(document.body);
     startObserving();
     
     if (smartJustifyEnabled) {
@@ -314,23 +344,26 @@
 
   function disable() {
     isEnabled = false;
-    console.log('Georgian Hyphenation v2.2.6: DISABLED');
+    console.log('Georgian Hyphenation v2.2.7: DISABLED');
     
     stopObserving();
     removeHyphenationCSS();
     removeSmartJustifyCSS();
     
-    // Reload page to remove hyphens
+    processingQueue = [];
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+    
     location.reload();
   }
 
   function initialize() {
-    // Use sync storage to match popup
     chrome.storage.sync.get(['enabled', 'smartJustify'], (result) => {
       isEnabled = result.enabled !== false;
       smartJustifyEnabled = result.smartJustify !== false;
       
-      console.log('Georgian Hyphenation v2.2.6: Initial state -', { isEnabled, smartJustifyEnabled });
+      console.log('Georgian Hyphenation v2.2.7: Initial state -', { isEnabled, smartJustifyEnabled });
       
       if (isEnabled) {
         addHyphenationCSS();
@@ -342,13 +375,13 @@
         if (document.readyState === 'loading') {
           document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
-              processPage();
+              queueProcessing(document.body);
               startObserving();
             }, 100);
           });
         } else {
           setTimeout(() => {
-            processPage();
+            queueProcessing(document.body);
             startObserving();
           }, 100);
         }
@@ -356,9 +389,8 @@
     });
   }
 
-  // ✅ FIXED: Listen for BOTH 'toggle' and 'toggleHyphenation' actions
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    console.log('Georgian Hyphenation v2.2.6: Received message', message);
+    console.log('Georgian Hyphenation v2.2.7: Received message', message);
     
     if (message.action === 'toggle' || message.action === 'toggleHyphenation') {
       const newState = message.enabled;
@@ -394,16 +426,60 @@
 
   initialize();
 
-  // URL change detection for SPAs like Facebook
+  // SPA navigation detection
   let lastUrl = location.href;
-  new MutationObserver(() => {
+  
+  const urlChangeObserver = new MutationObserver(() => {
     const currentUrl = location.href;
     if (currentUrl !== lastUrl) {
       lastUrl = currentUrl;
-      console.log('Georgian Hyphenation v2.2.6: URL changed, reprocessing...');
+      console.log('Georgian Hyphenation v2.2.7: URL changed, reprocessing...');
+      
       processedNodes = new WeakSet();
-      setTimeout(processPage, 500);
+      stats = { processed: 0, hyphenated: 0 };
+      
+      setTimeout(() => {
+        queueProcessing(document.body);
+      }, 800);
     }
-  }).observe(document, { subtree: true, childList: true });
+  });
+  
+  if (document.querySelector('title')) {
+    urlChangeObserver.observe(document.querySelector('title'), { 
+      childList: true 
+    });
+  }
+  
+  window.addEventListener('popstate', () => {
+    console.log('Georgian Hyphenation v2.2.7: Navigation detected (popstate), reprocessing...');
+    processedNodes = new WeakSet();
+    stats = { processed: 0, hyphenated: 0 };
+    setTimeout(() => {
+      queueProcessing(document.body);
+    }, 800);
+  });
+  
+  const originalPushState = history.pushState;
+  const originalReplaceState = history.replaceState;
+  
+  history.pushState = function(...args) {
+    originalPushState.apply(this, args);
+    console.log('Georgian Hyphenation v2.2.7: Navigation detected (pushState), reprocessing...');
+    processedNodes = new WeakSet();
+    stats = { processed: 0, hyphenated: 0 };
+    setTimeout(() => {
+      queueProcessing(document.body);
+    }, 800);
+  };
+  
+  history.replaceState = function(...args) {
+    originalReplaceState.apply(this, args);
+    console.log('Georgian Hyphenation v2.2.7: Navigation detected (replaceState), reprocessing...');
+    processedNodes = new WeakSet();
+    stats = { processed: 0, hyphenated: 0 };
+    setTimeout(() => {
+      queueProcessing(document.body);
+    }, 800);
+  };
 
 })();
