@@ -1339,8 +1339,16 @@ function checkProblematicOOXMLElements(ooxmlString) {
     
     for (const [name, tag] of Object.entries(elementsToCheck)) {
         if (ooxmlString.includes(tag)) {
-            const count = (ooxmlString.match(new RegExp(tag.replace(/:/g, '\\:'), 'g')) || []).length;
-            problematicElements.push(`${name}(${count})`);
+            // Match only actual XML tags/attributes, not substrings
+            // Use word boundary or XML delimiters (< > space =)
+            const escapedTag = tag.replace(/:/g, '\\:');
+            const regex = new RegExp(`<${escapedTag}[\\s>]`, 'g');
+            const matches = ooxmlString.match(regex) || [];
+            const count = matches.length;
+            
+            if (count > 0) {
+                problematicElements.push(`${name}(${count})`);
+            }
         }
     }
     
