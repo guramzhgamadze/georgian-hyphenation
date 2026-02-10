@@ -442,6 +442,9 @@ async function hyphenateSelection() {
         timerStart('selPass1');
         logActivity("Pass 1 — removing existing hyphens…");
         
+        // Pre-capture selection text for potential error highlighting
+        const originalSelectionText = selection.text;
+        
         try {
             const ooxml1 = selection.getOoxml();
             await context.sync();
@@ -458,12 +461,17 @@ async function hyphenateSelection() {
             }
         } catch (err) {
             logActivity(`Pass 1 failed: ${err.message}`, LOG.ERROR);
-            // Highlight the problematic selection
+            
+            // Use search-based highlighting like full document does
             try {
-                selection.font.highlightColor = "yellow";
-                await context.sync();
+                if (originalSelectionText && originalSelectionText.length > 10) {
+                    logActivity(`Attempting to highlight error using search...`, LOG.INFO);
+                    await highlightErrorParagraph(context, originalSelectionText);
+                } else {
+                    logActivity(`Selection text too short for highlighting`, LOG.WARN);
+                }
             } catch (highlightErr) {
-                // If highlighting fails, just continue
+                logActivity(`Highlighting failed: ${highlightErr.message}`, LOG.WARN);
             }
             hideProgress();
             return;
@@ -478,6 +486,17 @@ async function hyphenateSelection() {
         updateProgress(60, '➕ ახალი ნიშნების დამატება...');
         timerStart('selPass2');
         logActivity("Pass 2 — adding new hyphens…");
+        
+        // Pre-capture text for potential error highlighting
+        let selectionText = '';
+        try {
+            const selForText = context.document.getSelection();
+            selForText.load('text');
+            await context.sync();
+            selectionText = selForText.text || '';
+        } catch (preloadErr) {
+            logActivity(`Could not pre-load selection text: ${preloadErr.message}`, LOG.WARN);
+        }
         
         try {
             // Get selection again after Pass 1 changes
@@ -500,13 +519,17 @@ async function hyphenateSelection() {
             }
         } catch (err) {
             logActivity(`Pass 2 failed: ${err.message}`, LOG.ERROR);
-            // Highlight the problematic selection
+            
+            // Use search-based highlighting like full document does
             try {
-                const selection2 = context.document.getSelection();
-                selection2.font.highlightColor = "yellow";
-                await context.sync();
+                if (selectionText && selectionText.length > 10) {
+                    logActivity(`Attempting to highlight error using search...`, LOG.INFO);
+                    await highlightErrorParagraph(context, selectionText);
+                } else {
+                    logActivity(`Selection text too short for highlighting`, LOG.WARN);
+                }
             } catch (highlightErr) {
-                // If highlighting fails, just continue
+                logActivity(`Highlighting failed: ${highlightErr.message}`, LOG.WARN);
             }
         }
 

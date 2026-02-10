@@ -90,6 +90,20 @@
     if (shouldSkipNode(node)) return;
     if (!/[\u10D0-\u10F0]{4,}/.test(text)) return;
 
+    // Remove inline text-align styles on Meta platforms (Facebook) 
+    // These override our CSS justify rules and prevent hyphens from showing
+    if (isMetaPlatform && node.parentElement) {
+      let current = node.parentElement;
+      let depth = 0;
+      while (current && depth < 5) {
+        if (current.style && current.style.textAlign) {
+          current.style.removeProperty('text-align');
+        }
+        current = current.parentElement;
+        depth++;
+      }
+    }
+
     try {
       const words = text.split(/(\s+)/);
       let hasChanges = false;
