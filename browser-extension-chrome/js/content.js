@@ -60,9 +60,7 @@
       return true;
     }
     
-    if (element.hasAttribute('aria-label') && !element.hasAttribute('data-process-text')) {
-      return true;
-    }
+    // Don't skip aria-hidden or aria-label - Facebook posts use these!
     
     return false;
   }
@@ -176,10 +174,22 @@
         
         if (stats.processed > oldStats.processed) {
           console.log(`Georgian Hyphenation v2.2.7: Processed ${stats.processed - oldStats.processed} new words, hyphenated ${stats.hyphenated - oldStats.hyphenated}`);
-          chrome.storage.sync.set({ stats: stats });
+          
+          // Try to save stats, but handle extension reload gracefully
+          try {
+            chrome.storage.sync.set({ stats: stats });
+          } catch (e) {
+            // Extension was reloaded, ignore storage error
+            if (e.message && e.message.includes('Extension context invalidated')) {
+              console.log('Georgian Hyphenation v2.2.7: Extension reloaded, skipping stats save');
+            }
+          }
         }
       } catch (error) {
-        console.error('Georgian Hyphenation v2.2.7 error:', error);
+        // Only log real errors, not extension reload
+        if (!error.message || !error.message.includes('Extension context invalidated')) {
+          console.error('Georgian Hyphenation v2.2.7 error:', error);
+        }
       } finally {
         isProcessing = false;
       }
@@ -233,6 +243,47 @@
         attributes: false  // Skip attribute changes on Meta platforms
       });
       console.log('Georgian Hyphenation v2.2.7: Observer started (Meta platform mode)');
+      
+      // Add click listener for "See more" / "See less" buttons on Facebook
+      document.body.addEventListener('click', (event) => {
+        // Check if clicked element or its parent is a "See more" type button
+        const target = event.target;
+        const clickedText = target.textContent || '';
+        
+        // Facebook "See more" buttons often contain these phrases
+        if (clickedText.includes('See more') || 
+            clickedText.includes('See less') ||
+            clickedText.includes('...more') ||
+            target.getAttribute('role') === 'button') {
+          
+          // Wait for DOM to update, then reprocess nearby content
+          setTimeout(() => {
+            // Find the nearest post container
+            let postContainer = target.closest('[role="article"]') || 
+                               target.closest('[data-pagelet]') ||
+                               target.parentElement;
+            
+            if (postContainer) {
+              // Clear processed tracking for this container's text nodes
+              const walker = document.createTreeWalker(
+                postContainer,
+                NodeFilter.SHOW_TEXT,
+                null
+              );
+              
+              let node;
+              while (node = walker.nextNode()) {
+                processedNodes.delete(node);
+              }
+              
+              // Reprocess the container
+              queueProcessing(postContainer);
+              console.log('Georgian Hyphenation v2.2.7: Reprocessing after "See more" click');
+            }
+          }, 300); // Wait for Facebook's expand animation
+        }
+      }, true); // Use capture phase to catch clicks early
+      
     } else {
       observer.observe(document.body, { 
         childList: true, 
@@ -287,33 +338,43 @@
     const style = document.createElement('style');
     style.id = 'georgian-smart-justify-css';
     style.textContent = `
-      /* Apply justify to readable content */
-      p:not([contenteditable="true"]), 
-      article:not([contenteditable="true"]), 
-      section:not([contenteditable="true"]),
-      div.content:not([contenteditable="true"]),
-      [role="article"]:not([contenteditable="true"]),
-      div[dir="auto"]:not([contenteditable="true"]):not([role="textbox"]) {
+      /* Justify paragraphs, articles, sections - normal content */
+      p,
+      article, 
+      section,
+      div.content,
+      div[dir="auto"] {
         text-align: justify !important;
       }
       
-      /* EXCLUDE: All input areas */
-      [contenteditable="true"],
+      /* EXCLUSIONS: Never justify anything inside these containers */
+      /* 1. Contenteditable elements (chat inputs, composers) */
+      [contenteditable] *,
       [contenteditable="true"] *,
-      [role="textbox"],
       [role="textbox"] *,
-      [role="combobox"],
+      
+      /* 2. Lexical editor (Facebook's rich text editor) */
+      [data-lexical-editor] *,
+      
+      /* 3. Form inputs */
       textarea,
+      textarea *,
       input,
-      [aria-label*="comment" i],
-      [aria-label*="write" i],
-      [aria-label*="message" i],
-      [aria-label*="reply" i],
-      [aria-label*="post" i],
-      [placeholder*="write" i],
+      input *,
+      [placeholder] *,
+      
+      /* 4. Specific Facebook composer/input classes */
       [data-pagelet*="composer"] *,
+      [data-testid*="composer"] *,
       ._1mf *,
-      ._5rpb * {
+      ._5rpb *,
+      ._5rpu *,
+      
+      /* 5. ARIA labels indicating input areas */
+      [aria-label*="comment" i] *,
+      [aria-label*="write" i] *,
+      [aria-label*="message" i] *,
+      [aria-label*="chat" i] * {
         text-align: left !important;
       }
     `;

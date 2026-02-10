@@ -469,6 +469,9 @@ async function hyphenateSelection() {
             return;
         }
         
+        // CRITICAL: Sync and wait before Pass 2 to ensure Pass 1 changes are committed
+        await context.sync();
+        
         // ═══════════════════════════════════════════════════════
         // PASS 2: ADD NEW HYPHENS TO CLEAN SELECTION
         // ═══════════════════════════════════════════════════════
