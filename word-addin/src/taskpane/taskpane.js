@@ -412,12 +412,11 @@ async function hyphenateSelection() {
     showProgress();
     timerStart('selection');
     
-    let selectionStart = '';
-    let selectionEnd = '';
+    let searchKey = '';
     let fullText = '';
     
     // ═══════════════════════════════════════════════════════
-    // STEP 1: Capture selection boundaries
+    // STEP 1: Capture selection text WITHOUT hyphens for searching
     // ═══════════════════════════════════════════════════════
     await Word.run(async (context) => {
         logActivity("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", LOG.SEP);
@@ -442,9 +441,14 @@ async function hyphenateSelection() {
         fullText = selection.text;
         logActivity(`Selection: ${fullText.length} chars`);
         
-        // Capture first and last 30 characters to re-find the selection
-        selectionStart = fullText.substring(0, Math.min(30, fullText.length));
-        selectionEnd = fullText.substring(Math.max(0, fullText.length - 30));
+        // Remove soft hyphens from text to create search key
+        // This ensures we can find the text whether it has hyphens or not
+        const textWithoutHyphens = fullText.replace(/\u00AD/g, '');
+        
+        // Use first 30 characters WITHOUT hyphens as search key
+        searchKey = textWithoutHyphens.substring(0, Math.min(30, textWithoutHyphens.length));
+        
+        logActivity(`Search key: "${searchKey.substring(0, 20)}..."`, LOG.INFO);
     });
     
     // ═══════════════════════════════════════════════════════
@@ -455,8 +459,8 @@ async function hyphenateSelection() {
         timerStart('selPass1');
         logActivity("Pass 1 — removing existing hyphens…");
         
-        // Find the selection by searching for the start text
-        const searchResults = context.document.body.search(selectionStart, {
+        // Search for text (will match even if it has hyphens in OOXML)
+        const searchResults = context.document.body.search(searchKey, {
             matchCase: true,
             matchWholeWord: false
         });
@@ -469,13 +473,8 @@ async function hyphenateSelection() {
             return;
         }
         
-        // Get the range
+        // Use the first match
         const range = searchResults.items[0];
-        
-        // Expand range to cover full selection
-        // We'll get OOXML and process it
-        range.load('text');
-        await context.sync();
         
         try {
             const ooxml1 = range.getOoxml();
@@ -513,8 +512,8 @@ async function hyphenateSelection() {
         timerStart('selPass2');
         logActivity("Pass 2 — adding new hyphens…");
         
-        // Find the text again (now without hyphens from Pass 1)
-        const searchResults = context.document.body.search(selectionStart, {
+        // Search for the same text again (now without hyphens from Pass 1)
+        const searchResults = context.document.body.search(searchKey, {
             matchCase: true,
             matchWholeWord: false
         });
