@@ -411,13 +411,19 @@ async function hyphenateBody() {
 async function hyphenateSelection() {
     showProgress();
     timerStart('selection');
+    
+    let selectionStart = '';
+    let selectionEnd = '';
+    let fullText = '';
+    
+    // ═══════════════════════════════════════════════════════
+    // STEP 1: Capture selection boundaries
+    // ═══════════════════════════════════════════════════════
     await Word.run(async (context) => {
         logActivity("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", LOG.SEP);
         logActivity("Selection hyphenation started (two-pass)");
         
         const selection = context.document.getSelection();
-        
-        // Load selection text to check if it contains Georgian
         selection.load("text");
         await context.sync();
         
@@ -433,44 +439,63 @@ async function hyphenateSelection() {
             return;
         }
         
-        logActivity(`Selection: ${selection.text.length} chars`);
+        fullText = selection.text;
+        logActivity(`Selection: ${fullText.length} chars`);
         
-        // Pre-capture the original text for error highlighting
-        const originalText = selection.text;
-        
-        // ═══════════════════════════════════════════════════════
-        // PASS 1: REMOVE ALL EXISTING HYPHENS FROM SELECTION
-        // ═══════════════════════════════════════════════════════
+        // Capture first and last 30 characters to re-find the selection
+        selectionStart = fullText.substring(0, Math.min(30, fullText.length));
+        selectionEnd = fullText.substring(Math.max(0, fullText.length - 30));
+    });
+    
+    // ═══════════════════════════════════════════════════════
+    // PASS 1: REMOVE ALL EXISTING HYPHENS
+    // ═══════════════════════════════════════════════════════
+    await Word.run(async (context) => {
         updateProgress(10, '🗑️ მოძველებული ნიშნების წაშლა...');
         timerStart('selPass1');
         logActivity("Pass 1 — removing existing hyphens…");
         
-        let pass1Changed = false;
+        // Find the selection by searching for the start text
+        const searchResults = context.document.body.search(selectionStart, {
+            matchCase: true,
+            matchWholeWord: false
+        });
+        searchResults.load('items');
+        await context.sync();
+        
+        if (searchResults.items.length === 0) {
+            logActivity("Could not find selection for Pass 1", LOG.ERROR);
+            hideProgress();
+            return;
+        }
+        
+        // Get the range
+        const range = searchResults.items[0];
+        
+        // Expand range to cover full selection
+        // We'll get OOXML and process it
+        range.load('text');
+        await context.sync();
+        
         try {
-            const ooxml1 = selection.getOoxml();
+            const ooxml1 = range.getOoxml();
             await context.sync();
             
             updateProgress(30, '🗑️ მოძველებული ნიშნების წაშლა...');
             const cleanedOOXML = removeAllHyphensFromOOXML(ooxml1.value);
             
             if (cleanedOOXML.changed) {
-                selection.insertOoxml(cleanedOOXML.ooxml, Word.InsertLocation.replace);
+                range.insertOoxml(cleanedOOXML.ooxml, Word.InsertLocation.replace);
                 await context.sync();
-                pass1Changed = true;
                 logActivity(`Pass 1 done in ${timerEnd('selPass1')} ms — hyphens removed`);
             } else {
                 logActivity(`Pass 1 done in ${timerEnd('selPass1')} ms — nothing to remove`);
             }
         } catch (err) {
             logActivity(`Pass 1 failed: ${err.message}`, LOG.ERROR);
-            
-            // Use search-based highlighting
             try {
-                if (originalText && originalText.length > 10) {
-                    logActivity(`Attempting to highlight error using search...`, LOG.INFO);
-                    await highlightErrorParagraph(context, originalText);
-                } else {
-                    logActivity(`Selection text too short for highlighting`, LOG.WARN);
+                if (fullText && fullText.length > 10) {
+                    await highlightErrorParagraph(context, fullText);
                 }
             } catch (highlightErr) {
                 logActivity(`Highlighting failed: ${highlightErr.message}`, LOG.WARN);
@@ -478,36 +503,45 @@ async function hyphenateSelection() {
             hideProgress();
             return;
         }
-        
-        // ═══════════════════════════════════════════════════════
-        // CRITICAL: Create a NEW context for Pass 2
-        // This ensures we get fresh OOXML after Pass 1 modifications
-        // ═══════════════════════════════════════════════════════
     });
     
-    // Run Pass 2 in a SEPARATE Word.run context to ensure fresh state
+    // ═══════════════════════════════════════════════════════
+    // PASS 2: ADD NEW HYPHENS (Fresh context with search)
+    // ═══════════════════════════════════════════════════════
     await Word.run(async (context) => {
         updateProgress(60, '➕ ახალი ნიშნების დამატება...');
         timerStart('selPass2');
         logActivity("Pass 2 — adding new hyphens…");
         
-        // Get a completely fresh selection in the new context
-        const selection2 = context.document.getSelection();
-        selection2.load('text');
+        // Find the text again (now without hyphens from Pass 1)
+        const searchResults = context.document.body.search(selectionStart, {
+            matchCase: true,
+            matchWholeWord: false
+        });
+        searchResults.load('items');
         await context.sync();
         
-        // Save text for error highlighting
-        const selectionText = selection2.text;
+        if (searchResults.items.length === 0) {
+            logActivity("Could not find selection for Pass 2", LOG.ERROR);
+            hideProgress();
+            return;
+        }
+        
+        const range = searchResults.items[0];
+        range.load('text');
+        await context.sync();
+        
+        const currentText = range.text;
         
         try {
-            const ooxml2 = selection2.getOoxml();
+            const ooxml2 = range.getOoxml();
             await context.sync();
             
             updateProgress(80, '➕ ახალი ნიშნების დამატება...');
             const hyphenatedOOXML = addHyphensToOOXML(ooxml2.value);
             
             if (hyphenatedOOXML.changed) {
-                selection2.insertOoxml(hyphenatedOOXML.ooxml, Word.InsertLocation.replace);
+                range.insertOoxml(hyphenatedOOXML.ooxml, Word.InsertLocation.replace);
                 await context.sync();
                 
                 updateProgress(100, '✅ დასრულდა');
@@ -518,25 +552,20 @@ async function hyphenateSelection() {
             }
         } catch (err) {
             logActivity(`Pass 2 failed: ${err.message}`, LOG.ERROR);
-            
-            // Use search-based highlighting
             try {
-                if (selectionText && selectionText.length > 10) {
-                    logActivity(`Attempting to highlight error using search...`, LOG.INFO);
-                    await highlightErrorParagraph(context, selectionText);
-                } else {
-                    logActivity(`Selection text too short for highlighting`, LOG.WARN);
+                if (currentText && currentText.length > 10) {
+                    await highlightErrorParagraph(context, currentText);
                 }
             } catch (highlightErr) {
                 logActivity(`Highlighting failed: ${highlightErr.message}`, LOG.WARN);
             }
         }
-
+        
         logActivity("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", LOG.SEP);
         logActivity(`Completed in ${timerEnd('selection')} ms`);
     });
     
-    setTimeout(hideProgress, 1000); // Keep progress visible for 1 second
+    setTimeout(hideProgress, 1000);
 }
 
 /**
