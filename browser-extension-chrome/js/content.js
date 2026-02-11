@@ -1,4 +1,4 @@
-// Content Script v2.2.10 - Facebook Character-Span Obfuscation Handler
+// Content Script v2.2.7 - Watch for text content changes (characterData)
 (function() {
   'use strict';
 
@@ -17,12 +17,12 @@
   let processingQueue = [];
   let debounceTimer = null;
 
-  console.log('Georgian Hyphenation v2.2.10: Extension started');
+  console.log('Georgian Hyphenation v2.2.7: Extension started');
 
   // Blacklist
   const blacklistedHosts = ['claude.ai', 'chat.openai.com', 'gemini.google.com'];
   if (blacklistedHosts.some(host => window.location.hostname.includes(host))) {
-    console.log('Georgian Hyphenation v2.2.10: Skipping blacklisted site');
+    console.log('Georgian Hyphenation v2.2.7: Skipping blacklisted site');
     return;
   }
 
@@ -83,6 +83,9 @@
   function processTextNode(node) {
     if (!isEnabled || !node.textContent || !node.textContent.trim()) return;
     
+    const text = node.textContent;
+    const preview = text.substring(0, 30);
+    
     // Check if already processed AND hyphenation actually exists
     if (processedNodes.has(node)) {
       // Verify hyphenation actually worked
@@ -90,15 +93,21 @@
         return; // Already processed and hyphenated, skip
       } else {
         // Was marked as processed but has no hyphens - process again
+        console.log('DEBUG: Node marked processed but no hyphens, reprocessing:', preview);
         processedNodes.delete(node);
       }
     }
     
-    const text = node.textContent;
     if (!isGeorgianText(text)) return;
 
-    if (shouldSkipNode(node)) return;
-    if (!/[\u10D0-\u10F0]{4,}/.test(text)) return;
+    if (shouldSkipNode(node)) {
+      console.log('DEBUG: Skipped node (shouldSkipNode):', preview);
+      return;
+    }
+    if (!/[\u10D0-\u10F0]{4,}/.test(text)) {
+      console.log('DEBUG: Skipped node (no 4+ char Georgian):', preview);
+      return;
+    }
 
     // Remove inline text-align styles on Meta platforms (Facebook) 
     // These override our CSS justify rules and prevent hyphens from showing
@@ -134,13 +143,17 @@
           
           return hyphenated;
         } catch (e) {
+          console.log('DEBUG: Hyphenation error for word:', word, e);
           return word;
         }
       });
 
       if (hasChanges) {
+        console.log('DEBUG: Applying hyphenation to node:', text.substring(0, 30), '-> Changed:', hasChanges);
         node.textContent = processedWords.join('');
         processedNodes.add(node);
+      } else {
+        console.log('DEBUG: No changes for node:', text.substring(0, 30));
       }
     } catch (error) {
       // Silent error
@@ -288,7 +301,7 @@
         }
         
         if (stats.processed > oldStats.processed) {
-          console.log(`Georgian Hyphenation v2.2.10: Processed ${stats.processed - oldStats.processed} new words, hyphenated ${stats.hyphenated - oldStats.hyphenated}`);
+          console.log(`Georgian Hyphenation v2.2.7: Processed ${stats.processed - oldStats.processed} new words, hyphenated ${stats.hyphenated - oldStats.hyphenated}`);
           
           // Try to save stats, but handle extension reload gracefully
           try {
@@ -296,14 +309,14 @@
           } catch (e) {
             // Extension was reloaded, ignore storage error
             if (e.message && e.message.includes('Extension context invalidated')) {
-              console.log('Georgian Hyphenation v2.2.10: Extension reloaded, skipping stats save');
+              console.log('Georgian Hyphenation v2.2.7: Extension reloaded, skipping stats save');
             }
           }
         }
       } catch (error) {
         // Only log real errors, not extension reload
         if (!error.message || !error.message.includes('Extension context invalidated')) {
-          console.error('Georgian Hyphenation v2.2.10 error:', error);
+          console.error('Georgian Hyphenation v2.2.7 error:', error);
         }
       } finally {
         isProcessing = false;
@@ -321,6 +334,11 @@
     if (!isEnabled || isProcessing) return;
     
     const relevantMutations = mutations.filter(mutation => {
+      // Handle text content changes in existing nodes
+      if (mutation.type === 'characterData') {
+        return true;
+      }
+      
       if (mutation.target && shouldSkipElement(mutation.target)) {
         return false;
       }
@@ -330,6 +348,18 @@
     if (relevantMutations.length === 0) return;
     
     for (let mutation of relevantMutations) {
+      // Handle characterData mutations (text content changed)
+      if (mutation.type === 'characterData' && mutation.target.nodeType === Node.TEXT_NODE) {
+        const textNode = mutation.target;
+        // If text changed and doesn't have hyphens, remove from processed set so it gets reprocessed
+        if (isGeorgianText(textNode.textContent) && !textNode.textContent.includes('\u00AD')) {
+          processedNodes.delete(textNode);
+          queueProcessing(textNode);
+        }
+        continue;
+      }
+      
+      // Handle childList mutations (new nodes added)
       for (let node of mutation.addedNodes) {
         if (processedNodes.has(node)) continue;
         
@@ -355,9 +385,11 @@
       observer.observe(document.body, { 
         childList: true, 
         subtree: true,
+        characterData: true,  // Watch for text content changes
+        characterDataOldValue: false,
         attributes: false  // Skip attribute changes on Meta platforms
       });
-      console.log('Georgian Hyphenation v2.2.10: Observer started (Meta platform mode - Character-Span Handler)');
+      console.log('Georgian Hyphenation v2.2.7: Observer started (Meta platform mode - Character-Span Handler)');
       
       // Add click listener for "See more" / "See less" buttons on Facebook
       document.body.addEventListener('click', (event) => {
@@ -393,7 +425,7 @@
               
               // Reprocess the container
               queueProcessing(postContainer);
-              console.log('Georgian Hyphenation v2.2.10: Reprocessing after "See more" click');
+              console.log('Georgian Hyphenation v2.2.7: Reprocessing after "See more" click');
             }
           }, 300); // Wait for Facebook's expand animation
         }
@@ -404,13 +436,13 @@
         childList: true, 
         subtree: true 
       });
-      console.log('Georgian Hyphenation v2.2.10: Observer started');
+      console.log('Georgian Hyphenation v2.2.7: Observer started');
     }
   }
 
   function stopObserving() {
     observer.disconnect();
-    console.log('Georgian Hyphenation v2.2.10: Observer stopped');
+    console.log('Georgian Hyphenation v2.2.7: Observer stopped');
   }
 
   function addHyphenationCSS() {
@@ -436,14 +468,14 @@
       }
     `;
     document.head.appendChild(style);
-    console.log('Georgian Hyphenation v2.2.10: CSS injected');
+    console.log('Georgian Hyphenation v2.2.7: CSS injected');
   }
 
   function removeHyphenationCSS() {
     const styleElement = document.getElementById('georgian-hyphenation-css');
     if (styleElement) {
       styleElement.remove();
-      console.log('Georgian Hyphenation v2.2.10: CSS removed');
+      console.log('Georgian Hyphenation v2.2.7: CSS removed');
     }
   }
 
@@ -494,20 +526,20 @@
       }
     `;
     document.head.appendChild(style);
-    console.log('Georgian Hyphenation v2.2.10: Smart Justify CSS injected');
+    console.log('Georgian Hyphenation v2.2.7: Smart Justify CSS injected');
   }
 
   function removeSmartJustifyCSS() {
     const styleElement = document.getElementById('georgian-smart-justify-css');
     if (styleElement) {
       styleElement.remove();
-      console.log('Georgian Hyphenation v2.2.10: Smart Justify CSS removed');
+      console.log('Georgian Hyphenation v2.2.7: Smart Justify CSS removed');
     }
   }
 
   function enable() {
     isEnabled = true;
-    console.log('Georgian Hyphenation v2.2.10: ENABLED');
+    console.log('Georgian Hyphenation v2.2.7: ENABLED');
     
     addHyphenationCSS();
     queueProcessing(document.body);
@@ -520,7 +552,7 @@
 
   function disable() {
     isEnabled = false;
-    console.log('Georgian Hyphenation v2.2.10: DISABLED');
+    console.log('Georgian Hyphenation v2.2.7: DISABLED');
     
     stopObserving();
     removeHyphenationCSS();
@@ -539,7 +571,7 @@
       isEnabled = result.enabled !== false;
       smartJustifyEnabled = result.smartJustify !== false;
       
-      console.log('Georgian Hyphenation v2.2.10: Initial state -', { isEnabled, smartJustifyEnabled });
+      console.log('Georgian Hyphenation v2.2.7: Initial state -', { isEnabled, smartJustifyEnabled });
       
       if (isEnabled) {
         addHyphenationCSS();
@@ -566,7 +598,7 @@
   }
 
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    console.log('Georgian Hyphenation v2.2.10: Received message', message);
+    console.log('Georgian Hyphenation v2.2.7: Received message', message);
     
     if (message.action === 'toggle' || message.action === 'toggleHyphenation') {
       const newState = message.enabled;
@@ -609,7 +641,7 @@
     const currentUrl = location.href;
     if (currentUrl !== lastUrl) {
       lastUrl = currentUrl;
-      console.log('Georgian Hyphenation v2.2.10: URL changed, reprocessing...');
+      console.log('Georgian Hyphenation v2.2.7: URL changed, reprocessing...');
       
       processedNodes = new WeakSet();
       stats = { processed: 0, hyphenated: 0 };
@@ -627,7 +659,7 @@
   }
   
   window.addEventListener('popstate', () => {
-    console.log('Georgian Hyphenation v2.2.10: Navigation detected (popstate), reprocessing...');
+    console.log('Georgian Hyphenation v2.2.7: Navigation detected (popstate), reprocessing...');
     processedNodes = new WeakSet();
     stats = { processed: 0, hyphenated: 0 };
     setTimeout(() => {
@@ -640,7 +672,7 @@
   
   history.pushState = function(...args) {
     originalPushState.apply(this, args);
-    console.log('Georgian Hyphenation v2.2.10: Navigation detected (pushState), reprocessing...');
+    console.log('Georgian Hyphenation v2.2.7: Navigation detected (pushState), reprocessing...');
     processedNodes = new WeakSet();
     stats = { processed: 0, hyphenated: 0 };
     setTimeout(() => {
@@ -650,7 +682,7 @@
   
   history.replaceState = function(...args) {
     originalReplaceState.apply(this, args);
-    console.log('Georgian Hyphenation v2.2.10: Navigation detected (replaceState), reprocessing...');
+    console.log('Georgian Hyphenation v2.2.7: Navigation detected (replaceState), reprocessing...');
     processedNodes = new WeakSet();
     stats = { processed: 0, hyphenated: 0 };
     setTimeout(() => {
