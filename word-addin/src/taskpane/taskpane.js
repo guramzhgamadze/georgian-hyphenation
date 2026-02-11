@@ -412,11 +412,10 @@ async function hyphenateSelection() {
     showProgress();
     timerStart('selection');
     
-    let searchKey = '';
-    let fullText = '';
+    const BOOKMARK_NAME = 'GeorgianHyphenTempBookmark_' + Date.now();
     
     // ═══════════════════════════════════════════════════════
-    // STEP 1: Capture selection text WITHOUT hyphens for searching
+    // STEP 1: Create a bookmark for the selection
     // ═══════════════════════════════════════════════════════
     await Word.run(async (context) => {
         logActivity("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", LOG.SEP);
@@ -438,17 +437,13 @@ async function hyphenateSelection() {
             return;
         }
         
-        fullText = selection.text;
-        logActivity(`Selection: ${fullText.length} chars`);
+        logActivity(`Selection: ${selection.text.length} chars`);
         
-        // Remove soft hyphens from text to create search key
-        // This ensures we can find the text whether it has hyphens or not
-        const textWithoutHyphens = fullText.replace(/\u00AD/g, '');
+        // Insert a bookmark to track this selection
+        const bookmark = selection.insertBookmark(BOOKMARK_NAME);
+        await context.sync();
         
-        // Use first 30 characters WITHOUT hyphens as search key
-        searchKey = textWithoutHyphens.substring(0, Math.min(30, textWithoutHyphens.length));
-        
-        logActivity(`Search key: "${searchKey.substring(0, 20)}..."`, LOG.INFO);
+        logActivity(`Bookmark created: ${BOOKMARK_NAME}`, LOG.INFO);
     });
     
     // ═══════════════════════════════════════════════════════
@@ -459,24 +454,17 @@ async function hyphenateSelection() {
         timerStart('selPass1');
         logActivity("Pass 1 — removing existing hyphens…");
         
-        // Search for text (will match even if it has hyphens in OOXML)
-        const searchResults = context.document.body.search(searchKey, {
-            matchCase: true,
-            matchWholeWord: false
-        });
-        searchResults.load('items');
-        await context.sync();
-        
-        if (searchResults.items.length === 0) {
-            logActivity("Could not find selection for Pass 1", LOG.ERROR);
-            hideProgress();
-            return;
-        }
-        
-        // Use the first match
-        const range = searchResults.items[0];
+        let fullText = '';
         
         try {
+            // Get the bookmarked range
+            const bookmark = context.document.bookmarks.getByName(BOOKMARK_NAME);
+            const range = bookmark.getRange();
+            range.load('text');
+            await context.sync();
+            
+            fullText = range.text;
+            
             const ooxml1 = range.getOoxml();
             await context.sync();
             
@@ -486,6 +474,11 @@ async function hyphenateSelection() {
             if (cleanedOOXML.changed) {
                 range.insertOoxml(cleanedOOXML.ooxml, Word.InsertLocation.replace);
                 await context.sync();
+                
+                // Re-bookmark the cleaned range
+                range.insertBookmark(BOOKMARK_NAME);
+                await context.sync();
+                
                 logActivity(`Pass 1 done in ${timerEnd('selPass1')} ms — hyphens removed`);
             } else {
                 logActivity(`Pass 1 done in ${timerEnd('selPass1')} ms — nothing to remove`);
@@ -499,40 +492,40 @@ async function hyphenateSelection() {
             } catch (highlightErr) {
                 logActivity(`Highlighting failed: ${highlightErr.message}`, LOG.WARN);
             }
+            
+            // Clean up bookmark
+            try {
+                const bookmark = context.document.bookmarks.getByName(BOOKMARK_NAME);
+                bookmark.delete();
+                await context.sync();
+            } catch (cleanupErr) {
+                // Ignore cleanup errors
+            }
+            
             hideProgress();
             return;
         }
     });
     
     // ═══════════════════════════════════════════════════════
-    // PASS 2: ADD NEW HYPHENS (Fresh context with search)
+    // PASS 2: ADD NEW HYPHENS (using the same bookmark)
     // ═══════════════════════════════════════════════════════
     await Word.run(async (context) => {
         updateProgress(60, '➕ ახალი ნიშნების დამატება...');
         timerStart('selPass2');
         logActivity("Pass 2 — adding new hyphens…");
         
-        // Search for the same text again (now without hyphens from Pass 1)
-        const searchResults = context.document.body.search(searchKey, {
-            matchCase: true,
-            matchWholeWord: false
-        });
-        searchResults.load('items');
-        await context.sync();
-        
-        if (searchResults.items.length === 0) {
-            logActivity("Could not find selection for Pass 2", LOG.ERROR);
-            hideProgress();
-            return;
-        }
-        
-        const range = searchResults.items[0];
-        range.load('text');
-        await context.sync();
-        
-        const currentText = range.text;
+        let currentText = '';
         
         try {
+            // Get the same bookmarked range (now without hyphens)
+            const bookmark = context.document.bookmarks.getByName(BOOKMARK_NAME);
+            const range = bookmark.getRange();
+            range.load('text');
+            await context.sync();
+            
+            currentText = range.text;
+            
             const ooxml2 = range.getOoxml();
             await context.sync();
             
@@ -557,6 +550,16 @@ async function hyphenateSelection() {
                 }
             } catch (highlightErr) {
                 logActivity(`Highlighting failed: ${highlightErr.message}`, LOG.WARN);
+            }
+        } finally {
+            // Always clean up the bookmark
+            try {
+                const bookmark = context.document.bookmarks.getByName(BOOKMARK_NAME);
+                bookmark.delete();
+                await context.sync();
+                logActivity(`Bookmark cleaned up`, LOG.INFO);
+            } catch (cleanupErr) {
+                // Ignore cleanup errors
             }
         }
         
