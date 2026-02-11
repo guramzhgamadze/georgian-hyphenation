@@ -435,6 +435,9 @@ async function hyphenateSelection() {
         
         logActivity(`Selection: ${selection.text.length} chars`);
         
+        // Pre-capture the original text for error highlighting
+        const originalText = selection.text;
+        
         // ═══════════════════════════════════════════════════════
         // PASS 1: REMOVE ALL EXISTING HYPHENS FROM SELECTION
         // ═══════════════════════════════════════════════════════
@@ -442,9 +445,7 @@ async function hyphenateSelection() {
         timerStart('selPass1');
         logActivity("Pass 1 — removing existing hyphens…");
         
-        // Pre-capture selection text for potential error highlighting
-        const originalSelectionText = selection.text;
-        
+        let pass1Changed = false;
         try {
             const ooxml1 = selection.getOoxml();
             await context.sync();
@@ -455,6 +456,7 @@ async function hyphenateSelection() {
             if (cleanedOOXML.changed) {
                 selection.insertOoxml(cleanedOOXML.ooxml, Word.InsertLocation.replace);
                 await context.sync();
+                pass1Changed = true;
                 logActivity(`Pass 1 done in ${timerEnd('selPass1')} ms — hyphens removed`);
             } else {
                 logActivity(`Pass 1 done in ${timerEnd('selPass1')} ms — nothing to remove`);
@@ -462,11 +464,11 @@ async function hyphenateSelection() {
         } catch (err) {
             logActivity(`Pass 1 failed: ${err.message}`, LOG.ERROR);
             
-            // Use search-based highlighting like full document does
+            // Use search-based highlighting
             try {
-                if (originalSelectionText && originalSelectionText.length > 10) {
+                if (originalText && originalText.length > 10) {
                     logActivity(`Attempting to highlight error using search...`, LOG.INFO);
-                    await highlightErrorParagraph(context, originalSelectionText);
+                    await highlightErrorParagraph(context, originalText);
                 } else {
                     logActivity(`Selection text too short for highlighting`, LOG.WARN);
                 }
@@ -477,30 +479,27 @@ async function hyphenateSelection() {
             return;
         }
         
-        // CRITICAL: Sync and wait before Pass 2 to ensure Pass 1 changes are committed
-        await context.sync();
-        
         // ═══════════════════════════════════════════════════════
-        // PASS 2: ADD NEW HYPHENS TO CLEAN SELECTION
+        // CRITICAL: Create a NEW context for Pass 2
+        // This ensures we get fresh OOXML after Pass 1 modifications
         // ═══════════════════════════════════════════════════════
+    });
+    
+    // Run Pass 2 in a SEPARATE Word.run context to ensure fresh state
+    await Word.run(async (context) => {
         updateProgress(60, '➕ ახალი ნიშნების დამატება...');
         timerStart('selPass2');
         logActivity("Pass 2 — adding new hyphens…");
         
-        // Pre-capture text for potential error highlighting
-        let selectionText = '';
-        try {
-            const selForText = context.document.getSelection();
-            selForText.load('text');
-            await context.sync();
-            selectionText = selForText.text || '';
-        } catch (preloadErr) {
-            logActivity(`Could not pre-load selection text: ${preloadErr.message}`, LOG.WARN);
-        }
+        // Get a completely fresh selection in the new context
+        const selection2 = context.document.getSelection();
+        selection2.load('text');
+        await context.sync();
+        
+        // Save text for error highlighting
+        const selectionText = selection2.text;
         
         try {
-            // Get selection again after Pass 1 changes
-            const selection2 = context.document.getSelection();
             const ooxml2 = selection2.getOoxml();
             await context.sync();
             
@@ -520,7 +519,7 @@ async function hyphenateSelection() {
         } catch (err) {
             logActivity(`Pass 2 failed: ${err.message}`, LOG.ERROR);
             
-            // Use search-based highlighting like full document does
+            // Use search-based highlighting
             try {
                 if (selectionText && selectionText.length > 10) {
                     logActivity(`Attempting to highlight error using search...`, LOG.INFO);
