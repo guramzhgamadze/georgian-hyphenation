@@ -412,11 +412,6 @@ async function hyphenateSelection() {
     showProgress();
     timerStart('selection');
     
-    const BOOKMARK_NAME = 'GeorgianHyphenTempBookmark_' + Date.now();
-    
-    // ═══════════════════════════════════════════════════════
-    // STEP 1: Create a bookmark for the selection
-    // ═══════════════════════════════════════════════════════
     await Word.run(async (context) => {
         logActivity("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", LOG.SEP);
         logActivity("Selection hyphenation started (two-pass)");
@@ -438,33 +433,18 @@ async function hyphenateSelection() {
         }
         
         logActivity(`Selection: ${selection.text.length} chars`);
+        const originalText = selection.text;
         
-        // Insert a bookmark to track this selection
-        const bookmark = selection.insertBookmark(BOOKMARK_NAME);
-        await context.sync();
-        
-        logActivity(`Bookmark created: ${BOOKMARK_NAME}`, LOG.INFO);
-    });
-    
-    // ═══════════════════════════════════════════════════════
-    // PASS 1: REMOVE ALL EXISTING HYPHENS
-    // ═══════════════════════════════════════════════════════
-    await Word.run(async (context) => {
+        // ═══════════════════════════════════════════════════════
+        // PASS 1: REMOVE ALL EXISTING HYPHENS FROM SELECTION
+        // ═══════════════════════════════════════════════════════
         updateProgress(10, '🗑️ მოძველებული ნიშნების წაშლა...');
         timerStart('selPass1');
         logActivity("Pass 1 — removing existing hyphens…");
         
-        let fullText = '';
+        let range = selection.getRange();
         
         try {
-            // Get the bookmarked range
-            const bookmark = context.document.bookmarks.getByName(BOOKMARK_NAME);
-            const range = bookmark.getRange();
-            range.load('text');
-            await context.sync();
-            
-            fullText = range.text;
-            
             const ooxml1 = range.getOoxml();
             await context.sync();
             
@@ -474,58 +454,41 @@ async function hyphenateSelection() {
             if (cleanedOOXML.changed) {
                 range.insertOoxml(cleanedOOXML.ooxml, Word.InsertLocation.replace);
                 await context.sync();
-                
-                // Re-bookmark the cleaned range
-                range.insertBookmark(BOOKMARK_NAME);
-                await context.sync();
-                
                 logActivity(`Pass 1 done in ${timerEnd('selPass1')} ms — hyphens removed`);
+                
+                // After insertOoxml, we need to get the range again
+                // The range object becomes stale after modification
+                range = range.getRange();
+                await context.sync();
             } else {
                 logActivity(`Pass 1 done in ${timerEnd('selPass1')} ms — nothing to remove`);
             }
         } catch (err) {
             logActivity(`Pass 1 failed: ${err.message}`, LOG.ERROR);
             try {
-                if (fullText && fullText.length > 10) {
-                    await highlightErrorParagraph(context, fullText);
+                if (originalText && originalText.length > 10) {
+                    await highlightErrorParagraph(context, originalText);
                 }
             } catch (highlightErr) {
                 logActivity(`Highlighting failed: ${highlightErr.message}`, LOG.WARN);
             }
-            
-            // Clean up bookmark
-            try {
-                const bookmark = context.document.bookmarks.getByName(BOOKMARK_NAME);
-                bookmark.delete();
-                await context.sync();
-            } catch (cleanupErr) {
-                // Ignore cleanup errors
-            }
-            
             hideProgress();
             return;
         }
-    });
-    
-    // ═══════════════════════════════════════════════════════
-    // PASS 2: ADD NEW HYPHENS (using the same bookmark)
-    // ═══════════════════════════════════════════════════════
-    await Word.run(async (context) => {
+        
+        // ═══════════════════════════════════════════════════════
+        // PASS 2: ADD NEW HYPHENS TO CLEAN SELECTION
+        // ═══════════════════════════════════════════════════════
         updateProgress(60, '➕ ახალი ნიშნების დამატება...');
         timerStart('selPass2');
         logActivity("Pass 2 — adding new hyphens…");
         
-        let currentText = '';
+        // Load the current text after Pass 1
+        range.load('text');
+        await context.sync();
+        const currentText = range.text;
         
         try {
-            // Get the same bookmarked range (now without hyphens)
-            const bookmark = context.document.bookmarks.getByName(BOOKMARK_NAME);
-            const range = bookmark.getRange();
-            range.load('text');
-            await context.sync();
-            
-            currentText = range.text;
-            
             const ooxml2 = range.getOoxml();
             await context.sync();
             
@@ -551,18 +514,8 @@ async function hyphenateSelection() {
             } catch (highlightErr) {
                 logActivity(`Highlighting failed: ${highlightErr.message}`, LOG.WARN);
             }
-        } finally {
-            // Always clean up the bookmark
-            try {
-                const bookmark = context.document.bookmarks.getByName(BOOKMARK_NAME);
-                bookmark.delete();
-                await context.sync();
-                logActivity(`Bookmark cleaned up`, LOG.INFO);
-            } catch (cleanupErr) {
-                // Ignore cleanup errors
-            }
         }
-        
+
         logActivity("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", LOG.SEP);
         logActivity(`Completed in ${timerEnd('selection')} ms`);
     });
