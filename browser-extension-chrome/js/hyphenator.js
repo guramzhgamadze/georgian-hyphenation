@@ -1,5 +1,5 @@
 /**
- * Georgian Hyphenation Library v2.2.6
+ * Georgian Hyphenation Library v2.2.7
  * Embedded from NPM Package
  */
 
@@ -53,9 +53,9 @@ if (typeof window.GeorgianHyphenator === 'undefined') {
           this.loadLibrary(data);
           this.dictionaryLoaded = true;
           
-          console.log(`Georgian Hyphenation v2.2.6: Dictionary loaded (${this.dictionary.size} words)`);
+          console.log(`Georgian Hyphenation v2.2.7: Dictionary loaded (${this.dictionary.size} words)`);
         } catch (error) {
-          console.warn('Georgian Hyphenation v2.2.6: Dictionary not available, using algorithm only');
+          console.warn('Georgian Hyphenation v2.2.7: Dictionary not available, using algorithm only');
         }
       }
     }

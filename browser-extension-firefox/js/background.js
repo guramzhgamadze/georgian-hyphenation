@@ -1,16 +1,16 @@
-// Background Script v2.2.6.1 - Firefox - FIXED
-console.log('Georgian Hyphenation v2.2.6.1 (Firefox): Background script loaded');
+// Background Script v2.2.7 - Firefox - FIXED
+console.log('Georgian Hyphenation v2.2.7 (Firefox): Background script loaded');
 
 // Initialize default settings on install/update
 browser.runtime.onInstalled.addListener((details) => {
   if (details.reason === 'install') {
-    console.log('Georgian Hyphenation v2.2.6.1 (Firefox): Extension installed!');
+    console.log('Georgian Hyphenation v2.2.7 (Firefox): Extension installed!');
     
     browser.storage.sync.set({
       enabled: true,
       smartJustify: true,
       stats: { processed: 0, hyphenated: 0 },
-      version: '2.2.6.1'
+      version: '2.2.7'
     }).catch(err => {
       console.error('Storage error:', err);
       // Fallback to local storage if sync fails
@@ -18,15 +18,15 @@ browser.runtime.onInstalled.addListener((details) => {
         enabled: true,
         smartJustify: true,
         stats: { processed: 0, hyphenated: 0 },
-        version: '2.2.6.1'
+        version: '2.2.7'
       });
     });
   } else if (details.reason === 'update') {
-    console.log('Georgian Hyphenation v2.2.6.1 (Firefox): Extension updated!');
+    console.log('Georgian Hyphenation v2.2.7 (Firefox): Extension updated!');
     
     // Update version in storage
-    browser.storage.sync.set({ version: '2.2.6.1' }).catch(err => {
-      browser.storage.local.set({ version: '2.2.6.1' });
+    browser.storage.sync.set({ version: '2.2.7' }).catch(err => {
+      browser.storage.local.set({ version: '2.2.7' });
     });
   }
 });
@@ -93,6 +93,6 @@ browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 // Keep background script responsive
 browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('Background received message:', message);
-  sendResponse({ received: true, version: '2.2.6.1' });
+  sendResponse({ received: true, version: '2.2.7' });
   return true;
 });

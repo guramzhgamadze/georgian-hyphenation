@@ -1,4 +1,4 @@
-// Popup Script v2.2.6.1 - Firefox - FIXED
+// Popup Script v2.2.7 - Firefox - FIXED
 (function() {
   'use strict';
 

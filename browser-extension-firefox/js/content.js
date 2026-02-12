@@ -1,4 +1,4 @@
-// Georgian Hyphenation Extension v2.2.6.1 - Content Script (Firefox) - FIXED & VALIDATED
+// Georgian Hyphenation Extension v2.2.7 - Content Script (Firefox) - FIXED & VALIDATED
 (function() {
   'use strict';
 
@@ -8,7 +8,7 @@
   }
   window.georgianHyphenationExtensionLoaded = true;
 
-  console.log('🇬🇪 Georgian Hyphenation v2.2.6.1: Initializing...');
+  console.log('🇬🇪 Georgian Hyphenation v2.2.7: Initializing...');
 
   function waitForLibrary() {
     if (typeof GeorgianHyphenator === 'undefined') {
@@ -22,12 +22,12 @@
     const DEBUG = false;
     
     function log(msg, ...args) {
-      if(DEBUG) console.log('🇬🇪 GH v2.2.6.1:', msg, ...args);
+      if(DEBUG) console.log('🇬🇪 GH v2.2.7:', msg, ...args);
     }
 
     const blacklistedHosts = ['claude.ai', 'chat.openai.com', 'gemini.google.com'];
     if (blacklistedHosts.some(host => window.location.hostname.includes(host))) {
-      console.log('Georgian Hyphenation v2.2.6.1: Skipping blacklisted site');
+      console.log('Georgian Hyphenation v2.2.7: Skipping blacklisted site');
       return;
     }
 
@@ -77,13 +77,13 @@
     browser.storage.sync.get(['enabled', 'smartJustify']).then(data => {
       isEnabled = data.enabled !== false;
       smartJustifyEnabled = data.smartJustify !== false;
-      console.log('Georgian Hyphenation v2.2.6.1: Initial state loaded');
+      console.log('Georgian Hyphenation v2.2.7: Initial state loaded');
       
       if (isEnabled) {
         injectStyles();
       }
     }).catch(err => {
-      console.error('Georgian Hyphenation v2.2.6.1: Storage error', err);
+      console.error('Georgian Hyphenation v2.2.7: Storage error', err);
     });
 
     function saveStats() {

@@ -1,4 +1,4 @@
-// Content Script v2.2.7 - Watch for text content changes (characterData)
+// Content Script v2.2.7 - Smart Justify only for Georgian text
 (function() {
   'use strict';
 
@@ -152,6 +152,17 @@
         console.log('DEBUG: Applying hyphenation to node:', text.substring(0, 30), '-> Changed:', hasChanges);
         node.textContent = processedWords.join('');
         processedNodes.add(node);
+        
+        // Mark parent elements with Georgian text for Smart Justify
+        if (smartJustifyEnabled) {
+          let current = node.parentElement;
+          let depth = 0;
+          while (current && depth < 5) {
+            current.classList.add('georgian-text-content');
+            current = current.parentElement;
+            depth++;
+          }
+        }
       } else {
         console.log('DEBUG: No changes for node:', text.substring(0, 30));
       }
@@ -241,6 +252,18 @@
     }
     
     processedNodes.add(element);
+    
+    // Mark parent elements with Georgian text for Smart Justify
+    if (smartJustifyEnabled) {
+      let current = element;
+      let depth = 0;
+      while (current && depth < 5) {
+        current.classList.add('georgian-text-content');
+        current = current.parentElement;
+        depth++;
+      }
+    }
+    
     return true;
   }
 
@@ -485,43 +508,37 @@
     const style = document.createElement('style');
     style.id = 'georgian-smart-justify-css';
     style.textContent = `
-      /* Justify paragraphs, articles, sections - normal content */
-      p,
-      article, 
-      section,
-      div.content,
-      div[dir="auto"] {
+      /* ONLY justify elements that contain Georgian text */
+      .georgian-text-content {
         text-align: justify !important;
       }
       
       /* EXCLUSIONS: Never justify anything inside these containers */
       /* 1. Contenteditable elements (chat inputs, composers) */
-      [contenteditable] *,
-      [contenteditable="true"] *,
-      [role="textbox"] *,
+      [contenteditable] .georgian-text-content,
+      [contenteditable="true"] .georgian-text-content,
+      [role="textbox"] .georgian-text-content,
       
       /* 2. Lexical editor (Facebook's rich text editor) */
-      [data-lexical-editor] *,
+      [data-lexical-editor] .georgian-text-content,
       
       /* 3. Form inputs */
-      textarea,
-      textarea *,
-      input,
-      input *,
-      [placeholder] *,
+      textarea .georgian-text-content,
+      input .georgian-text-content,
+      [placeholder] .georgian-text-content,
       
       /* 4. Specific Facebook composer/input classes */
-      [data-pagelet*="composer"] *,
-      [data-testid*="composer"] *,
-      ._1mf *,
-      ._5rpb *,
-      ._5rpu *,
+      [data-pagelet*="composer"] .georgian-text-content,
+      [data-testid*="composer"] .georgian-text-content,
+      ._1mf .georgian-text-content,
+      ._5rpb .georgian-text-content,
+      ._5rpu .georgian-text-content,
       
       /* 5. ARIA labels indicating input areas */
-      [aria-label*="comment" i] *,
-      [aria-label*="write" i] *,
-      [aria-label*="message" i] *,
-      [aria-label*="chat" i] * {
+      [aria-label*="comment" i] .georgian-text-content,
+      [aria-label*="write" i] .georgian-text-content,
+      [aria-label*="message" i] .georgian-text-content,
+      [aria-label*="chat" i] .georgian-text-content {
         text-align: left !important;
       }
     `;

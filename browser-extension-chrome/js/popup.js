@@ -1,4 +1,4 @@
-// Popup Script v2.2.6 - Fixed Toggle Communication
+// Popup Script v2.2.7 - Fixed Toggle Communication
 (function() {
   'use strict';
 
