@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "Georgian Hyphenation",
   "version": "2.2.7",
-  "description": "Automatic hyphenation for Georgian text)",
+  "description": "Automatic hyphenation for Georgian text",
   "permissions": [
     "storage",
     "<all_urls>",
