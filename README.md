@@ -11,7 +11,7 @@
 
 **Professional-grade syllabification for the Georgian language**
 
-[Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Documentation](#-documentation) • [Demo](https://guramzhgamadze.github.io/georgian-hyphenation/)
+[Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Documentation](#-documentation) • [Demo](https://guramzhgamadze.github.io/georgian-hyphenation/docs/index.html)
 
 </div>
 
