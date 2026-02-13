@@ -23,7 +23,7 @@ Georgian Hyphenation is a comprehensive, linguistically accurate library for aut
 
 **Version 2.2.7** – 🎉 **17+ NEW utility functions** for Python & JavaScript!  
 **Version 2.2.7** – Enhanced browser extensions with Meta platform optimization!  
-**Version 2.2.6** – Word add-in with advanced features!
+**Version 2.2.7** – Word add-in with advanced features!
 
 ### Why Georgian Hyphenation?
 
@@ -68,7 +68,7 @@ Georgian Hyphenation is a comprehensive, linguistically accurate library for aut
 | 🦊 **Firefox Extension** | 2.2.7 | [![Firefox](https://img.shields.io/amo/v/georgian-hyphenation)](https://addons.mozilla.org/firefox/addon/georgian-hyphenation/) | [Install from AMO](https://addons.mozilla.org/firefox/addon/georgian-hyphenation/) |
 | 🌐 **Chrome Extension** | 2.2.7 | Beta | [Manual install](#chrome-extension) |
 | 🔌 **WordPress Plugin** | 2.2.6 | Stable | [Download](#wordpress-plugin) |
-| 📝 **MS Word Add-in** | 2.2.6 | Beta | [Installation guide](#microsoft-word-add-in) |
+| 📝 **MS Word Add-in** | 2.2.7 | Beta | [Installation guide](#microsoft-word-add-in) |
 
 ---
 
@@ -565,7 +565,7 @@ const GeorgianHyphenator = require('georgian-hyphenation');
 <summary><b>Microsoft Word Add-in</b></summary>
 
 **Status:** Beta (Web-hosted, ready to use)  
-**Version:** 2.2.6
+**Version:** 2.2.7
 
 ### Quick Installation
 
@@ -593,7 +593,7 @@ const GeorgianHyphenator = require('georgian-hyphenation');
    - Insert → Get Add-ins → Shared Folder
    - Select "Georgian Hyphenation" → Add
 
-### Features (v2.2.6)
+### Features (v2.2.7)
 
 **Core Functionality:**
 - ✅ **Soft Hyphens (U+00AD)**: Clean, invisible hyphens for professional documents
@@ -753,7 +753,7 @@ print(h.hyphenate('კომპიუტერი'))      # კომ-პი-უ
 print(h.hyphenate('მწვრთნელი'))       # მწვრთნე-ლი (keeps მწვრთ together)
 print(h.hyphenate('ასტრონომია'))      # ას-ტრო-ნო-მი-ა (keeps ტრ cluster)
 
-# Compound words (v2.2.6)
+# Compound words (v2.2.7)
 print(h.hyphenate('მაგ-რამ'))         # მაგ-რამ (preserves hyphen)
 print(h.hyphenate('ხელ-ფეხი'))        # ხელ-ფეხი (preserves hyphen)
 ```

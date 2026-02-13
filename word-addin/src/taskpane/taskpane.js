@@ -227,8 +227,8 @@ const Hyphenator = {
 
     async init() {
         try {
-            // გამოყენებულია v2.2.6-ის შესაბამისი CDN
-            const req = await fetch('https://cdn.jsdelivr.net/npm/georgian-hyphenation@2.2.6/data/exceptions.json');
+            // გამოყენებულია v2.2.7-ის შესაბამისი CDN
+            const req = await fetch('https://cdn.jsdelivr.net/npm/georgian-hyphenation@2.2.7/data/exceptions.json');
             if (req.ok) {
                 const data = await req.json();
                 Object.entries(data).forEach(([key, val]) => {

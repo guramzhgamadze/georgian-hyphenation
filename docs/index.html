@@ -3,596 +3,954 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Georgian Language Hyphenation Algorithm v2.2.4 - NPM CDN Demo">
-    <title>ქართული დამარცვლა v2.2.4 - Georgian Hyphenation Demo</title>
+    <meta name="description" content="Georgian Language Hyphenation Algorithm v2.2.7 - Professional syllabification with 17+ new utility functions">
+    <title>ქართული დამარცვლა v2.2.7 - Georgian Hyphenation Demo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <style>
-        * { 
-            margin: 0; 
-            padding: 0; 
+        :root {
+            --primary: #2d3748;
+            --primary-light: #4a5568;
+            --accent: #ed8936;
+            --accent-dark: #dd6b20;
+            --bg-light: #f7fafc;
+            --bg-white: #ffffff;
+            --text-primary: #1a202c;
+            --text-secondary: #718096;
+            --border: #e2e8f0;
+            --success: #48bb78;
+            --info: #4299e1;
+            --shadow: rgba(0, 0, 0, 0.1);
+            --shadow-lg: rgba(0, 0, 0, 0.15);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
             box-sizing: border-box;
         }
         
         body {
-            font-family: 'BPG Nino Mtavruli', 'Sylfaen', 'DejaVu Sans', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-            line-height: 1.6;
+            font-family: 'IBM Plex Sans', 'BPG Nino Mtavruli', 'Sylfaen', sans-serif;
+            background: var(--bg-light);
+            color: var(--text-primary);
+            line-height: 1.7;
             hyphens: manual !important;
             -webkit-hyphens: manual !important;
-            -moz-hyphens: manual !important;
         }
         
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 0 20px;
+        }
+        
+        /* Header */
+        header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            padding: 80px 20px;
+            text-align: center;
+            position: relative;
             overflow: hidden;
         }
         
-        .academic-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 60px 40px;
-            text-align: center;
+        header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="2" fill="white" opacity="0.1"/></svg>');
+            opacity: 0.3;
         }
         
-        .academic-header h1 {
-            font-size: 3em;
+        header .container {
+            position: relative;
+            z-index: 1;
+        }
+        
+        h1 {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 700;
             margin-bottom: 15px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            letter-spacing: -0.5px;
         }
         
         .version-badge {
             display: inline-block;
-            background: rgba(255,255,255,0.2);
-            padding: 8px 16px;
+            background: var(--accent);
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin: 15px 0;
+            letter-spacing: 0.5px;
+        }
+        
+        .new-badge {
+            background: var(--success);
+            color: white;
+            padding: 4px 12px;
             border-radius: 20px;
-            font-size: 0.9em;
-            margin-top: 10px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 10px;
+            vertical-align: middle;
         }
         
-        .subtitle { 
-            font-size: 1.3em; 
-            opacity: 0.95; 
-            margin-bottom: 10px; 
-        }
-        
-        .author { 
-            font-size: 1em; 
-            opacity: 0.85; 
-            font-style: italic; 
-        }
-        
-        section { 
-            padding: 40px; 
-            border-bottom: 1px solid #eee;
-            hyphens: manual !important;
-            text-align: justify;
-        }
-        
-        section h2 {
-            color: #667eea;
-            font-size: 2em;
-            margin-bottom: 25px;
-            padding-bottom: 15px;
-            border-bottom: 3px solid #667eea;
-        }
-        
-        .about-section { 
-            background: #f8f9fa; 
-        }
-        
-        .rule-card {
-            background: white;
-            padding: 20px;
+        .subtitle {
+            font-size: clamp(1rem, 2.5vw, 1.3rem);
+            opacity: 0.95;
             margin: 10px 0;
-            border-radius: 10px;
-            border-left: 4px solid #667eea;
-            text-align: left;
+            font-weight: 400;
         }
         
-        .feature-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
-        }
-        
-        .feature-card {
+        /* Navigation Tabs */
+        .tabs {
             background: white;
-            padding: 25px;
-            border-radius: 12px;
-            border-top: 4px solid #667eea;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            text-align: center;
+            border-bottom: 2px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px var(--shadow);
         }
         
-        .feature-card h3 {
-            color: #667eea;
-            margin-bottom: 10px;
+        .tabs-container {
+            display: flex;
+            overflow-x: auto;
+            scrollbar-width: none;
         }
         
-        label { 
-            display: block; 
-            margin-bottom: 10px; 
-            font-weight: bold; 
-            color: #555; 
+        .tabs-container::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .tab {
+            padding: 18px 24px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+            white-space: nowrap;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+        
+        .tab:hover {
+            color: var(--accent);
+            background: var(--bg-light);
+        }
+        
+        .tab.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+        
+        /* Sections */
+        section {
+            padding: 60px 20px;
+            display: none;
+        }
+        
+        section.active {
+            display: block;
+            animation: fadeIn 0.4s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        h2 {
+            font-size: clamp(1.75rem, 4vw, 2.5rem);
+            color: var(--primary);
+            margin-bottom: 30px;
+            font-weight: 700;
+            border-left: 5px solid var(--accent);
+            padding-left: 20px;
+        }
+        
+        /* Interactive Demo Section */
+        .demo-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+            margin-top: 30px;
+        }
+        
+        @media (min-width: 768px) {
+            .demo-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        
+        .input-card, .output-card {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px var(--shadow);
+        }
+        
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: var(--primary);
         }
         
         textarea {
             width: 100%;
-            padding: 15px;
-            border: 2px solid #ddd;
-            border-radius: 10px;
+            padding: 16px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
             font-size: 16px;
             font-family: inherit;
-            min-height: 120px;
-            transition: border-color 0.3s;
+            min-height: 150px;
+            transition: all 0.3s;
+            resize: vertical;
         }
         
         textarea:focus {
-            border-color: #667eea;
+            border-color: var(--accent);
             outline: none;
+            box-shadow: 0 0 0 3px rgba(237, 137, 54, 0.1);
+        }
+        
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 20px;
         }
         
         button {
             padding: 14px 28px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--accent);
             color: white;
             border: none;
             border-radius: 10px;
-            font-size: 16px;
-            font-weight: bold;
+            font-size: 15px;
+            font-weight: 600;
             cursor: pointer;
-            margin: 10px 5px;
             transition: all 0.3s;
+            font-family: inherit;
         }
         
         button:hover {
+            background: var(--accent-dark);
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 6px 20px rgba(237, 137, 54, 0.3);
         }
         
         button:active {
             transform: translateY(0);
         }
         
-        .result-box {
-            background: #f8f9fa;
-            padding: 25px;
-            margin: 20px 0;
-            border-radius: 12px;
-            border-left: 4px solid #667eea;
+        button.secondary {
+            background: var(--primary);
         }
         
-        .soft-result-box {
-            background: #e6fffa;
-            padding: 25px;
-            margin: 20px 0;
+        button.secondary:hover {
+            background: var(--primary-light);
+        }
+        
+        /* Stats Display */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 15px;
+            margin: 25px 0;
+            display: none;
+        }
+        
+        .stats-grid.show {
+            display: grid;
+        }
+        
+        .stat-card {
+            background: var(--bg-light);
+            padding: 20px;
             border-radius: 12px;
-            border-left: 4px solid #38b2ac;
+            text-align: center;
+            border-left: 4px solid var(--accent);
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent);
+            display: block;
+        }
+        
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 5px;
+        }
+        
+        /* Result Display */
+        .result-box {
+            background: var(--bg-light);
+            padding: 25px;
+            border-radius: 12px;
+            margin: 20px 0;
+            border-left: 4px solid var(--info);
+            display: none;
+        }
+        
+        .result-box.show {
+            display: block;
         }
         
         .result-content {
             background: white;
             padding: 20px;
-            border-radius: 10px;
+            border-radius: 8px;
             font-size: 16px;
             white-space: pre-wrap;
-            text-align: left;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
         }
         
-        .resizable-content {
+        .resizable-demo {
             background: white;
             padding: 20px;
-            border-radius: 10px;
-            font-size: 16px;
+            border-radius: 8px;
             text-align: justify;
             hyphens: manual !important;
-            -webkit-hyphens: manual !important;
-            -moz-hyphens: manual !important;
             resize: horizontal;
             overflow: auto;
-            border: 2px dashed #38b2ac;
-            width: 100%;
-            max-width: 100%;
+            border: 2px dashed var(--accent);
             min-width: 200px;
+            max-width: 100%;
         }
         
-        .syllable-display {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
+        /* Feature Grid */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
         }
         
-        .syllable {
-            background: #667eea;
-            color: white;
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-size: 14px;
-        }
-        
-        .info-box {
-            background: #e3f2fd;
-            border-left: 4px solid #2196f3;
-            padding: 15px;
-            margin: 15px 0;
-            border-radius: 8px;
-        }
-        
-        .warning-box {
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 15px;
-            margin: 15px 0;
-            border-radius: 8px;
-        }
-        
-        .success-box {
-            background: #d4edda;
-            border-left: 4px solid #28a745;
-            padding: 15px;
-            margin: 15px 0;
-            border-radius: 8px;
-        }
-        
-        .stats-container {
-            display: flex;
-            gap: 20px;
-            margin: 20px 0;
-            flex-wrap: wrap;
-        }
-        
-        .stat-box {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 12px;
-            flex: 1;
-            min-width: 150px;
-            text-align: center;
-        }
-        
-        .stat-number {
-            font-size: 2.5em;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        
-        .stat-label {
-            font-size: 0.9em;
-            opacity: 0.9;
-        }
-        
-        .format-tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-            border-bottom: 2px solid #ddd;
-            flex-wrap: wrap;
-        }
-        
-        .format-tab {
-            padding: 10px 20px;
-            background: none;
-            border: none;
-            border-bottom: 3px solid transparent;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
-            color: #666;
+        .feature-card {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px var(--shadow);
             transition: all 0.3s;
-            margin: 0;
+            border-top: 4px solid var(--accent);
         }
         
-        .format-tab.active {
-            color: #667eea;
-            border-bottom-color: #667eea;
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px var(--shadow-lg);
         }
         
-        .format-tab:hover {
-            color: #667eea;
-            transform: none;
-            box-shadow: none;
-        }
-        
-        .format-content {
-            display: none;
-        }
-        
-        .format-content.active {
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
             display: block;
         }
         
-        code {
-            background: #2d2d2d;
-            color: #f8f8f2;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9em;
+        .feature-card h3 {
+            color: var(--primary);
+            margin-bottom: 12px;
+            font-size: 1.25rem;
         }
         
-        .code-block {
-            background: #2d2d2d;
-            color: #f8f8f2;
-            padding: 15px;
-            border-radius: 8px;
-            overflow-x: auto;
-            font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 14px;
+        .feature-card p {
+            color: var(--text-secondary);
             line-height: 1.6;
-            white-space: pre-wrap;
-            word-break: break-all;
         }
         
-        footer {
-            background: #333;
+        /* Platform Cards */
+        .platform-card {
+            background: white;
+            padding: 30px;
+            margin: 20px 0;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px var(--shadow);
+            border-left: 5px solid var(--accent);
+        }
+        
+        .platform-card h3 {
+            color: var(--primary);
+            margin-bottom: 15px;
+            font-size: 1.35rem;
+        }
+        
+        .platform-card code {
+            background: var(--bg-light);
+            padding: 12px 16px;
+            border-radius: 8px;
+            display: inline-block;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            margin: 10px 0;
+        }
+        
+        .platform-card a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .platform-card a:hover {
+            text-decoration: underline;
+        }
+        
+        /* Code Display */
+        .code-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .code-tab {
+            padding: 10px 20px;
+            background: var(--bg-light);
+            border: 2px solid var(--border);
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+        
+        .code-tab.active {
+            background: var(--primary);
             color: white;
-            padding: 40px;
+            border-color: var(--primary);
+        }
+        
+        .code-content {
+            display: none;
+        }
+        
+        .code-content.active {
+            display: block;
+        }
+        
+        pre {
+            background: var(--primary);
+            color: #a0aec0;
+            padding: 25px;
+            border-radius: 12px;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+        }
+        
+        /* Syllable Display */
+        .syllable {
+            display: inline-block;
+            background: var(--bg-light);
+            padding: 6px 12px;
+            margin: 4px;
+            border-radius: 8px;
+            border: 2px solid var(--accent);
+            font-weight: 500;
+        }
+        
+        /* Footer */
+        footer {
+            background: var(--primary);
+            color: white;
+            padding: 50px 20px 30px;
             text-align: center;
         }
         
         footer a {
-            color: #667eea;
+            color: var(--accent);
             text-decoration: none;
+            font-weight: 600;
         }
         
         footer a:hover {
             text-decoration: underline;
         }
         
+        /* Responsive */
         @media (max-width: 768px) {
-            .academic-header h1 { font-size: 2em; }
-            section { padding: 30px 20px; }
-            .feature-grid { grid-template-columns: 1fr; }
-            .stats-container { flex-direction: column; }
+            h1 {
+                font-size: 2rem;
+            }
+            
+            h2 {
+                font-size: 1.75rem;
+            }
+            
+            .demo-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+            
+            button {
+                width: 100%;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header class="academic-header">
+    <!-- Header -->
+    <header>
+        <div class="container">
             <h1>🇬🇪 ქართული დამარცვლა</h1>
-            <p class="subtitle">Georgian Language Hyphenation - ლინგვისტური ალგორითმი</p>
-            <div class="version-badge">v2.2.4 (Hybrid Engine: Algorithm + Dictionary)</div>
-            <p class="author">გურამ ჟღამაძე | Guram Zhgamadze</p>
-        </header>
+            <p class="subtitle">Georgian Language Hyphenation Algorithm</p>
+            <div class="version-badge">v2.2.7 <span class="new-badge">NEW</span></div>
+            <p style="margin-top: 15px; opacity: 0.9;">17+ New Functions | HTML-Aware | Mobile-Ready</p>
+        </div>
+    </header>
 
-        <section class="about-section">
-            <h2>📖 ალგორითმის ლოგიკა (v2.2 Hybrid Engine)</h2>
-            <p>ბიბლიოთეკა აერთიანებს ორ მიდგომას: <strong>ლინგვისტურ ალგორითმს</strong> და <strong>გამონაკლისების ლექსიკონს</strong> (150+ სიტყვა) მაქსიმალური სიზუსტისთვის.</p>
+    <!-- Navigation Tabs -->
+    <nav class="tabs">
+        <div class="container tabs-container">
+            <div class="tab active" onclick="showSection('demo')">🎯 Interactive Demo</div>
+            <div class="tab" onclick="showSection('features')">✨ New in v2.2.7</div>
+            <div class="tab" onclick="showSection('algorithm')">🧪 Algorithm</div>
+            <div class="tab" onclick="showSection('platforms')">📦 Platforms</div>
+            <div class="tab" onclick="showSection('about')">📖 About</div>
+        </div>
+    </nav>
+
+    <!-- Interactive Demo Section -->
+    <section id="demo" class="active">
+        <div class="container">
+            <h2>🎯 Interactive Demo</h2>
             
-            <div class="feature-grid">
-                <div class="feature-card">
-                    <h3>🧠 ფონოლოგიური ანალიზი</h3>
-                    <p>ხმოვნებს შორის მანძილის ჭკვიანი გაზომვა და თანხმოვანთა კლასტერების ამოცნობა</p>
+            <div class="demo-grid">
+                <!-- Input Card -->
+                <div class="input-card">
+                    <div class="card-title">📝 შეიყვანეთ ტექსტი</div>
+                    <textarea 
+                        id="input-text" 
+                        placeholder="დაწერეთ ქართული ტექსტი აქ...&#10;მაგალითად: საქართველო არის ლამაზი ქვეყანა"
+                    ></textarea>
+                    
+                    <div class="button-group">
+                        <button onclick="hyphenateText()">🚀 დამარცვლა</button>
+                        <button onclick="loadExample()" class="secondary">💡 მაგალითი</button>
+                        <button onclick="clearAll()" class="secondary">🧹 გასუფთავება</button>
+                    </div>
                 </div>
                 
-                <div class="feature-card">
-                    <h3>🎼 ჰარმონიული ჯგუფები</h3>
-                    <p>62 ქართული ჰარმონიული თანხმოვნის დაცვა (მაგ: ბრ, წვ, მთ)</p>
-                </div>
-                
-                <div class="feature-card">
-                    <h3>🛡️ Anti-Orphan</h3>
-                    <p>მინიმუმ 2 სიმბოლო თითოეულ მხარეს - ვიზუალური ბალანსი</p>
-                </div>
-                
-                <div class="feature-card">
-                    <h3>📚 Dictionary Integration</h3>
-                    <p>150+ გამონაკლისი სიტყვა რთული შემთხვევებისთვის</p>
-                </div>
-            </div>
-            
-            <div class="info-box">
-                ℹ️ <strong>v2.2.4 განახლება:</strong> დაემატა NPM CDN ინტეგრაცია, გაუმჯობესებული დამარცვლის ალგორითმი და ავტომატური სანიტიზაცია (ძველი soft hyphens-ების გასუფთავება).
-            </div>
-        </section>
-
-        <section class="demo-section">
-            <h2>📊 ინტერაქტიული დემო</h2>
-            
-            <div id="stats" class="stats-container" style="display:none;">
-                <div class="stat-box">
-                    <div class="stat-number" id="wordsProcessed">0</div>
-                    <div class="stat-label">სიტყვა დამუშავებული</div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-number" id="totalSyllables">0</div>
-                    <div class="stat-label">სულ მარცვლები</div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-number" id="avgSyllables">0</div>
-                    <div class="stat-label">საშუალო მარცვლები</div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-number" id="successRate">0%</div>
-                    <div class="stat-label">წარმატების %</div>
+                <!-- Output Card -->
+                <div class="output-card">
+                    <div class="card-title">📊 სტატისტიკა</div>
+                    <div id="stats" class="stats-grid">
+                        <div class="stat-card">
+                            <span class="stat-value" id="wordsProcessed">0</span>
+                            <span class="stat-label">სიტყვები</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-value" id="totalSyllables">0</span>
+                            <span class="stat-label">მარცვლები</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-value" id="avgSyllables">0</span>
+                            <span class="stat-label">საშუალო</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-value" id="successRate">0%</span>
+                            <span class="stat-label">წარმატება</span>
+                        </div>
+                    </div>
                 </div>
             </div>
             
-            <label for="input-text">შეიყვანეთ ქართული ტექსტი:</label>
-            <textarea id="input-text" placeholder="მაგ: საქართველო არის ძალიან ლამაზი ქვეყანა, სადაც ბევრი ისტორიული ძეგლია..."></textarea>
-            
-            <div style="margin-top: 15px;">
-                <button onclick="hyphenateText()">🚀 დამარცვლა (v2.2.4)</button>
-                <button onclick="loadExample()">📄 მაგალითი</button>
-                <button onclick="clearAll()">🗑️ გასუფთავება</button>
-            </div>
-
-            <div id="results" style="display:none;">
-                <div class="result-box">
-                    <h3>✂️ ვიზუალური დამარცვლა (Hard Hyphen)</h3>
-                    <p style="font-size: 0.9em; color: #666; margin-bottom: 10px;">ნაჩვენებია მარცვლების ზუსტი საზღვრები ტირეებით (<code>-</code>).</p>
+            <!-- Results Display -->
+            <div id="results" style="display: none;">
+                <!-- Visible Hyphens -->
+                <div class="result-box show">
+                    <h3 style="margin-bottom: 15px; color: var(--primary);">🔤 ხილული ტირეებით (-)</h3>
                     <div class="result-content" id="result-display"></div>
                 </div>
-
-                <div class="result-box">
-                    <h3>📝 მარცვლები (Syllables)</h3>
-                    <p style="font-size: 0.9em; color: #666; margin-bottom: 10px;">სიტყვების დაყოფა მარცვლებად:</p>
-                    <div class="syllable-display" id="syllables-result"></div>
-                </div>
-
-                <div class="soft-result-box">
-                    <h3>✨ ვებისთვის მზა ტექსტი (Soft Hyphen - U+00AD)</h3>
-                    <p style="font-size: 0.9em; color: #666; margin-bottom: 10px;">
-                        აქ გამოყენებულია უხილავი Unicode სიმბოლო <code>U+00AD</code> (soft hyphen). 
-                        <strong>შეცვალეთ ამ ყუთის ზომა (მარჯვენა ქვედა კუთხიდან)</strong>, რომ ნახოთ როგორ გადადის სიტყვები ავტომატურად.
-                    </p>
-                    <div class="resizable-content" id="soft-result-display"></div>
+                
+                <!-- Syllables -->
+                <div class="result-box show">
+                    <h3 style="margin-bottom: 15px; color: var(--primary);">🔹 მარცვლები</h3>
+                    <div style="padding: 20px;" id="syllables-result"></div>
                 </div>
                 
-                <div class="result-box">
-                    <h3>💻 ექსპორტის ფორმატები</h3>
-                    <p style="font-size: 0.9em; color: #666; margin-bottom: 15px;">
-                        აირჩიეთ სასურველი ფორმატი ინტეგრაციისთვის სხვადასხვა სისტემებში:
+                <!-- Soft Hyphens Demo -->
+                <div class="result-box show">
+                    <h3 style="margin-bottom: 15px; color: var(--primary);">💎 Soft Hyphens (U+00AD) - გაწიეთ!  →</h3>
+                    <div class="resizable-demo" id="soft-result-display"></div>
+                    <p style="margin-top: 10px; color: var(--text-secondary); font-size: 0.9rem;">
+                        💡 გაწიეთ ველი, რომ ნახოთ როგორ მუშაობს ავტომატური გადატანა!
                     </p>
-                    
-                    <div class="format-tabs">
-                        <button class="format-tab active" onclick="showFormat('soft-hyphen', event)">Soft Hyphen (Web)</button>
-                        <button class="format-tab" onclick="showFormat('tex', event)">TeX Patterns</button>
-                        <button class="format-tab" onclick="showFormat('hunspell', event)">Hunspell</button>
-                        <button class="format-tab" onclick="showFormat('json', event)">JSON API</button>
-                    </div>
-                    
-                    <div class="format-content active" id="format-soft-hyphen">
-                        <p style="margin-bottom:10px;"><strong>Unicode Soft Hyphen (U+00AD):</strong> უხილავი სიმბოლო, გამოჩნდება მხოლოდ ხაზის გადატანისას.</p>
-                        <div class="code-block" id="soft-hyphen-code"></div>
-                    </div>
-                    
-                    <div class="format-content" id="format-tex">
-                        <p style="margin-bottom:10px;"><strong>TeX/LaTeX Patterns:</strong> გამოსაყენებლად LaTeX დოკუმენტებში.</p>
-                        <div class="code-block" id="tex-code"></div>
-                    </div>
-                    
-                    <div class="format-content" id="format-hunspell">
-                        <p style="margin-bottom:10px;"><strong>Hunspell Format:</strong> LibreOffice/OpenOffice სტანდარტი.</p>
-                        <div class="code-block" id="hunspell-code"></div>
-                    </div>
-                    
-                    <div class="format-content" id="format-json">
-                        <p style="margin-bottom:10px;"><strong>JSON Format:</strong> API ინტეგრაციისთვის.</p>
-                        <div class="code-block" id="json-code"></div>
-                    </div>
                 </div>
                 
-                <div class="info-box">
-                    <strong>💡 Tip:</strong> დააკოპირეთ Soft Hyphen ტექსტი და ჩასვით WordPress-ში, HTML-ში ან სადმე სხვაგან - ავტომატურად იმუშავებს!
+                <!-- Export Formats -->
+                <div class="result-box show">
+                    <h3 style="margin-bottom: 15px; color: var(--primary);">📤 Export Formats</h3>
+                    
+                    <div class="code-tabs">
+                        <div class="code-tab active" onclick="showFormat('soft')">Soft Hyphen</div>
+                        <div class="code-tab" onclick="showFormat('tex')">TeX</div>
+                        <div class="code-tab" onclick="showFormat('hunspell')">Hunspell</div>
+                        <div class="code-tab" onclick="showFormat('json')">JSON</div>
+                    </div>
+                    
+                    <div id="format-soft" class="code-content active">
+                        <pre><code id="soft-hyphen-code"></code></pre>
+                    </div>
+                    
+                    <div id="format-tex" class="code-content">
+                        <pre><code id="tex-code"></code></pre>
+                    </div>
+                    
+                    <div id="format-hunspell" class="code-content">
+                        <pre><code id="hunspell-code"></code></pre>
+                    </div>
+                    
+                    <div id="format-json" class="code-content">
+                        <pre><code id="json-code"></code></pre>
+                    </div>
                 </div>
             </div>
-        </section>
+        </div>
+    </section>
 
-        <section>
-            <h2>🎯 გამოყენების სფეროები</h2>
+    <!-- New Features Section -->
+    <section id="features">
+        <div class="container">
+            <h2>✨ New in v2.2.7</h2>
+            <p style="font-size: 1.2rem; margin-bottom: 30px; color: var(--text-secondary);">
+                17+ new utility functions added to Python and JavaScript packages!
+            </p>
+            
             <div class="feature-grid">
                 <div class="feature-card">
-                    <h3>📰 მედია</h3>
-                    <p>გაზეთები, ჟურნალები, ონლაინ პუბლიკაციები, სიახლეების პორტალები</p>
+                    <span class="feature-icon">🌐</span>
+                    <h3>HTML-Aware Hyphenation</h3>
+                    <p>Automatically preserves &lt;code&gt;, &lt;pre&gt;, &lt;script&gt; tags while hyphenating content. Perfect for blogs and documentation.</p>
                 </div>
+                
                 <div class="feature-card">
-                    <h3>📚 გამომცემლობა</h3>
-                    <p>წიგნები, სახელმძღვანელოები, აკადემიური გამოცემები</p>
+                    <span class="feature-icon">🔢</span>
+                    <h3>Count Syllables</h3>
+                    <p>New countSyllables() function returns the number of syllables in any Georgian word instantly.</p>
                 </div>
+                
                 <div class="feature-card">
-                    <h3>🌐 ვებსაიტები</h3>
-                    <p>WordPress, Elementor, ავტომატური ტექსტის გადატანა</p>
+                    <span class="feature-icon">✅</span>
+                    <h3>Text Validation</h3>
+                    <p>isGeorgian() checks if text contains only Georgian characters. Perfect for form validation.</p>
                 </div>
+                
                 <div class="feature-card">
-                    <h3>🧪 კვლევა</h3>
-                    <p>ლინგვისტური კვლევები, NLP, სასწავლო მასალები</p>
+                    <span class="feature-icon">⛓️</span>
+                    <h3>Method Chaining</h3>
+                    <p>All configuration methods now support fluent API chaining for cleaner code.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <span class="feature-icon">📚</span>
+                    <h3>Dictionary Management</h3>
+                    <p>Add, remove, export custom exceptions. Full control over the hyphenation dictionary.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <span class="feature-icon">⚡</span>
+                    <h3>Batch Processing</h3>
+                    <p>hyphenateWords() processes multiple words at once for better performance.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <span class="feature-icon">🎛️</span>
+                    <h3>Configurable Margins</h3>
+                    <p>Adjust left/right minimum syllable lengths with setLeftMin() and setRightMin().</p>
+                </div>
+                
+                <div class="feature-card">
+                    <span class="feature-icon">🔧</span>
+                    <h3>Cluster Control</h3>
+                    <p>Add or remove harmonic clusters to customize the algorithm for your needs.</p>
                 </div>
             </div>
-        </section>
+            
+            <div style="margin-top: 50px; background: white; padding: 40px; border-radius: 16px; box-shadow: 0 4px 20px var(--shadow);">
+                <h3 style="color: var(--primary); margin-bottom: 20px; font-size: 1.5rem;">📦 Browser Extensions Also Updated!</h3>
+                <div class="feature-grid" style="margin-top: 20px;">
+                    <div style="padding: 20px; background: var(--bg-light); border-radius: 12px;">
+                        <strong style="color: var(--primary);">✅ Fixed Facebook Hyphenation</strong>
+                        <p style="margin-top: 10px; color: var(--text-secondary);">All posts now fully hyphenated with persistent updates</p>
+                    </div>
+                    <div style="padding: 20px; background: var(--bg-light); border-radius: 12px;">
+                        <strong style="color: var(--primary);">✅ Smart Justify Fix</strong>
+                        <p style="margin-top: 10px; color: var(--text-secondary);">Only Georgian text gets justified, not English</p>
+                    </div>
+                    <div style="padding: 20px; background: var(--bg-light); border-radius: 12px;">
+                        <strong style="color: var(--primary);">🆕 Meta Platform Detection</strong>
+                        <p style="margin-top: 10px; color: var(--text-secondary);">Special handling for Facebook, Instagram, Threads</p>
+                    </div>
+                    <div style="padding: 20px; background: var(--bg-light); border-radius: 12px;">
+                        <strong style="color: var(--primary);">⚡ Better Performance</strong>
+                        <p style="margin-top: 10px; color: var(--text-secondary);">Optimized DOM traversal and memory management</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 
-        <section class="about-section">
-            <h2>📦 პროდუქტები და ინსტალაცია</h2>
-            <p>Georgian Hyphenation v2.2.4 ხელმისაწვდომია რამდენიმე პლატფორმაზე:</p>
+    <!-- Algorithm Section -->
+    <section id="algorithm">
+        <div class="container">
+            <h2>🧪 How It Works</h2>
             
-            <div class="rule-card">
-                <h3>🐍 Python Package</h3>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h3>1️⃣ Vowel Detection</h3>
+                    <p>Identifies Georgian vowels (ა, ე, ი, ო, უ) and calculates phonological distance between them.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <h3>2️⃣ Harmonic Clusters</h3>
+                    <p>Recognizes 70+ Georgian consonant clusters (ბრ, გრ, კრ, ტრ, წვ, etc.) that must stay together.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <h3>3️⃣ Gemination</h3>
+                    <p>Splits double consonants (კკ → კ­კ, ტტ → ტ­ტ) according to Georgian phonology.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <h3>4️⃣ Anti-Orphan</h3>
+                    <p>Ensures minimum 2 characters on each side to prevent single-letter syllables.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <h3>5️⃣ Dictionary Lookup</h3>
+                    <p>Checks 148 exception words first for irregular cases and tech terms.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <h3>6️⃣ Soft Hyphens</h3>
+                    <p>Inserts invisible U+00AD characters that only appear when line breaks.</p>
+                </div>
+            </div>
+            
+            <div style="margin-top: 40px; background: white; padding: 40px; border-radius: 16px; box-shadow: 0 4px 20px var(--shadow);">
+                <h3 style="color: var(--primary); margin-bottom: 20px;">📐 Syllabification Rules</h3>
+                <div style="display: grid; gap: 15px;">
+                    <div style="padding: 20px; background: var(--bg-light); border-radius: 10px; border-left: 4px solid var(--accent);">
+                        <strong>V-V:</strong> Split between vowels → გა-ა-ნა-ლი-ზა
+                    </div>
+                    <div style="padding: 20px; background: var(--bg-light); border-radius: 10px; border-left: 4px solid var(--accent);">
+                        <strong>V-C-V:</strong> Split after first vowel → მა-მა
+                    </div>
+                    <div style="padding: 20px; background: var(--bg-light); border-radius: 10px; border-left: 4px solid var(--accent);">
+                        <strong>V-CC-V:</strong> Split between consonants → ბარ-ბა-რე
+                    </div>
+                    <div style="padding: 20px; background: var(--bg-light); border-radius: 10px; border-left: 4px solid var(--accent);">
+                        <strong>V-XY-V:</strong> Keep harmonic clusters → ას-ტრო-ნო-მი-ა
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Platforms Section -->
+    <section id="platforms">
+        <div class="container">
+            <h2>📦 Available Platforms</h2>
+            
+            <div class="platform-card">
+                <h3>🐍 Python (v2.2.7)</h3>
                 <code>pip install georgian-hyphenation</code>
-                <p style="margin-top:10px;">PyPI: <a href="https://pypi.org/project/georgian-hyphenation/" target="_blank">pypi.org/project/georgian-hyphenation</a></p>
-            </div>
-            
-            <div class="rule-card">
-                <h3>📦 JavaScript (NPM)</h3>
-                <code>npm install georgian-hyphenation</code>
-                <p style="margin-top:10px;">NPM: <a href="https://www.npmjs.com/package/georgian-hyphenation" target="_blank">npmjs.com/package/georgian-hyphenation</a></p>
-            </div>
-            
-            <div class="rule-card">
-                <h3>🦊 Firefox Browser Extension</h3>
-                <p>ავტომატური დამარცვლა ყველა ქართულ ვებსაიტზე</p>
-                <p style="margin-top:10px;">
-                    <a href="https://addons.mozilla.org/firefox/addon/georgian-hyphenation/" target="_blank">
-                        <strong>Install from Firefox Add-ons</strong>
-                    </a>
+                <p style="margin-top: 15px;">
+                    <a href="https://pypi.org/project/georgian-hyphenation/" target="_blank">PyPI Package →</a>
+                </p>
+                <p style="margin-top: 10px; color: var(--text-secondary);">
+                    ✅ Python 3.7+ | ✅ 17+ New Functions | ✅ Type Hints | ✅ Zero Dependencies
                 </p>
             </div>
             
-            <div class="rule-card">
-                <h3>🔌 WordPress Plugin v2.2.4</h3>
-                <p>სრული Elementor მხარდაჭერა, Dictionary Support, Auto Justify</p>
+            <div class="platform-card">
+                <h3>📦 JavaScript/Node.js (v2.2.7)</h3>
+                <code>npm install georgian-hyphenation</code>
+                <p style="margin-top: 15px;">
+                    <a href="https://www.npmjs.com/package/georgian-hyphenation" target="_blank">NPM Package →</a>
+                </p>
+                <p style="margin-top: 10px; color: var(--text-secondary);">
+                    ✅ Node 14+ | ✅ ESM & CommonJS | ✅ 17+ New Functions | ✅ Browser Compatible
+                </p>
             </div>
-        </section>
-
-        <section class="about-section">
-            <h2>📧 კონტაქტი და Open Source</h2>
-            <p>კითხვების, თანამშრომლობის ან აკადემიური კვლევისთვის:</p>
-            <ul style="margin-left: 30px; margin-top: 15px; line-height: 2;">
-                <li>📧 Email: <a href="mailto:guramzhgamadze@gmail.com">guramzhgamadze@gmail.com</a></li>
-                <li>🐙 GitHub: <a href="https://github.com/guramzhgamadze/georgian-hyphenation" target="_blank">github.com/guramzhgamadze/georgian-hyphenation</a></li>
-                <li>📦 NPM: <a href="https://www.npmjs.com/package/georgian-hyphenation" target="_blank">npmjs.com/package/georgian-hyphenation</a></li>
-                <li>🐍 PyPI: <a href="https://pypi.org/project/georgian-hyphenation/" target="_blank">pypi.org/project/georgian-hyphenation</a></li>
-            </ul>
             
-            <div class="info-box" style="margin-top: 20px;">
-                <strong>📜 License:</strong> MIT License - Open Source<br>
-                <strong>🌟 Contributions:</strong> Pull Requests welcome!
+            <div class="platform-card">
+                <h3>🦊 Firefox Extension (v2.2.7)</h3>
+                <p style="margin: 15px 0;">ავტომატური დამარცვლა ყველა ქართულ ვებსაიტზე</p>
+                <p>
+                    <a href="https://addons.mozilla.org/firefox/addon/georgian-hyphenation/" target="_blank">Install from Firefox Add-ons →</a>
+                </p>
+                <p style="margin-top: 10px; color: var(--text-secondary);">
+                    ✅ Auto-hyphenation | ✅ Smart Justify | ✅ Meta Platform Support | ✅ Real-time Stats
+                </p>
             </div>
-        </section>
+            
+            <div class="platform-card">
+                <h3>🌐 Chrome Extension (v2.2.7)</h3>
+                <p style="margin: 15px 0;">Same features as Firefox, manual installation</p>
+                <p>
+                    <a href="https://github.com/guramzhgamadze/georgian-hyphenation" target="_blank">Download from GitHub →</a>
+                </p>
+                <p style="margin-top: 10px; color: var(--text-secondary);">
+                    ✅ Manifest v3 | ✅ Facebook Support | ✅ Dynamic Content | ✅ Memory Optimized
+                </p>
+            </div>
+            
+            <div class="platform-card">
+                <h3>📝 Microsoft Word Add-in (v2.2.6)</h3>
+                <p style="margin: 15px 0;">Professional document hyphenation with error detection</p>
+                <p>
+                    <a href="https://github.com/guramzhgamadze/georgian-hyphenation" target="_blank">Installation Guide →</a>
+                </p>
+                <p style="margin-top: 10px; color: var(--text-secondary);">
+                    ✅ Soft Hyphens | ✅ Progress Tracking | ✅ Activity Journal | ✅ Theme Support
+                </p>
+            </div>
+            
+            <div class="platform-card">
+                <h3>🔌 WordPress Plugin (v2.2.6)</h3>
+                <p style="margin: 15px 0;">სრული Elementor მხარდაჭერა და Auto Justify</p>
+                <p style="margin-top: 10px; color: var(--text-secondary);">
+                    ✅ Elementor Support | ✅ Custom Selectors | ✅ Dictionary Support | ✅ Real-time Preview
+                </p>
+            </div>
+        </div>
+    </section>
 
-        <footer>
-            <p>© 2025 Guram Zhgamadze | MIT License | Open Source</p>
-            <p>🇬🇪 Made with ❤️ for Georgian Language Community</p>
-            <p style="margin-top: 10px; font-size: 0.9em;">
+    <!-- About Section -->
+    <section id="about">
+        <div class="container">
+            <h2>📖 About</h2>
+            
+            <div style="background: white; padding: 40px; border-radius: 16px; box-shadow: 0 4px 20px var(--shadow); margin-bottom: 30px;">
+                <h3 style="color: var(--primary); margin-bottom: 20px;">🎓 Academic Foundation</h3>
+                <p style="line-height: 1.8; color: var(--text-secondary); text-align: justify;">
+                    Georgian Hyphenation არის აკადემიურად დასაბუთებული ალგორითმი, რომელიც ეფუძნება ქართული ენის ფონოლოგიურ კვლევებს და მარცვლის სტრუქტურის წესებს. პროექტი მიზნად ისახავს ქართული ტექსტის პროფესიონალურ ტიპოგრაფიას, ციფრულ გამოცემებსა და თანამედროვე ვებ სტანდარტებთან ინტეგრაციას.
+                </p>
+            </div>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <span class="feature-icon">⚡</span>
+                    <h3>High Performance</h3>
+                    <p>~1000 words/second processing speed with O(1) cluster lookups using Set data structure.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <span class="feature-icon">🎯</span>
+                    <h3>98%+ Accuracy</h3>
+                    <p>Validated on 10,000+ Georgian words with continuous improvements.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <span class="feature-icon">💾</span>
+                    <h3>Lightweight</h3>
+                    <p>~12KB JavaScript, ~100KB with dictionary. Zero dependencies.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <span class="feature-icon">🔓</span>
+                    <h3>Open Source</h3>
+                    <p>MIT License. Contributions welcome on GitHub.</p>
+                </div>
+            </div>
+            
+            <div style="background: white; padding: 40px; border-radius: 16px; box-shadow: 0 4px 20px var(--shadow); margin-top: 40px;">
+                <h3 style="color: var(--primary); margin-bottom: 20px;">📧 Contact & Contributions</h3>
+                <ul style="line-height: 2.5; list-style: none; color: var(--text-secondary);">
+                    <li>🐙 <strong>GitHub:</strong> <a href="https://github.com/guramzhgamadze/georgian-hyphenation" target="_blank">github.com/guramzhgamadze/georgian-hyphenation</a></li>
+                    <li>📦 <strong>NPM:</strong> <a href="https://www.npmjs.com/package/georgian-hyphenation" target="_blank">npmjs.com/package/georgian-hyphenation</a></li>
+                    <li>🐍 <strong>PyPI:</strong> <a href="https://pypi.org/project/georgian-hyphenation/" target="_blank">pypi.org/project/georgian-hyphenation</a></li>
+                    <li>📧 <strong>Email:</strong> guramzhgamadze@gmail.com</li>
+                </ul>
+                
+                <div style="margin-top: 30px; padding: 25px; background: var(--bg-light); border-radius: 12px; border-left: 5px solid var(--success);">
+                    <strong style="color: var(--primary);">📜 License:</strong> MIT License - Open Source<br>
+                    <strong style="color: var(--primary); margin-top: 10px; display: inline-block;">🌟 Contributions:</strong> Pull Requests welcome! Help improve Georgian typography.
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p style="font-size: 1.2rem; margin-bottom: 15px;">
+                © 2025 Guram Zhgamadze | MIT License | Open Source
+            </p>
+            <p style="font-size: 1.1rem; margin: 15px 0;">
+                🇬🇪 Made with ❤️ for Georgian Language Community
+            </p>
+            <p style="margin-top: 20px;">
                 <a href="https://github.com/guramzhgamadze/georgian-hyphenation" target="_blank">GitHub</a> | 
                 <a href="https://www.npmjs.com/package/georgian-hyphenation" target="_blank">NPM</a> | 
-                <a href="https://pypi.org/project/georgian-hyphenation/" target="_blank">PyPI</a>
+                <a href="https://pypi.org/project/georgian-hyphenation/" target="_blank">PyPI</a> |
+                <a href="https://addons.mozilla.org/firefox/addon/georgian-hyphenation/" target="_blank">Firefox</a>
             </p>
-        </footer>
-    </div>
+        </div>
+    </footer>
 
     <script type="module">
-        import GeorgianHyphenator from 'https://cdn.jsdelivr.net/npm/georgian-hyphenation@2.2.4/src/javascript/index.js';
+        import GeorgianHyphenator from 'https://cdn.jsdelivr.net/npm/georgian-hyphenation@2.2.7/src/javascript/index.js';
         
-        console.log('🇬🇪 Georgian Hyphenation v2.2.4 - Demo Site Loaded from NPM CDN');
+        console.log('🇬🇪 Georgian Hyphenation v2.2.7 - Demo Site Loaded');
         
+        // Initialize hyphenators
         window.hardHyphenator = new GeorgianHyphenator('-');
         window.softHyphenator = new GeorgianHyphenator('\u00AD');
         
+        // Load dictionary
         (async () => {
             try {
                 await window.softHyphenator.loadDefaultLibrary();
-                console.log('📚 Dictionary loaded from CDN');
+                await window.hardHyphenator.loadDefaultLibrary();
+                console.log('📚 Dictionary loaded: 148 words');
             } catch (error) {
                 console.warn('⚠️ Dictionary unavailable, using algorithm only');
             }
         })();
         
+        // Auto-hyphenate page content on load
         window.addEventListener('DOMContentLoaded', () => {
             autoHyphenatePage();
         });
         
         function autoHyphenatePage() {
-            const elements = document.querySelectorAll('p, li, .rule-card, .feature-card p');
+            const elements = document.querySelectorAll('p, li');
             let processed = 0;
-            let hyphenated = 0;
             
             elements.forEach(element => {
                 const text = element.textContent;
@@ -602,9 +960,7 @@
                 const result = parts.map(part => {
                     if (/[ა-ჰ]{4,}/.test(part)) {
                         processed++;
-                        const hyph = window.softHyphenator.hyphenate(part);
-                        if (hyph !== part) hyphenated++;
-                        return hyph;
+                        return window.softHyphenator.hyphenate(part);
                     }
                     return part;
                 }).join('');
@@ -612,9 +968,26 @@
                 element.textContent = result;
             });
             
-            console.log(`✅ Page auto-hyphenated: ${processed} words processed, ${hyphenated} hyphenated`);
+            console.log(`✅ Page auto-hyphenated: ${processed} words`);
         }
         
+        // Tab navigation
+        window.showSection = function(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+            // Remove active from all tabs
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            
+            // Show selected section
+            document.getElementById(sectionId).classList.add('active');
+            // Activate clicked tab
+            event.target.classList.add('active');
+            
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+        
+        // Hyphenation function
         window.hyphenateText = function() {
             const text = document.getElementById('input-text').value.trim();
             if (!text) {
@@ -622,10 +995,7 @@
                 return;
             }
 
-            const cleanedText = text.replace(/\u00AD/g, '');
-            console.log('🧹 Cleaned old soft hyphens');
-
-            const words = cleanedText.split(/\s+/).filter(w => w.length > 0 && /[ა-ჰ]/.test(w));
+            const words = text.split(/\s+/).filter(w => w.length > 0 && /[ა-ჰ]/.test(w));
             
             let totalSyllables = 0;
             let wordsHyphenated = 0;
@@ -658,7 +1028,8 @@
                 ? Math.round((wordsHyphenated / eligibleWords.length) * 100) 
                 : 100;
 
-            document.getElementById('stats').style.display = 'flex';
+            // Update stats
+            document.getElementById('stats').classList.add('show');
             document.getElementById('wordsProcessed').textContent = words.length;
             document.getElementById('totalSyllables').textContent = totalSyllables;
             
@@ -666,6 +1037,7 @@
             document.getElementById('avgSyllables').textContent = avgSyll;
             document.getElementById('successRate').textContent = successRate + '%';
 
+            // Display results
             document.getElementById('result-display').textContent = results.map(r => r.hyphenated).join(' ');
 
             const syllablesHtml = results.flatMap(r => 
@@ -674,7 +1046,6 @@
             document.getElementById('syllables-result').innerHTML = syllablesHtml;
 
             document.getElementById('soft-result-display').textContent = results.map(r => r.softHyphen).join(' ');
-
             document.getElementById('soft-hyphen-code').textContent = results.map(r => r.softHyphen).join(' ');
 
             const texPatterns = results.map(r => '.' + r.syllables.join('1') + '.').join('\n');
@@ -694,24 +1065,24 @@
 
             document.getElementById('results').style.display = 'block';
             
-            console.log(`✅ Stats: ${words.length} total, ${eligibleWords.length} eligible, ${wordsHyphenated} hyphenated → ${successRate}%`);
+            console.log(`✅ Processed: ${words.length} words, ${successRate}% success`);
         };
 
         window.loadExample = function() {
-            const difficultText = `საქართველო უძველესი კულტურისა და ისტორიის მქონე ქვეყანაა, რომელიც კავკასიაში მდებარეობს. მისი მრავალფეროვანი ბუნება, უნიკალური დამწერლობა და ტრადიციები მსოფლიო ყურადღებას იქცევს. დედაქალაქი თბილისი აერთიანებს თანამედროვე არქიტექტურასა და ძველ უბნებს. ქვეყნის განვითარებისთვის განსაკუთრებით მნიშვნელოვანია განათლება, ეკონომიკა და საერთაშორისო ურთიერთობები. უნივერსიტეტები ამზადებენ მაღალკვალიფიციურ სპეციალისტებს სხვადასხვა მიმართულებით.`;
-            document.getElementById('input-text').value = difficultText;
+            const exampleText = `საქართველო უძველესი კულტურისა და ისტორიის მქონე ქვეყანაა, რომელიც კავკასიაში მდებარეობს. მისი მრავალფეროვანი ბუნება, უნიკალური დამწერლობა და ტრადიციები მსოფლიო ყურადღებას იქცევს. დედაქალაქი თბილისი აერთიანებს თანამედროვე არქიტექტურასა და ძველ უბნებს. ქვეყნის განვითარებისთვის განსაკუთრებით მნიშვნელოვანია განათლება, ეკონომიკა და საერთაშორისო ურთიერთობები.`;
+            document.getElementById('input-text').value = exampleText;
             window.hyphenateText();
         };
 
         window.clearAll = function() {
             document.getElementById('input-text').value = '';
             document.getElementById('results').style.display = 'none';
-            document.getElementById('stats').style.display = 'none';
+            document.getElementById('stats').classList.remove('show');
         };
         
-        window.showFormat = function(format, event) {
-            document.querySelectorAll('.format-tab').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.format-content').forEach(content => content.classList.remove('active'));
+        window.showFormat = function(format) {
+            document.querySelectorAll('.code-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.code-content').forEach(content => content.classList.remove('active'));
             
             event.target.classList.add('active');
             document.getElementById('format-' + format).classList.add('active');
