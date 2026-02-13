@@ -19,19 +19,21 @@
 
 ## 🎯 Overview
 
-Georgian Hyphenation is a comprehensive, linguistically accurate library for automatic syllabification of Georgian (ქართული) text. Built on academic phonological principles, it provides high-quality hyphenation for digital typography, text processing, and publishing.
+Georgian Hyphenation is a comprehensive, linguistically accurate library for automatic syllabification of Georgian (ქართული) text. Built on academic phonological principles, it provides high-quality hyphenation for digital typography, text processing, and publishing across multiple platforms.
 
-**Version 2.2.6** – Now preserves compound word hyphens!
+**Version 2.2.7** – Enhanced browser extensions with Meta platform optimization!  
+**Version 2.2.6** – Word add-in with advanced features!
 
 ### Why Georgian Hyphenation?
 
 - **🎓 Academically Accurate**: Based on Georgian phonological research and syllable structure rules
 - **⚡ High Performance**: Optimized algorithms with O(1) cluster lookups, processes 1000+ words/second
-- **🌍 Multi-Platform**: Works in Python, JavaScript (Node.js & Browser), WordPress, and browser extensions
+- **🌍 Multi-Platform**: Works in Python, JavaScript (Node.js & Browser), WordPress, Microsoft Word, and browser extensions
 - **🎨 Typography-Ready**: Generates soft hyphens, TeX patterns, and Hunspell formats
-- **📚 Dictionary Support**: 150+ exception words for edge cases
+- **📚 Dictionary Support**: 1000+ exception words for edge cases
 - **🔧 Flexible**: Customizable hyphen characters and user dictionaries
-- **✨ New in v2.2.6**: Preserves existing hyphens in compound words like მაგ-რამ, ხელ-ფეხი
+- **✨ Smart Features**: Context-aware justify, Meta platform optimization, dynamic content support
+- **📱 Social Media Ready**: Special handling for Facebook, Instagram, Threads with character-span obfuscation
 
 ---
 
@@ -44,18 +46,18 @@ Georgian Hyphenation is a comprehensive, linguistically accurate library for aut
 - ✅ **Gemination handling** (double consonant splitting)
 - ✅ **Anti-orphan protection** (minimum 2 characters per syllable)
 - ✅ **Hiatus detection** (V-V splitting: გა-ა-ნა-ლი-ზა)
-- ✅ **Compound word preservation** (v2.2.6: keeps hyphens in მაგ-რამ)
+- ✅ **Compound word preservation** (keeps hyphens in მაგ-რამ)
 
 ### Integration Options
 
-| Platform | Status | Installation |
-|----------|--------|--------------|
-| 🐍 **Python** | [![PyPI](https://img.shields.io/pypi/v/georgian-hyphenation)](https://pypi.org/project/georgian-hyphenation/) | `pip install georgian-hyphenation` |
-| 📦 **JavaScript/Node.js** | [![npm](https://img.shields.io/npm/v/georgian-hyphenation)](https://www.npmjs.com/package/georgian-hyphenation) | `npm install georgian-hyphenation` |
-| 🦊 **Firefox Extension** | [![Firefox](https://img.shields.io/amo/v/georgian-hyphenation)](https://addons.mozilla.org/firefox/addon/georgian-hyphenation/) | [Install from AMO](https://addons.mozilla.org/firefox/addon/georgian-hyphenation/) |
-| 🌐 **Chrome Extension** | v2.2.6 | [Manual install](#chrome-extension) |
-| 🔌 **WordPress Plugin** | v2.2.6 | [Download](#wordpress-plugin) |
-| 📝 **MS Word Add-in** | Beta | [Sideload instructions](#microsoft-word-add-in) |
+| Platform | Version | Status | Installation |
+|----------|---------|--------|--------------|
+| 🐍 **Python** | 2.2.6 | [![PyPI](https://img.shields.io/pypi/v/georgian-hyphenation)](https://pypi.org/project/georgian-hyphenation/) | `pip install georgian-hyphenation` |
+| 📦 **JavaScript/Node.js** | 2.2.6 | [![npm](https://img.shields.io/npm/v/georgian-hyphenation)](https://www.npmjs.com/package/georgian-hyphenation) | `npm install georgian-hyphenation` |
+| 🦊 **Firefox Extension** | 2.2.7 | [![Firefox](https://img.shields.io/amo/v/georgian-hyphenation)](https://addons.mozilla.org/firefox/addon/georgian-hyphenation/) | [Install from AMO](https://addons.mozilla.org/firefox/addon/georgian-hyphenation/) |
+| 🌐 **Chrome Extension** | 2.2.7 | Beta | [Manual install](#chrome-extension) |
+| 🔌 **WordPress Plugin** | 2.2.6 | Stable | [Download](#wordpress-plugin) |
+| 📝 **MS Word Add-in** | 2.2.6 | Beta | [Installation guide](#microsoft-word-add-in) |
 
 ---
 
@@ -126,6 +128,7 @@ console.log(hyphenator.hyphenateText(text));
 
 <details>
 <summary><b>Python</b></summary>
+
 ```bash
 pip install georgian-hyphenation
 ```
@@ -144,6 +147,7 @@ print(get_syllables('თბილისი'))
 
 <details>
 <summary><b>JavaScript / Node.js</b></summary>
+
 ```bash
 npm install georgian-hyphenation
 ```
@@ -173,18 +177,32 @@ const GeorgianHyphenator = require('georgian-hyphenation');
 
 ### Chrome
 
-1. Download 
+1. Download the latest release from GitHub
 2. Extract ZIP file
 3. Open `chrome://extensions/`
 4. Enable "Developer mode"
 5. Click "Load unpacked" → select extracted folder
 
-**Features:**
-- ✅ Automatic hyphenation on all Georgian websites
-- ✅ Smart skip logic (navigation, headers, buttons)
-- ✅ Toggle on/off per site
-- ✅ Real-time statistics
-- ✅ Works with dynamic content (React, Vue, Angular)
+**Features (v2.2.7):**
+- ✅ **Meta Platform Optimized**: Special handling for Facebook, Instagram, Threads
+- ✅ **Smart Justify**: Only applies to Georgian text (not English!)
+- ✅ **Dynamic Content Support**: Works with SPAs and live updates
+- ✅ **Character-Data Observer**: Catches Facebook's content replacements
+- ✅ **Facebook Char-Span Handler**: Processes obfuscated ad/link text
+- ✅ **Auto-hyphenation on all Georgian websites**
+- ✅ **Smart skip logic** (navigation, headers, buttons)
+- ✅ **Toggle on/off per site**
+- ✅ **Real-time statistics**
+- ✅ **Works with React, Vue, Angular**
+
+**What's New in v2.2.7:**
+- **Fixed**: Facebook partial hyphenation bug
+- **Fixed**: Smart Justify applying to non-Georgian text (eBay, Amazon)
+- **Added**: CharacterData mutation observer for persistent hyphenation
+- **Added**: Class-based CSS targeting (.georgian-text-content)
+- **Added**: Meta platform detection and special handling
+- **Added**: Batched processing queue for better performance
+- **Improved**: Memory management with WeakSet verification
 
 </details>
 
@@ -208,29 +226,73 @@ const GeorgianHyphenator = require('georgian-hyphenation');
 <details>
 <summary><b>Microsoft Word Add-in</b></summary>
 
-**Status:** Beta (Sideloading required)
+**Status:** Beta (Web-hosted, ready to use)  
+**Version:** 2.2.6
 
-**Installation:**
+### Quick Installation
 
+**Option 1: Direct Installation (Recommended)**
+1. Open Microsoft Word
+2. Go to **Insert** → **Get Add-ins**
+3. Click **My Add-ins** tab
+4. Click **Upload My Add-in** (bottom of dialog)
+5. Download the manifest: [manifest.xml](https://guramzhgamadze.github.io/georgian-hyphenation/word-addin/manifest.xml)
+6. Upload the manifest file
+7. Click **OK**
+
+**Option 2: Network Share (For Organizations)**
 1. Share the `word-addin` folder on your network:
    - Right-click folder → Properties → Sharing → Share
-   - Add "Everyone" with Read/Write permissions
+   - Add "Everyone" with Read permissions
    - Copy network path (e.g., `\\YourPC\word-addin`)
 
-2. Add to Word:
+2. Add to Word Trust Center:
    - File → Options → Trust Center → Trust Center Settings
    - Trusted Add-in Catalogs → Add catalog URL
    - Paste network path → Check "Show in Menu" → OK
 
-3. Activate:
-   - Word → Insert → Get Add-ins → Shared Folder
+3. Activate in Word:
+   - Insert → Get Add-ins → Shared Folder
    - Select "Georgian Hyphenation" → Add
 
-**Features:**
-- ✅ Soft hyphens (\u00AD) for clean text
-- ✅ Task pane interface
-- ✅ Preserves formatting
-- ✅ Academic accuracy
+### Features (v2.2.6)
+
+**Core Functionality:**
+- ✅ **Soft Hyphens (U+00AD)**: Clean, invisible hyphens for professional documents
+- ✅ **Two-Pass Processing**: Remove old → Sync → Add new (prevents duplicates)
+- ✅ **Hybrid Engine**: Algorithm + 1000+ word dictionary
+- ✅ **Full Document Hyphenation**: Process entire document in one click
+- ✅ **Selection Hyphenation**: Process only selected text
+- ✅ **Preserves Formatting**: Maintains all fonts, styles, colors
+
+**Advanced Features:**
+- ✅ **Error Detection**: Automatically highlights problematic paragraphs
+- ✅ **Progress Tracking**: Real-time progress bar with percentage
+- ✅ **Activity Journal**: Detailed log of all operations with timestamps
+- ✅ **Theme Support**: Auto-adapts to Office theme (Light/Dark Gray/Black)
+- ✅ **Language Detection**: Processes only Georgian text (checks languageId)
+- ✅ **Clear Highlighting**: Remove all error markers in one click
+
+**Smart Processing:**
+- Skips tables of contents
+- Skips headers/footers
+- Skips text boxes
+- Processes main document body
+- Handles complex OOXML structures
+
+**User Interface:**
+- Modern Microsoft 365 design
+- Collapsible features card
+- Toggle activity journal on/off
+- Download log as .txt file
+- Georgian/English bilingual interface
+- Responsive task pane
+
+**Technical Specs:**
+- Processing speed: ~1000 words/second
+- Memory efficient: WeakMap caching
+- Error handling: Try-catch for all operations
+- Performance monitoring: Built-in timers
 
 </details>
 
@@ -315,14 +377,14 @@ The algorithm applies Georgian phonological principles:
 
 ### Harmonic Clusters (70+ supported)
 ```
-ბლ ბრ ბღ ბზ	|  გდ გლ გმ გნ გვ გზ გრ	|  დრ
-თლ თრ თღ		|  კლ კმ კნ კრ კვ			|  მტ
-პლ პრ			|  ჟღ						|  რგ რლ რმ
-სწ სხ			|  ტკ ტპ ტრ				|  ფლ ფრ ფქ ფშ
-ქლ ქნ ქვ ქრ		|  ღლ ღრ					|  ყლ ყრ
-შთ შპ			|  ჩქ ჩრ					|  ცლ ცნ ცრ ცვ
-ძგ ძვ ძღ		|  წლ წრ წნ წკ				|  ჭკ ჭრ ჭყ
-ხლ ხმ ხნ ხვ		|  ჯგ
+ბლ ბრ ბღ ბზ    |  გდ გლ გმ გნ გვ გზ გრ    |  დრ
+თლ თრ თღ        |  კლ კმ კნ კრ კვ            |  მტ
+პლ პრ            |  ჟღ                        |  რგ რლ რმ
+სწ სხ            |  ტკ ტპ ტრ                |  ფლ ფრ ფქ ფშ
+ქლ ქნ ქვ ქრ        |  ღლ ღრ                    |  ყლ ყრ
+შთ შპ            |  ჩქ ჩრ                    |  ცლ ცნ ცრ ცვ
+ძგ ძვ ძღ        |  წლ წრ წნ წკ                |  ჭკ ჭრ ჭყ
+ხლ ხმ ხნ ხვ        |  ჯგ
 ```
 
 ### Constraints
@@ -330,7 +392,7 @@ The algorithm applies Georgian phonological principles:
 - **Minimum syllable length:** 2 characters (left and right)
 - **Anti-orphan protection:** Never leaves single character isolated
 - **Punctuation preservation:** Maintains all non-Georgian characters
-- **Sanitization:** Removes old hyphens before processing (v2.2.6: except regular hyphens in compounds)
+- **Sanitization:** Removes old hyphens before processing (except regular hyphens in compounds)
 
 ---
 
@@ -402,6 +464,25 @@ print(processed)
 </html>
 ```
 
+### Microsoft Word Usage
+
+```
+1. Open your Georgian document in Word
+2. Click "Insert" → "My Add-ins" → "Georgian Hyphenation"
+3. Task pane opens on the right
+4. Click "მთლიანი დოკუმენტის დამარცვლა" to hyphenate entire document
+   OR select text and click "მონიშნული ტექსტის დამარცვლა"
+5. Use Justify alignment (Ctrl+J) to see hyphenation in action
+6. Toggle "აქტივობის ჟურნალი" to see processing details
+```
+
+**Pro Tips for Word Add-in:**
+- Use Justify alignment to activate hyphenation
+- Problematic paragraphs are highlighted in yellow
+- Click "მარკირების მოშორება" to clear highlights
+- Download activity log for debugging
+- Theme auto-adapts to your Office settings
+
 ### LaTeX Integration
 ```python
 from georgian_hyphenation import to_tex_pattern
@@ -433,10 +514,49 @@ with open('georgian-patterns.tex', 'w', encoding='utf-8') as f:
 | Metric | Value |
 |--------|-------|
 | **Speed** | ~1000 words/second |
-| **Memory** | ~50KB with dictionary |
+| **Memory** | ~50KB with dictionary (1000+ words) |
 | **Accuracy** | 98%+ (validated on 10,000+ words) |
 | **Cluster Lookup** | O(1) with Set structure |
 | **Average Word** | ~0.05ms processing time |
+| **Extension Overhead** | <5MB per browser tab |
+
+---
+
+## 🆕 What's New
+
+### Version 2.2.7 (Browser Extensions)
+
+**Critical Bug Fixes:**
+- ✅ **Fixed Facebook partial hyphenation** - Text now fully hyphenated on all posts
+- ✅ **Fixed Smart Justify on English text** - eBay/Amazon products remain left-aligned
+- ✅ **Fixed dynamic content handling** - Hyphenation persists even after site updates
+
+**New Features:**
+- 🆕 **CharacterData MutationObserver** - Catches Facebook's content replacements
+- 🆕 **Meta Platform Detection** - Special handling for Facebook/Instagram/Threads
+- 🆕 **Facebook Char-Span Handler** - Processes obfuscated ad/link text
+- 🆕 **Class-based CSS targeting** - `.georgian-text-content` for precise control
+- 🆕 **Batched processing queue** - Better performance on dynamic sites
+
+**Performance Improvements:**
+- ⚡ WeakSet verification prevents false positives
+- ⚡ Optimized DOM traversal
+- ⚡ Better memory management
+- ⚡ Reduced CPU usage
+
+### Version 2.2.6 (Core Library & Word Add-in)
+
+**Core Library:**
+- ✅ Compound word hyphen preservation (მაგ-რამ, ხელ-ფეხი)
+- ✅ Enhanced dictionary with 1000+ exception words
+
+**Word Add-in:**
+- 🆕 Two-pass processing method (prevents duplicate hyphens)
+- 🆕 Error detection and highlighting
+- 🆕 Activity journal with download
+- 🆕 Office theme support (Light/Dark/Black)
+- 🆕 Progress tracking
+- 🆕 Language-aware processing
 
 ---
 
@@ -447,25 +567,30 @@ with open('georgian-patterns.tex', 'w', encoding='utf-8') as f:
 - [x] v2.0 Academic algorithm
 - [x] Python package (PyPI)
 - [x] JavaScript package (npm)
-- [x] Firefox extension
-- [x] Chrome extension
+- [x] Firefox extension (published on AMO)
+- [x] Chrome extension (beta)
 - [x] WordPress plugin
-- [x] MS Word add-in (beta)
+- [x] MS Word add-in (beta, web-hosted)
 - [x] v2.2.6 Compound word preservation
+- [x] v2.2.7 Browser extension enhancements
+- [x] Meta platform optimization
 
 ### 🚧 In Progress
 
 - [ ] Chrome Web Store submission
 - [ ] WordPress.org plugin directory
-- [ ] MS Word add-in (Office Store)
+- [ ] MS Word add-in (Office Store submission)
 
 ### 📅 Planned
 
-- [ ] TeX Live hyphenation database
+- [ ] LibreOffice extension
+- [ ] Google Docs add-on
 - [ ] Adobe InDesign plugin
+- [ ] TeX Live hyphenation database
 - [ ] Academic paper publication
 - [ ] Unicode CLDR proposal
 - [ ] iOS/Android keyboard integration
+- [ ] Desktop app (Electron)
 
 ---
 
@@ -478,6 +603,7 @@ Contributions are welcome! We're especially looking for:
 - 🌍 Platform integrations (LibreOffice, Google Docs, etc.)
 - 📖 Documentation improvements
 - 🧪 Test cases
+- 🎨 UI/UX enhancements
 
 **How to contribute:**
 
@@ -486,6 +612,43 @@ Contributions are welcome! We're especially looking for:
 3. Commit your changes (`git commit -m 'Add amazing feature'`)
 4. Push to branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+**Code Style:**
+- Python: Follow PEP 8
+- JavaScript: Use ES6+ features
+- Add tests for new features
+- Update documentation
+
+---
+
+## 🐛 Known Issues & Limitations
+
+### Browser Extensions
+- ⚠️ Requires internet for initial dictionary load (cached afterwards)
+- ⚠️ Large headings (>20px) may be skipped
+- ⚠️ Some rich text editors may not work
+- ⚠️ Chrome version requires manual installation (not on Web Store yet)
+
+### Word Add-in
+- ⚠️ Requires Office 2016 or later
+- ⚠️ Web-hosted manifest (internet required for initial load)
+- ⚠️ Not yet on Office Store (sideloading required)
+- ⚠️ May skip complex table structures
+
+### Core Library
+- ℹ️ Dictionary lookup improves accuracy but adds ~50KB memory
+- ℹ️ Soft hyphens (U+00AD) invisible until line breaks
+
+---
+
+## 📱 Platform Support
+
+| Platform | Python | JavaScript | Browser Ext. | WordPress | MS Word |
+|----------|--------|------------|--------------|-----------|---------|
+| **Windows** | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **macOS** | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Linux** | ✅ | ✅ | ✅ | ✅ | ❌ |
+| **Web** | ❌ | ✅ | ✅ | ✅ | ✅ (Online) |
 
 ---
 
@@ -502,6 +665,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 - 🐙 GitHub: [@guramzhgamadze](https://github.com/guramzhgamadze)
 - 📧 Email: guramzhgamadze@gmail.com
 - 🐛 Issues: [Report here](https://github.com/guramzhgamadze/georgian-hyphenation/issues)
+- 💬 Discussions: [GitHub Discussions](https://github.com/guramzhgamadze/georgian-hyphenation/discussions)
 
 ---
 
@@ -510,13 +674,16 @@ MIT License - see [LICENSE](LICENSE) file for details.
 - Based on Georgian phonological research
 - Inspired by TeX hyphenation algorithms (Liang, 1983)
 - Thanks to the Georgian linguistic community
-- Special thanks to early adopters and contributors
+- Special thanks to early adopters and beta testers
+- Microsoft Office.js team for add-in platform
+- Mozilla and Chrome extension APIs
 
 ---
 
 ## 📚 Citation
 
 If you use this library in academic work, please cite:
+
 ```bibtex
 @software{georgian_hyphenation_2026,
   author = {Zhgamadze, Guram},
@@ -524,9 +691,15 @@ If you use this library in academic work, please cite:
   year = {2026},
   publisher = {GitHub},
   url = {https://github.com/guramzhgamadze/georgian-hyphenation},
-  version = {2.2.6}
+  version = {2.2.7}
 }
 ```
+
+---
+
+## 🌟 Star History
+
+If you find this project useful, please consider giving it a ⭐ on GitHub!
 
 ---
 
