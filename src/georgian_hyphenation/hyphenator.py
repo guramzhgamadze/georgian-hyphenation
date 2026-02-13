@@ -1,14 +1,17 @@
 # -*- coding: utf-8 -*-
 """
-Georgian Hyphenation Library v2.2.6
+Georgian Hyphenation Library v2.2.7
 ქართული ენის დამარცვლის ბიბლიოთეკა
 
-Modernized & Optimized
+Enhanced with 17+ utility functions
 - Hybrid Engine: Algorithm + Dictionary
 - Harmonic Clusters Support
 - Gemination Handling
+- HTML-aware hyphenation
+- Configurable settings with method chaining
+- Dictionary management
 - O(1) Cluster Lookup with Set
-- Preserves compound word hyphens (v2.2.6)
+- Preserves compound word hyphens
 
 Author: Guram Zhgamadze
 """
@@ -16,7 +19,7 @@ Author: Guram Zhgamadze
 import json
 import os
 import re
-from typing import List, Dict, Set
+from typing import List, Dict, Set, Optional
 
 
 class GeorgianHyphenator:
@@ -29,7 +32,9 @@ class GeorgianHyphenator:
     - Harmonic cluster awareness
     - Gemination (double consonant) handling
     - Anti-orphan protection
-    - Preserves compound word hyphens (v2.2.6)
+    - Preserves compound word hyphens
+    - HTML-aware hyphenation (v2.2.7)
+    - 17+ utility functions (v2.2.7)
     """
     
     def __init__(self, hyphen_char: str = '\u00AD'):
@@ -44,7 +49,7 @@ class GeorgianHyphenator:
         self.left_min = 2
         self.right_min = 2
         
-        # v2.2.1: Optimized - Set for O(1) lookup instead of list
+        # Optimized - Set for O(1) lookup instead of list
         self.harmonic_clusters: Set[str] = {
             'ბლ', 'ბრ', 'ბღ', 'ბზ', 'გდ', 'გლ', 'გმ', 'გნ', 'გვ', 'გზ', 'გრ',
             'დრ', 'თლ', 'თრ', 'თღ', 'კლ', 'კმ', 'კნ', 'კრ', 'კვ', 'მტ', 'პლ', 
@@ -54,14 +59,14 @@ class GeorgianHyphenator:
             'წლ', 'წრ', 'წნ', 'წკ', 'ჭკ', 'ჭრ', 'ჭყ', 'ხლ', 'ხმ', 'ხნ', 'ხვ', 'ჯგ'
         }
         
-        # v2.2.1: Dictionary for exception words
+        # Dictionary for exception words
         self.dictionary: Dict[str, str] = {}
     
     def _strip_hyphens(self, text: str) -> str:
         """
         Remove existing hyphenation symbols (Sanitization)
         
-        v2.2.6: Only removes soft hyphens and zero-width spaces,
+        Only removes soft hyphens and zero-width spaces,
         preserves regular hyphens for compound words.
         
         Args:
@@ -72,7 +77,7 @@ class GeorgianHyphenator:
         """
         if not text:
             return ''
-        # v2.2.6: Remove only soft hyphens (\u00AD) and zero-width spaces (\u200B)
+        # Remove only soft hyphens (\u00AD) and zero-width spaces (\u200B)
         # Preserve regular hyphens (-) for compound words
         text = text.replace('\u00AD', '')  # soft hyphen
         text = text.replace('\u200B', '')  # zero-width space
@@ -125,19 +130,18 @@ class GeorgianHyphenator:
                 with open(data_file, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                     self.load_library(data)
-                    print(f"Georgian Hyphenation v2.2.6: Dictionary loaded ({len(self.dictionary)} words)")
+                    print(f"Georgian Hyphenation v2.2.7: Dictionary loaded ({len(self.dictionary)} words)")
             else:
-                print("Georgian Hyphenation v2.2.6: Dictionary not found, using algorithm only")
+                print("Georgian Hyphenation v2.2.7: Dictionary not found, using algorithm only")
         
         except Exception as e:
-            print(f"Georgian Hyphenation v2.2.6: Could not load dictionary ({e}), using algorithm only")
+            print(f"Georgian Hyphenation v2.2.7: Could not load dictionary ({e}), using algorithm only")
     
     def hyphenate(self, word: str) -> str:
         """
         Hyphenate a Georgian word
         
-        v2.2.6 Behavior: Strips soft hyphens but preserves regular hyphens
-        in compound words.
+        Strips soft hyphens but preserves regular hyphens in compound words.
         
         Args:
             word: Georgian word to hyphenate
@@ -145,7 +149,7 @@ class GeorgianHyphenator:
         Returns:
             Hyphenated word with configured hyphen character
         """
-        # v2.2.6: Strip only soft hyphens and zero-width spaces
+        # Strip only soft hyphens and zero-width spaces
         sanitized_word = self._strip_hyphens(word)
         
         # Remove punctuation for dictionary lookup (but not hyphens)
@@ -162,7 +166,7 @@ class GeorgianHyphenator:
         """
         Apply hyphenation algorithm
         
-        v2.2.1 Algorithm Features:
+        Algorithm Features:
         - Vowel-based syllable detection
         - Gemination (double consonant) handling
         - Harmonic cluster preservation
@@ -197,15 +201,15 @@ class GeorgianHyphenator:
             candidate_pos = -1
             
             if distance == 0:
-                # V-V: Split between vowels (გა-ა-ნა-ლი-ზა)
+                # V-V: Split between vowels
                 candidate_pos = v1 + 1
             elif distance == 1:
-                # V-C-V: Split after vowel (მა-მა)
+                # V-C-V: Split after vowel
                 candidate_pos = v1 + 1
             else:
                 # V-CC...C-V: Complex case
                 
-                # v2.2.1: Check for gemination (double consonants)
+                # Check for gemination (double consonants)
                 double_consonant_index = -1
                 for j in range(len(between_substring) - 1):
                     if between_substring[j] == between_substring[j + 1]:
@@ -213,10 +217,10 @@ class GeorgianHyphenator:
                         break
                 
                 if double_consonant_index != -1:
-                    # Split between double consonants (კლას-სი, მას-სა)
+                    # Split between double consonants
                     candidate_pos = v1 + 1 + double_consonant_index + 1
                 else:
-                    # v2.2.1: Check for harmonic clusters
+                    # Check for harmonic clusters
                     break_index = -1
                     if distance >= 2:
                         last_two = between_substring[distance - 2:distance]
@@ -224,13 +228,13 @@ class GeorgianHyphenator:
                             break_index = distance - 2
                     
                     if break_index != -1:
-                        # Split before harmonic cluster (ას-ტრო-ნო-მი-ა)
+                        # Split before harmonic cluster
                         candidate_pos = v1 + 1 + break_index
                     else:
-                        # Default: split after first consonant (ბარ-ბა-რე)
+                        # Default: split after first consonant
                         candidate_pos = v1 + 2
             
-            # Anti-orphan protection: ensure minimum 2 chars on each side
+            # Anti-orphan protection: ensure minimum chars on each side
             if candidate_pos >= self.left_min and (len(word) - candidate_pos) >= self.right_min:
                 insert_points.append(candidate_pos)
         
@@ -263,7 +267,7 @@ class GeorgianHyphenator:
         - Non-Georgian characters
         - Word boundaries
         - Whitespace
-        - Regular hyphens in compound words (v2.2.6)
+        - Regular hyphens in compound words
         
         Args:
             text: Text to hyphenate (can contain multiple words)
@@ -274,7 +278,7 @@ class GeorgianHyphenator:
         if not text:
             return ''
         
-        # v2.2.6: Strip only soft hyphens and zero-width spaces
+        # Strip only soft hyphens and zero-width spaces
         sanitized_text = self._strip_hyphens(text)
         
         # Split text into Georgian words and other characters
@@ -290,6 +294,266 @@ class GeorgianHyphenator:
                 result.append(part)
         
         return ''.join(result)
+    
+    # ========================================
+    # NEW UTILITY FUNCTIONS (v2.2.7)
+    # ========================================
+    
+    def unhyphenate(self, text: str) -> str:
+        """
+        Remove all hyphenation from text (public method)
+        
+        Args:
+            text: Text with hyphens to remove
+            
+        Returns:
+            Text without hyphens
+        """
+        return self._strip_hyphens(text)
+    
+    def count_syllables(self, word: str) -> int:
+        """
+        Count syllables in a word
+        
+        Args:
+            word: Word to count syllables
+            
+        Returns:
+            Number of syllables
+        """
+        return len(self.get_syllables(word))
+    
+    def get_hyphenation_points(self, word: str) -> int:
+        """
+        Get the number of hyphenation points in a word
+        
+        Args:
+            word: Word to analyze
+            
+        Returns:
+            Number of hyphenation points (syllables - 1)
+        """
+        hyphenated = self.hyphenate(word)
+        return hyphenated.count(self.hyphen_char)
+    
+    def is_georgian(self, text: str) -> bool:
+        """
+        Check if text contains only Georgian characters
+        
+        Args:
+            text: Text to validate
+            
+        Returns:
+            True if only Georgian characters
+        """
+        if not text:
+            return False
+        return bool(re.match(r'^[ა-ჰ]+$', text))
+    
+    def can_hyphenate(self, word: str) -> bool:
+        """
+        Check if a word can be hyphenated (meets minimum length)
+        
+        Args:
+            word: Word to check
+            
+        Returns:
+            True if word can be hyphenated
+        """
+        if not word:
+            return False
+        return len(word) >= (self.left_min + self.right_min)
+    
+    def hyphenate_words(self, words: List[str]) -> List[str]:
+        """
+        Hyphenate multiple words at once
+        
+        Args:
+            words: List of words to hyphenate
+            
+        Returns:
+            List of hyphenated words
+        """
+        return [self.hyphenate(word) for word in words]
+    
+    def hyphenate_html(self, html: str) -> str:
+        """
+        Hyphenate HTML content while preserving tags
+        Skips <script>, <style>, <code>, <pre> tags
+        
+        Args:
+            html: HTML content to hyphenate
+            
+        Returns:
+            Hyphenated HTML
+        """
+        if not html:
+            return ''
+        
+        # Tags to skip entirely
+        skip_tags = ['script', 'style', 'code', 'pre', 'textarea']
+        skip_pattern = '|'.join(skip_tags)
+        
+        # Store skipped content
+        skipped = []
+        def store_skip(match):
+            skipped.append(match.group(0))
+            return f'___SKIP_{len(skipped) - 1}___'
+        
+        # Replace skip tags with placeholders
+        placeholder = re.sub(
+            f'<({skip_pattern})[^>]*>.*?</\\1>',
+            store_skip,
+            html,
+            flags=re.IGNORECASE | re.DOTALL
+        )
+        
+        # Split by tags to preserve HTML structure
+        parts = re.split(r'(<[^>]+>)', placeholder)
+        
+        processed = []
+        for part in parts:
+            # Skip HTML tags themselves
+            if part.startswith('<'):
+                processed.append(part)
+            else:
+                # Process text content
+                processed.append(self.hyphenate_text(part))
+        
+        # Restore skipped content
+        result = ''.join(processed)
+        for i, content in enumerate(skipped):
+            result = result.replace(f'___SKIP_{i}___', content)
+        
+        return result
+    
+    def set_left_min(self, value: int) -> 'GeorgianHyphenator':
+        """
+        Set the minimum characters before first hyphen
+        
+        Args:
+            value: Minimum left characters (default: 2)
+            
+        Returns:
+            Self for method chaining
+        """
+        if isinstance(value, int) and value >= 1:
+            self.left_min = value
+        return self
+    
+    def set_right_min(self, value: int) -> 'GeorgianHyphenator':
+        """
+        Set the minimum characters after last hyphen
+        
+        Args:
+            value: Minimum right characters (default: 2)
+            
+        Returns:
+            Self for method chaining
+        """
+        if isinstance(value, int) and value >= 1:
+            self.right_min = value
+        return self
+    
+    def set_hyphen_char(self, char: str) -> 'GeorgianHyphenator':
+        """
+        Change the hyphen character
+        
+        Args:
+            char: New hyphen character
+            
+        Returns:
+            Self for method chaining
+        """
+        if isinstance(char, str) and len(char) > 0:
+            self.hyphen_char = char
+        return self
+    
+    def add_exception(self, word: str, hyphenated: str) -> 'GeorgianHyphenator':
+        """
+        Add a single hyphenation exception to dictionary
+        
+        Args:
+            word: Original word
+            hyphenated: Hyphenated version (use '-' for breaks)
+            
+        Returns:
+            Self for method chaining
+        """
+        if word and hyphenated:
+            self.dictionary[word] = hyphenated
+        return self
+    
+    def remove_exception(self, word: str) -> bool:
+        """
+        Remove a hyphenation exception from dictionary
+        
+        Args:
+            word: Word to remove
+            
+        Returns:
+            True if word was removed
+        """
+        if word in self.dictionary:
+            del self.dictionary[word]
+            return True
+        return False
+    
+    def export_dictionary(self) -> Dict[str, str]:
+        """
+        Export the current dictionary as a plain dict
+        
+        Returns:
+            Dictionary as key-value pairs
+        """
+        return dict(self.dictionary)
+    
+    def get_dictionary_size(self) -> int:
+        """
+        Get the current dictionary size
+        
+        Returns:
+            Number of words in dictionary
+        """
+        return len(self.dictionary)
+    
+    def add_harmonic_cluster(self, cluster: str) -> 'GeorgianHyphenator':
+        """
+        Add a custom harmonic cluster
+        
+        Args:
+            cluster: Two-character cluster (e.g., 'ბრ')
+            
+        Returns:
+            Self for method chaining
+        """
+        if isinstance(cluster, str) and len(cluster) == 2:
+            self.harmonic_clusters.add(cluster)
+        return self
+    
+    def remove_harmonic_cluster(self, cluster: str) -> bool:
+        """
+        Remove a harmonic cluster
+        
+        Args:
+            cluster: Cluster to remove
+            
+        Returns:
+            True if cluster was removed
+        """
+        if cluster in self.harmonic_clusters:
+            self.harmonic_clusters.remove(cluster)
+            return True
+        return False
+    
+    def get_harmonic_clusters(self) -> List[str]:
+        """
+        Get all harmonic clusters
+        
+        Returns:
+            List of harmonic clusters
+        """
+        return sorted(list(self.harmonic_clusters))
 
 
 # Convenience functions for backward compatibility and quick usage

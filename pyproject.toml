@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "georgian-hyphenation"
-version = "2.2.6.1"
-description = "Georgian Language Hyphenation Library v2.2.6 - Preserves compound word hyphens"
+version = "2.2.7"
+description = "Georgian Language Hyphenation Library v2.2.7 - Preserves compound word hyphens"
 readme = "README.md"
 authors = [
     {name = "Guram Zhgamadze", email = "guramzhgamadze@gmail.com"}

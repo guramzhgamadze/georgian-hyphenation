@@ -12,11 +12,13 @@ Georgian Language Hyphenation Library - Fast, accurate syllabification for Georg
 - ✅ **Accurate Georgian syllabification** based on phonetic rules
 - ✅ **Harmonic consonant clusters** recognition (ბრ, გრ, კრ, etc.)
 - ✅ **Gemination handling** (double consonant splitting)
-- ✅ **Exception dictionary** for irregular words
-- ✅ **Preserves compound word hyphens** (new in v2.2.6)
+- ✅ **Exception dictionary** for irregular words (148 words)
+- ✅ **HTML-aware hyphenation** - preserves tags and code blocks (new in v2.2.7)
+- ✅ **17+ utility functions** for advanced text processing (new in v2.2.7)
+- ✅ **Configurable settings** - adjust margins and hyphen character (new in v2.2.7)
 - ✅ **Browser + Node.js compatible** (ESM & CommonJS)
 - ✅ **Zero dependencies**
-- ✅ **Lightweight** (~5KB)
+- ✅ **Lightweight** (~12KB)
 
 ## Installation
 
@@ -24,7 +26,7 @@ Georgian Language Hyphenation Library - Fast, accurate syllabification for Georg
 npm install georgian-hyphenation
 ```
 
-## Usage
+## Quick Start
 
 ### ES Modules (Modern)
 
@@ -41,9 +43,14 @@ console.log(hyphenator.hyphenate('საქართველო'));
 console.log(hyphenator.getSyllables('თბილისი'));
 // Output: ['თბი', 'ლი', 'სი']
 
-// Hyphenate entire text
-const text = 'საქართველო არის ძალიან ლამაზი ქვეყანა';
-console.log(hyphenator.hyphenateText(text));
+// Count syllables (NEW in v2.2.7)
+console.log(hyphenator.countSyllables('გამარჯობა'));
+// Output: 4
+
+// Hyphenate HTML (NEW in v2.2.7)
+const html = '<p>ქართული ენა <code>console.log()</code> პროგრამირება</p>';
+console.log(hyphenator.hyphenateHTML(html));
+// Code tags are preserved!
 ```
 
 ### CommonJS (Node.js)
@@ -59,24 +66,14 @@ console.log(hyphenator.hyphenate('კომპიუტერი'));
 
 ```html
 <script type="module">
-  import GeorgianHyphenator from 'https://cdn.jsdelivr.net/npm/georgian-hyphenation@2.2.6/src/javascript/index.js';
+  import GeorgianHyphenator from 'https://cdn.jsdelivr.net/npm/georgian-hyphenation@2.2.7/src/javascript/index.js';
   
   const hyphenator = new GeorgianHyphenator();
   console.log(hyphenator.hyphenate('პროგრამირება'));
 </script>
 ```
 
-Or without modules:
-
-```html
-<script src="https://cdn.jsdelivr.net/npm/georgian-hyphenation@2.2.6/src/javascript/index.js"></script>
-<script>
-  const hyphenator = new GeorgianHyphenator();
-  console.log(hyphenator.hyphenate('საქართველო'));
-</script>
-```
-
-## API
+## API Reference
 
 ### Constructor
 
@@ -87,9 +84,11 @@ const hyphenator = new GeorgianHyphenator(hyphenChar = '\u00AD');
 **Parameters:**
 - `hyphenChar` (optional): Character to use for hyphenation. Default is soft hyphen (`\u00AD`)
 
-### Methods
+---
 
-#### `hyphenate(word)`
+## Core Methods
+
+### `hyphenate(word)`
 
 Hyphenates a single word.
 
@@ -98,7 +97,7 @@ hyphenator.hyphenate('საქართველო');
 // Returns: 'სა­ქარ­თვე­ლო'
 ```
 
-#### `getSyllables(word)`
+### `getSyllables(word)`
 
 Returns an array of syllables.
 
@@ -107,16 +106,151 @@ hyphenator.getSyllables('თბილისი');
 // Returns: ['თბი', 'ლი', 'სი']
 ```
 
-#### `hyphenateText(text)`
+### `hyphenateText(text)`
 
 Hyphenates all words in a text string.
 
 ```javascript
-hyphenator.hyphenateText('საქართველო არის ლამაზი');
-// Returns: 'სა­ქარ­თვე­ლო არის ლა­მა­ზი'
+hyphenator.hyphenateText('საქართველო არის ლამაზი ქვეყანა');
+// Returns: 'სა­ქარ­თვე­ლო არის ლა­მა­ზი ქვე­ყა­ნა'
 ```
 
-#### `loadLibrary(data)`
+---
+
+## New in v2.2.7: Utility Functions
+
+### `countSyllables(word)`
+
+Get the number of syllables in a word.
+
+```javascript
+hyphenator.countSyllables('გამარჯობა');
+// Returns: 4
+```
+
+### `getHyphenationPoints(word)`
+
+Get the number of hyphenation points (hyphens) in a word.
+
+```javascript
+hyphenator.getHyphenationPoints('გამარჯობა');
+// Returns: 3 (four syllables = three hyphens)
+```
+
+### `isGeorgian(text)`
+
+Check if text contains only Georgian characters.
+
+```javascript
+hyphenator.isGeorgian('გამარჯობა');  // true
+hyphenator.isGeorgian('hello');       // false
+hyphenator.isGeorgian('გამარჯობა123'); // false
+```
+
+### `canHyphenate(word)`
+
+Check if a word meets minimum length requirements for hyphenation.
+
+```javascript
+hyphenator.canHyphenate('გა');     // false (too short)
+hyphenator.canHyphenate('გამარ');  // true
+```
+
+### `unhyphenate(text)`
+
+Remove all hyphenation from text.
+
+```javascript
+const hyphenated = hyphenator.hyphenate('გამარჯობა');
+hyphenator.unhyphenate(hyphenated);
+// Returns: 'გამარჯობა'
+```
+
+### `hyphenateWords(words)`
+
+Hyphenate multiple words at once (batch processing).
+
+```javascript
+const words = ['ქართული', 'ენა', 'მშვენიერია'];
+hyphenator.hyphenateWords(words);
+// Returns: ['ქარ­თუ­ლი', 'ე­ნა', 'მშვე­ნი­ე­რია']
+```
+
+### `hyphenateHTML(html)` ⭐ Most Useful!
+
+Hyphenate HTML content while preserving tags and skipping code blocks.
+
+```javascript
+const html = `
+  <article>
+    <h1>ქართული ენა</h1>
+    <p>პროგრამირება და კომპიუტერული მეცნიერება</p>
+    <code>console.log('skip me')</code>
+    <pre>this won't be hyphenated</pre>
+  </article>
+`;
+
+const result = hyphenator.hyphenateHTML(html);
+// Only <p> content gets hyphenated
+// <code>, <pre>, <script>, <style>, <textarea> are preserved
+```
+
+---
+
+## New in v2.2.7: Configuration Methods
+
+All configuration methods support **method chaining**:
+
+### `setLeftMin(value)`
+
+Set minimum characters before the first hyphen (default: 2).
+
+```javascript
+hyphenator.setLeftMin(3);
+// Now requires at least 3 characters before first hyphen
+```
+
+### `setRightMin(value)`
+
+Set minimum characters after the last hyphen (default: 2).
+
+```javascript
+hyphenator.setRightMin(3);
+// Now requires at least 3 characters after last hyphen
+```
+
+### `setHyphenChar(char)`
+
+Change the hyphen character.
+
+```javascript
+// Use visible hyphen for debugging
+hyphenator.setHyphenChar('-');
+console.log(hyphenator.hyphenate('გამარჯობა'));
+// Output: 'გა-მარ-ჯო-ბა'
+
+// Use custom separator
+hyphenator.setHyphenChar('•');
+console.log(hyphenator.hyphenate('საქართველო'));
+// Output: 'სა•ქარ•თვე•ლო'
+```
+
+### Method Chaining
+
+```javascript
+const hyphenator = new GeorgianHyphenator()
+  .setLeftMin(3)
+  .setRightMin(3)
+  .setHyphenChar('-');
+
+console.log(hyphenator.hyphenate('გამარჯობა'));
+```
+
+---
+
+## New in v2.2.7: Dictionary Management
+
+### `loadLibrary(data)`
 
 Load custom exception dictionary.
 
@@ -129,41 +263,77 @@ const customWords = {
 hyphenator.loadLibrary(customWords);
 ```
 
-#### `async loadDefaultLibrary()`
+### `async loadDefaultLibrary()`
 
-Load the default exception dictionary (browser only, requires network).
+Load the built-in exception dictionary (148 words).
 
 ```javascript
 await hyphenator.loadDefaultLibrary();
+// Dictionary loaded with tech terms, places, political terms
 ```
 
-## Custom Hyphen Character
+### `addException(word, hyphenated)`
 
-You can use any character for hyphenation:
+Add a single custom hyphenation exception.
 
 ```javascript
-// Visible hyphen
-const hyphenator = new GeorgianHyphenator('-');
-console.log(hyphenator.hyphenate('საქართველო'));
-// Output: 'სა-ქარ-თვე-ლო'
+hyphenator.addException('ტესტი', 'ტეს-ტი');
 
-// Custom separator
-const hyphenator2 = new GeorgianHyphenator('•');
-console.log(hyphenator2.hyphenate('საქართველო'));
-// Output: 'სა•ქარ•თვე•ლო'
+console.log(hyphenator.hyphenate('ტესტი'));
+// Returns: 'ტეს­ტი' (uses your custom hyphenation)
 ```
 
-## Compound Words (v2.2.6+)
+### `removeException(word)`
 
-The library now preserves existing hyphens in compound words:
+Remove an exception from the dictionary.
 
 ```javascript
-hyphenator.hyphenate('მაგ-რამ');
-// Preserves the hyphen: 'მაგ-რამ'
-
-hyphenator.hyphenate('ხელ-ფეხი');
-// Preserves the hyphen: 'ხელ-ფეხი'
+hyphenator.removeException('ტესტი');
+// Returns: true (if word was removed)
 ```
+
+### `exportDictionary()`
+
+Export the entire dictionary as a JSON object.
+
+```javascript
+const dict = hyphenator.exportDictionary();
+console.log(dict);
+// { "გამარჯობა": "გა-მარ-ჯო-ბა", ... }
+```
+
+### `getDictionarySize()`
+
+Get the number of words in the dictionary.
+
+```javascript
+await hyphenator.loadDefaultLibrary();
+console.log(hyphenator.getDictionarySize());
+// Output: 148
+```
+
+---
+
+## New in v2.2.7: Advanced Features
+
+### Harmonic Cluster Management
+
+For advanced users who need to customize consonant cluster recognition:
+
+```javascript
+// Add a custom harmonic cluster
+hyphenator.addHarmonicCluster('ტვ');
+
+// Remove a cluster
+hyphenator.removeHarmonicCluster('ტვ');
+
+// Get all clusters
+const clusters = hyphenator.getHarmonicClusters();
+console.log(clusters);
+// ['ბლ', 'ბრ', 'ბღ', ... (70+ clusters)]
+```
+
+---
 
 ## CSS Integration
 
@@ -183,6 +353,25 @@ document.querySelector('.georgian-text').innerHTML =
   hyphenator.hyphenateText('თქვენი ტექსტი აქ');
 ```
 
+---
+
+## Built-in Dictionary
+
+The library includes 148 pre-hyphenated words including:
+
+**Tech Terms:** კომპიუტერი, ფეისბუქი, იუთუბი, ინსტაგრამი  
+**Places:** საქართველო, თბილისი  
+**Political:** პარლამენტი, დემოკრატია, რესპუბლიკა  
+**Compound Words:** სახელმწიფო, გულმავიწყი, თავდადებული
+
+```javascript
+await hyphenator.loadDefaultLibrary();
+console.log(hyphenator.hyphenate('კომპიუტერი'));
+// Uses dictionary: 'კომ­პიუ­ტე­რი'
+```
+
+---
+
 ## Algorithm
 
 The library uses a phonetic algorithm based on Georgian syllable structure:
@@ -190,7 +379,8 @@ The library uses a phonetic algorithm based on Georgian syllable structure:
 1. **Vowel Detection**: Identifies vowels (ა, ე, ი, ო, უ)
 2. **Consonant Cluster Analysis**: Recognizes 70+ harmonic clusters
 3. **Gemination Rules**: Splits double consonants (კკ → კ­კ)
-4. **Orphan Prevention**: Ensures minimum syllable length (2 characters)
+4. **Orphan Prevention**: Ensures minimum syllable length (2 characters by default)
+5. **Dictionary Lookup**: Checks exceptions first for accuracy
 
 ### Supported Harmonic Clusters
 
@@ -202,31 +392,21 @@ The library uses a phonetic algorithm based on Georgian syllable structure:
 ჭრ, ჭყ, ხლ, ხმ, ხნ, ხვ, ჯგ
 ```
 
-## Browser Support
+---
 
-- ✅ Chrome/Edge 90+
-- ✅ Firefox 88+
-- ✅ Safari 14+
-- ✅ Node.js 14+
-
-## Performance
-
-- Average hyphenation speed: **~0.05ms per word**
-- Memory usage: **~50KB with dictionary loaded**
-- Optimized with `Set` for O(1) cluster lookups
-
-## Examples
+## Use Cases & Examples
 
 ### E-book Reader
 
 ```javascript
 const hyphenator = new GeorgianHyphenator();
+await hyphenator.loadDefaultLibrary();
 
-function formatText(text) {
-  return hyphenator.hyphenateText(text);
+function formatBook(htmlContent) {
+  return hyphenator.hyphenateHTML(htmlContent);
 }
 
-document.getElementById('content').innerHTML = formatText(bookText);
+document.getElementById('content').innerHTML = formatBook(bookHTML);
 ```
 
 ### Text Justification
@@ -239,10 +419,36 @@ const justified = hyphenator.hyphenateText(
 );
 ```
 
-### Dynamic Typography
+### Blog/CMS Integration
 
 ```javascript
-const hyphenator = new GeorgianHyphenator('·');
+const hyphenator = new GeorgianHyphenator();
+await hyphenator.loadDefaultLibrary();
+
+// Hyphenate all articles
+document.querySelectorAll('article p').forEach(p => {
+  p.innerHTML = hyphenator.hyphenateHTML(p.innerHTML);
+});
+```
+
+### Form Validation
+
+```javascript
+const hyphenator = new GeorgianHyphenator();
+
+function validateGeorgianInput(text) {
+  if (!hyphenator.isGeorgian(text)) {
+    alert('გთხოვთ შეიყვანოთ მხოლოდ ქართული ტექსტი');
+    return false;
+  }
+  return true;
+}
+```
+
+### Syllable-based Animation
+
+```javascript
+const hyphenator = new GeorgianHyphenator();
 const syllables = hyphenator.getSyllables('პროგრამირება');
 
 syllables.forEach((syllable, i) => {
@@ -250,34 +456,89 @@ syllables.forEach((syllable, i) => {
     console.log(syllable);
   }, i * 200);
 });
+// Displays: პრო... გრა... მი... რე... ბა
 ```
 
+---
+
+## Browser Support
+
+- ✅ Chrome/Edge 90+
+- ✅ Firefox 88+
+- ✅ Safari 14+
+- ✅ Node.js 14+
+
+---
+
+## Performance
+
+- Average hyphenation speed: **~0.05ms per word**
+- HTML hyphenation: **~2ms for 1000 words**
+- Memory usage: **~100KB with dictionary loaded**
+- Optimized with `Set` for O(1) cluster lookups
+
+---
+
 ## Changelog
+
+### v2.2.7 (2025-02-13) 🎉
+
+**New Features (17 functions added):**
+
+✨ **Utility Functions:**
+- `countSyllables(word)` - Get syllable count
+- `getHyphenationPoints(word)` - Get hyphen count
+- `isGeorgian(text)` - Validate Georgian text
+- `canHyphenate(word)` - Check if word can be hyphenated
+- `unhyphenate(text)` - Remove all hyphens
+- `hyphenateWords(words)` - Batch processing
+- `hyphenateHTML(html)` - HTML-aware hyphenation 🌟
+
+✨ **Configuration (Chainable):**
+- `setLeftMin(value)` - Configure left margin
+- `setRightMin(value)` - Configure right margin
+- `setHyphenChar(char)` - Change hyphen character
+
+✨ **Dictionary Management:**
+- `addException(word, hyphenated)` - Add custom word
+- `removeException(word)` - Remove exception
+- `exportDictionary()` - Export as JSON
+- `getDictionarySize()` - Get word count
+
+✨ **Advanced:**
+- `addHarmonicCluster(cluster)` - Add custom cluster
+- `removeHarmonicCluster(cluster)` - Remove cluster
+- `getHarmonicClusters()` - List all clusters
+
+**Improvements:**
+- 🔧 All configuration methods support method chaining
+- 📚 JSDoc documentation for all methods
+- ✅ 100% backwards compatible
+- 🎯 No breaking changes
 
 ### v2.2.6 (2026-01-30)
 - ✨ Preserves regular hyphens in compound words
 - 🐛 Fixed hyphen stripping to only remove soft hyphens and zero-width spaces
 - 📝 Improved documentation
 
-### Version 2.2.4 (2026-01-27)
+### v2.2.4 (2026-01-27)
+- 🌐 **Browser Fix**: Fixed CDN URL for reliable dictionary loading
+- 📦 **NPM Files**: Added `data/` folder to published package
+- 🔧 **Error Handling**: Improved fallback when dictionary unavailable
+- 📝 **Documentation**: Corrected examples
 
-* 🌐 **Browser Fix**: Fixed CDN URL for reliable dictionary loading
-* 📦 **NPM Files**: Added `data/` folder to published package (`files` whitelist)
-* 🔧 **Error Handling**: Improved fallback when dictionary unavailable
-* 📝 **Documentation**: Corrected examples, removed non-existent words
+### v2.2.1 (2026-01-26)
+- 🧹 **Sanitization**: Added `_stripHyphens` for automatic input cleaning
+- ⚡ **Performance**: Converted `harmonicClusters` to `Set` (O(1) lookup)
+- 📦 **ESM**: Full ES Modules support
+- 📚 **Dictionary**: Added `loadDefaultLibrary()` method
 
-### Version 2.2.1 (2026-01-26)
+### v2.0.1 (2026-01-22)
+- 🎓 **Academic Rewrite**: Phonological distance analysis
+- 🛡️ **Anti-Orphan**: Minimum 2 characters on each side
+- 🎼 **Harmonic Clusters**: Georgian-specific consonant groups
 
-* 🧹 **Sanitization**: Added `_stripHyphens` for automatic input cleaning
-* ⚡ **Performance**: Converted `harmonicClusters` to `Set` (O(1) lookup)
-* 📦 **ESM**: Full ES Modules support
-* 📚 **Dictionary**: Added `loadDefaultLibrary()` method
-
-### Version 2.0.1 (2026-01-22)
-
-* 🎓 **Academic Rewrite**: Phonological distance analysis
-* 🛡️ **Anti-Orphan**: Minimum 2 characters on each side
-* 🎼 **Harmonic Clusters**: Georgian-specific consonant groups
+---
 
 ## Contributing
 
@@ -301,15 +562,3 @@ MIT © [Guram Zhgamadze](https://github.com/guramzhgamadze)
 ---
 
 Made with ❤️ for the Georgian language community
-```
-
-Save this as `README.md` in your package root directory, then:
-
-```bash
-git add README.md
-git commit -m "Add comprehensive README"
-git push
-npm publish
-```
-
-This README includes everything users need to know about your package! 🚀

@@ -2,7 +2,7 @@
 """
 Georgian Language Hyphenation Library
 ქართული ენის დამარცვლის ბიბლიოთეკა
-Version: 2.2.6
+Version: 2.2.7
 """
 from .hyphenator import (
     GeorgianHyphenator,
@@ -12,7 +12,8 @@ from .hyphenator import (
     to_tex_pattern,
     to_hunspell_format
 )
-__version__ = '2.2.6'
+
+__version__ = '2.2.7'
 __author__ = 'Guram Zhgamadze'
 __all__ = [
     'GeorgianHyphenator',

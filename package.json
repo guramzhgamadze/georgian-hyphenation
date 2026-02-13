@@ -1,7 +1,7 @@
 {
   "name": "georgian-hyphenation",
-  "version": "2.2.6",
-  "description": "Georgian Language Hyphenation Library - Browser + Node.js compatible",
+  "version": "2.2.7",
+  "description": "Georgian Language Hyphenation Library with 17+ utility functions - Browser + Node.js compatible",
   "main": "src/javascript/index.cjs",
   "module": "src/javascript/index.js",
   "type": "module",
@@ -28,13 +28,17 @@
     "kartuli",
     "nlp",
     "browser",
-    "nodejs"
+    "nodejs",
+    "syllables",
+    "typography",
+    "i18n",
+    "html-hyphenation"
   ],
   "author": "Guram Zhgamadze <guramzhgamadze@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/guramzhgamadze/georgian-hyphenation.git"
+    "url": "git+https://github.com/guramzhgamadze/georgian-hyphenation.git"
   },
   "homepage": "https://github.com/guramzhgamadze/georgian-hyphenation#readme",
   "bugs": {

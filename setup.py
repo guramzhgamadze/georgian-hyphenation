@@ -6,10 +6,10 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="georgian-hyphenation",
-    version="2.2.6.1",
+    version="2.2.7",
     author="Guram Zhgamadze",
     author_email="guramzhgamadze@gmail.com",
-    description="Georgian Language Hyphenation Library v2.2.6 - Preserves compound word hyphens",
+    description="Georgian Language Hyphenation Library v2.2.7",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/guramzhgamadze/georgian-hyphenation",
@@ -34,4 +34,14 @@ setup(
         "Natural Language :: Georgian",
     ],
     python_requires=">=3.7",
+    keywords=[
+        "georgian",
+        "hyphenation",
+        "syllabification",
+        "kartuli",
+        "nlp",
+        "typography",
+        "i18n",
+        "html-hyphenation",
+    ],
 )
