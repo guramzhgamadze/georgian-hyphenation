@@ -33,7 +33,7 @@ Georgian Hyphenation is a comprehensive, linguistically accurate library for aut
 - **🎨 Typography-Ready**: Generates soft hyphens, TeX patterns, and Hunspell formats
 - **📚 Dictionary Support**: 148 exception words for edge cases
 - **🔧 Flexible**: Customizable hyphen characters, margins, and user dictionaries
-- **✨ **NEW in v2.2.7**: HTML-aware hyphenation, method chaining, 17+ utility functions
+- **✨ NEW in v2.2.7**: HTML-aware hyphenation, method chaining, 17+ utility functions
 - **✨ Smart Features**: Context-aware justify, Meta platform optimization, dynamic content support
 - **📱 Social Media Ready**: Special handling for Facebook, Instagram, Threads with character-span obfuscation
 
@@ -66,7 +66,7 @@ Georgian Hyphenation is a comprehensive, linguistically accurate library for aut
 | 🐍 **Python** | 2.2.7 | [![PyPI](https://img.shields.io/pypi/v/georgian-hyphenation)](https://pypi.org/project/georgian-hyphenation/) | `pip install georgian-hyphenation` |
 | 📦 **JavaScript/Node.js** | 2.2.7 | [![npm](https://img.shields.io/npm/v/georgian-hyphenation)](https://www.npmjs.com/package/georgian-hyphenation) | `npm install georgian-hyphenation` |
 | 🦊 **Firefox Extension** | 2.2.7 | [![Firefox](https://img.shields.io/amo/v/georgian-hyphenation)](https://addons.mozilla.org/firefox/addon/georgian-hyphenation/) | [Install from AMO](https://addons.mozilla.org/firefox/addon/georgian-hyphenation/) |
-| 🌐 **Chrome Extension** | 2.2.7 | Beta | [Manual install](#chrome-extension) |
+| 🌐 **Chrome Extension** | 2.2.7 | Beta | [Manual install](#browser-extension) |
 | 🔌 **WordPress Plugin** | 2.2.6 | Stable | [Download](#wordpress-plugin) |
 | 📝 **MS Word Add-in** | 2.2.7 | Beta | [Installation guide](#microsoft-word-add-in) |
 
@@ -462,7 +462,7 @@ console.log(clusters);  // ['ბლ', 'ბრ', 'ბღ', ...]
 - ✅ **Zero dependencies**
 - ✅ **Lightweight** (~12KB)
 
-## Installation
+## 📦 Installation
 
 <details>
 <summary><b>Python</b></summary>
@@ -968,7 +968,7 @@ This release adds extensive new functionality to both Python and JavaScript pack
 - [x] Chrome extension (beta)
 - [x] WordPress plugin
 - [x] MS Word add-in (beta, web-hosted)
-- [x] v2.2.6 Compound word preservation
+- [x] v2.2.7 Compound word preservation
 - [x] v2.2.7 Browser extension enhancements
 - [x] Meta platform optimization
 
