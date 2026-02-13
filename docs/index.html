@@ -116,16 +116,26 @@
             top: 0;
             z-index: 100;
             box-shadow: 0 2px 10px var(--shadow);
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .tabs::-webkit-scrollbar {
+            height: 3px;
+        }
+        
+        .tabs::-webkit-scrollbar-track {
+            background: var(--bg-light);
+        }
+        
+        .tabs::-webkit-scrollbar-thumb {
+            background: var(--accent);
+            border-radius: 3px;
         }
         
         .tabs-container {
             display: flex;
-            overflow-x: auto;
-            scrollbar-width: none;
-        }
-        
-        .tabs-container::-webkit-scrollbar {
-            display: none;
+            min-width: min-content;
         }
         
         .tab {
@@ -136,6 +146,7 @@
             white-space: nowrap;
             font-weight: 500;
             color: var(--text-secondary);
+            flex-shrink: 0;
         }
         
         .tab:hover {
@@ -146,6 +157,78 @@
         .tab.active {
             color: var(--accent);
             border-bottom-color: var(--accent);
+        }
+        
+        /* Mobile: Hamburger menu alternative */
+        .mobile-menu-toggle {
+            display: none;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(237, 137, 54, 0.4);
+            z-index: 101;
+            transition: all 0.3s;
+        }
+        
+        .mobile-menu-toggle:active {
+            transform: scale(0.95);
+        }
+        
+        .mobile-menu {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 102;
+            padding: 80px 20px 20px;
+            overflow-y: auto;
+        }
+        
+        .mobile-menu.show {
+            display: block;
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        .mobile-menu-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: white;
+            color: var(--primary);
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        
+        .mobile-menu .tab {
+            display: block;
+            width: 100%;
+            padding: 20px;
+            margin: 10px 0;
+            background: white;
+            border-radius: 12px;
+            text-align: center;
+            font-size: 18px;
+            border-bottom: none;
+        }
+        
+        .mobile-menu .tab.active {
+            background: var(--accent);
+            color: white;
         }
         
         /* Sections */
@@ -479,6 +562,10 @@
         
         /* Responsive */
         @media (max-width: 768px) {
+            header {
+                padding: 60px 20px;
+            }
+            
             h1 {
                 font-size: 2rem;
             }
@@ -501,6 +588,32 @@
             
             .stats-grid {
                 grid-template-columns: repeat(2, 1fr);
+            }
+            
+            /* Hide desktop tabs on mobile */
+            .tabs {
+                display: none;
+            }
+            
+            /* Show mobile menu toggle on small screens */
+            .mobile-menu-toggle {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .mobile-menu-toggle {
+                width: 48px;
+                height: 48px;
+                font-size: 20px;
+                top: 15px;
+                right: 15px;
             }
         }
         
@@ -541,6 +654,19 @@
             <div class="tab" onclick="showSection('about')">📖 About</div>
         </div>
     </nav>
+    
+    <!-- Mobile Menu Toggle -->
+    <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">☰</button>
+    
+    <!-- Mobile Menu Overlay -->
+    <div id="mobile-menu" class="mobile-menu">
+        <button class="mobile-menu-close" onclick="toggleMobileMenu()">✕</button>
+        <div class="tab active" onclick="showSection('demo'); toggleMobileMenu();">🎯 Interactive Demo</div>
+        <div class="tab" onclick="showSection('features'); toggleMobileMenu();">✨ New in v2.2.7</div>
+        <div class="tab" onclick="showSection('algorithm'); toggleMobileMenu();">🧪 Algorithm</div>
+        <div class="tab" onclick="showSection('platforms'); toggleMobileMenu();">📦 Platforms</div>
+        <div class="tab" onclick="showSection('about'); toggleMobileMenu();">📖 About</div>
+    </div>
 
     <!-- Interactive Demo Section -->
     <section id="demo" class="active">
@@ -980,12 +1106,33 @@
             
             // Show selected section
             document.getElementById(sectionId).classList.add('active');
-            // Activate clicked tab
-            event.target.classList.add('active');
+            // Activate clicked tab (both in main nav and mobile menu)
+            document.querySelectorAll('.tab').forEach(t => {
+                if (t.textContent.includes(sectionId === 'demo' ? 'Demo' : 
+                   sectionId === 'features' ? 'v2.2.7' : 
+                   sectionId === 'algorithm' ? 'Algorithm' : 
+                   sectionId === 'platforms' ? 'Platforms' : 'About')) {
+                    t.classList.add('active');
+                }
+            });
             
             // Scroll to top
             window.scrollTo({ top: 0, behavior: 'smooth' });
         };
+        
+        // Mobile menu toggle
+        window.toggleMobileMenu = function() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('show');
+        };
+        
+        // Close mobile menu on escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const menu = document.getElementById('mobile-menu');
+                menu.classList.remove('show');
+            }
+        });
         
         // Hyphenation function
         window.hyphenateText = function() {
