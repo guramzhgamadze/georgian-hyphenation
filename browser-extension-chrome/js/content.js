@@ -154,11 +154,22 @@
         processedNodes.add(node);
         
         // Mark parent elements with Georgian text for Smart Justify
+        // Skip headings and centered/right-aligned elements (same logic as Firefox)
         if (smartJustifyEnabled) {
+          const headingTags = new Set(['H1', 'H2', 'H3', 'H4', 'H5', 'H6']);
           let current = node.parentElement;
           let depth = 0;
           while (current && depth < 5) {
-            current.classList.add('georgian-text-content');
+            if (!headingTags.has(current.tagName)) {
+              try {
+                const align = window.getComputedStyle(current).textAlign;
+                if (align !== 'center' && align !== 'right') {
+                  current.classList.add('georgian-text-content');
+                }
+              } catch(e) {
+                current.classList.add('georgian-text-content');
+              }
+            }
             current = current.parentElement;
             depth++;
           }
@@ -254,11 +265,22 @@
     processedNodes.add(element);
     
     // Mark parent elements with Georgian text for Smart Justify
+    // Skip headings and centered/right-aligned elements (same logic as Firefox)
     if (smartJustifyEnabled) {
+      const headingTags = new Set(['H1', 'H2', 'H3', 'H4', 'H5', 'H6']);
       let current = element;
       let depth = 0;
       while (current && depth < 5) {
-        current.classList.add('georgian-text-content');
+        if (!headingTags.has(current.tagName)) {
+          try {
+            const align = window.getComputedStyle(current).textAlign;
+            if (align !== 'center' && align !== 'right') {
+              current.classList.add('georgian-text-content');
+            }
+          } catch(e) {
+            current.classList.add('georgian-text-content');
+          }
+        }
         current = current.parentElement;
         depth++;
       }
@@ -514,7 +536,19 @@
       }
       
       /* EXCLUSIONS: Never justify anything inside these containers */
-      /* 1. Contenteditable elements (chat inputs, composers) */
+      /* 0. Headings should never be justified */
+      h1.georgian-text-content,
+      h2.georgian-text-content,
+      h3.georgian-text-content,
+      h4.georgian-text-content,
+      h5.georgian-text-content,
+      h6.georgian-text-content,
+      h1 .georgian-text-content,
+      h2 .georgian-text-content,
+      h3 .georgian-text-content,
+      h4 .georgian-text-content,
+      h5 .georgian-text-content,
+      h6 .georgian-text-content,
       [contenteditable] .georgian-text-content,
       [contenteditable="true"] .georgian-text-content,
       [role="textbox"] .georgian-text-content,
