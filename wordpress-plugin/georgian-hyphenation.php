@@ -3,7 +3,7 @@
  * Plugin Name: Georgian Hyphenation
  * Plugin URI: https://github.com/guramzhgamadze/georgian-hyphenation
  * Description: Georgian hyphenation with v2.2 Hybrid Engine (Algorithm + Dictionary). Full Elementor support.
- * Version: 2.2.6
+ * Version: 2.2.7
  * Author: Guram Zhgamadze
  * Author URI: https://github.com/guramzhgamadze
  * License: MIT
@@ -59,19 +59,30 @@ class GeorgianHyphenationWP {
 
     public function register_settings() {
         register_setting( 'gh-settings', 'gh_enabled', array('type' => 'boolean', 'default' => true));
-        
+
         foreach ($this->elementor_widgets as $key => $widget) {
             register_setting( 'gh-settings', 'gh_elementor_' . $key, array('type' => 'boolean', 'default' => true));
         }
-        
+
         register_setting( 'gh-settings', 'gh_additional_selectors', array(
             'type' => 'string',
             'sanitize_callback' => 'sanitize_text_field',
             'default' => 'article p, .entry-content p'
         ));
-        
+
         register_setting( 'gh-settings', 'gh_auto_justify', array('type' => 'boolean', 'default' => true));
         register_setting( 'gh-settings', 'gh_load_dictionary', array('type' => 'boolean', 'default' => true));
+
+        register_setting( 'gh-settings', 'gh_left_min', array(
+            'type' => 'integer',
+            'sanitize_callback' => 'absint',
+            'default' => 2
+        ));
+        register_setting( 'gh-settings', 'gh_right_min', array(
+            'type' => 'integer',
+            'sanitize_callback' => 'absint',
+            'default' => 2
+        ));
     }
 
     public function settings_page() {
@@ -93,20 +104,21 @@ class GeorgianHyphenationWP {
             .gh-helper-list code { background: #fff; color: #d63638; padding: 2px 5px; }
             .gh-version-badge { display: inline-block; background: #4CAF50; color: white; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-left: 10px; }
             .gh-feature-new { color: #4CAF50; font-weight: bold; font-size: 11px; }
+            .gh-number-input { width: 60px; text-align: center; }
         </style>
 
         <div class="wrap">
             <h1>
-                🇬🇪 Georgian Hyphenation 
-                <span class="gh-version-badge">v2.2.6</span>
+                🇬🇪 Georgian Hyphenation
+                <span class="gh-version-badge">v2.2.7</span>
             </h1>
             <p style="font-size: 14px; color: #666;">
                 Hybrid Engine: Algorithm + Dictionary (150+ exceptions) | Auto-Sanitization
             </p>
-            
+
             <form method="post" action="options.php">
                 <?php settings_fields( 'gh-settings' ); ?>
-                
+
                 <h2>ძირითადი პარამეტრები</h2>
                 <table class="form-table">
                     <tr>
@@ -121,7 +133,7 @@ class GeorgianHyphenationWP {
                     </tr>
                     <tr>
                         <th scope="row">
-                            Dictionary Support 
+                            Dictionary Support
                             <span class="gh-feature-new">✨ NEW</span>
                         </th>
                         <td>
@@ -133,6 +145,25 @@ class GeorgianHyphenationWP {
                             <p class="description">
                                 ℹ️ რეკომენდებულია! უზრუნველყოფს უფრო მაღალ სიზუსტეს.
                             </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">მინიმალური სიმბოლოები</th>
+                        <td>
+                            <label>
+                                <strong>მარცხნივ:</strong>
+                                <input type="number" name="gh_left_min" class="gh-number-input"
+                                    value="<?php echo esc_attr( get_option('gh_left_min', 2) ); ?>"
+                                    min="1" max="5" />
+                            </label>
+                            &nbsp;&nbsp;
+                            <label>
+                                <strong>მარჯვნივ:</strong>
+                                <input type="number" name="gh_right_min" class="gh-number-input"
+                                    value="<?php echo esc_attr( get_option('gh_right_min', 2) ); ?>"
+                                    min="1" max="5" />
+                            </label>
+                            <p class="description">სიმბოლოების მინიმალური რაოდენობა გადატანის წინ და შემდეგ (ნაგულისხმევი: 2).</p>
                         </td>
                     </tr>
                 </table>
@@ -164,7 +195,7 @@ class GeorgianHyphenationWP {
                         <th scope="row">Custom CSS Selectors</th>
                         <td>
                             <textarea name="gh_additional_selectors" class="large-text code" rows="3" placeholder="მაგ: p, .my-custom-class"><?php echo esc_textarea( get_option('gh_additional_selectors', 'article p, .entry-content p') ); ?></textarea>
-                            
+
                             <div class="gh-helper-box">
                                 <p style="margin-top: 0; font-weight: bold;">ℹ️ როგორ გამოვიყენოთ:</p>
                                 <ul class="gh-helper-list" style="list-style-type: disc;">
@@ -186,10 +217,10 @@ class GeorgianHyphenationWP {
                         </td>
                     </tr>
                 </table>
-                
+
                 <?php submit_button(); ?>
             </form>
-            
+
             <hr>
             <h2>დიაგნოსტიკა</h2>
             <table class="form-table">
@@ -208,22 +239,22 @@ class GeorgianHyphenationWP {
 
     private function get_active_selectors() {
         $selectors = array();
-        
+
         foreach ($this->elementor_widgets as $key => $widget) {
             if ( get_option('gh_elementor_' . $key, 1) ) {
                 $selectors[] = $widget['selector'];
             }
         }
-        
+
         $custom = get_option('gh_additional_selectors', '');
         if ( !empty($custom) ) {
             $selectors[] = trim($custom);
         }
-        
+
         if (empty($selectors)) {
             $selectors[] = 'p';
         }
-        
+
         return implode(', ', $selectors);
     }
 
@@ -231,87 +262,79 @@ class GeorgianHyphenationWP {
         if ( ! get_option('gh_enabled', 1) ) return;
         if ( did_action( 'elementor/loaded' ) && \Elementor\Plugin::$instance->editor->is_edit_mode() ) return;
 
-        $selectors = esc_js($this->get_active_selectors());
-        $auto_justify = get_option('gh_auto_justify', 1) ? 'true' : 'false';
-        $load_dictionary = get_option('gh_load_dictionary', 1) ? 'true' : 'false';
+        $selectors    = esc_js($this->get_active_selectors());
+        $auto_justify = get_option('gh_auto_justify', 1)      ? 'true' : 'false';
+        $load_dict    = get_option('gh_load_dictionary', 1)    ? 'true' : 'false';
+        $left_min     = intval( get_option('gh_left_min', 2) );
+        $right_min    = intval( get_option('gh_right_min', 2) );
 
         ?>
         <script type="module">
-import GeorgianHyphenator from 'https://cdn.jsdelivr.net/npm/georgian-hyphenation@2.2.6/src/javascript/index.js';
+import GeorgianHyphenator from 'https://cdn.jsdelivr.net/npm/georgian-hyphenation@2.2.7/src/javascript/index.js';
 
 (async function() {
     'use strict';
-    const DEBUG = true;
-    const LOAD_DICTIONARY = <?php echo $load_dictionary; ?>;
-    
-    function log(msg, ...args) {
-        if(DEBUG) console.log('🇬🇪 GH v2.2.6:', msg, ...args);
+
+    const selectors   = '<?php echo $selectors; ?>';
+    const autoJustify = <?php echo $auto_justify; ?>;
+    const loadDict    = <?php echo $load_dict; ?>;
+    const leftMin     = <?php echo $left_min; ?>;
+    const rightMin    = <?php echo $right_min; ?>;
+
+    // Initialize hyphenator with chainable setters (v2.2.7)
+    const hyphenator = new GeorgianHyphenator('\u00AD')
+        .setLeftMin(leftMin)
+        .setRightMin(rightMin);
+
+    // Load dictionary (if enabled)
+    if (loadDict) {
+        await hyphenator.loadDefaultLibrary();
     }
 
-    log('🚀 Initializing...');
-
-    const selectors = '<?php echo $selectors; ?>';
-    
     async function processElements() {
         const elements = document.querySelectorAll(selectors);
-        
-        if (elements.length === 0) {
-            log('⚠️ No elements found with selectors:', selectors);
-            return;
-        }
-
-        log('📋 Elements found:', elements.length);
-
-        // Initialize hyphenator
-        const hyphenator = new GeorgianHyphenator('\u00AD');
-        
-        // Load Dictionary (if enabled)
-        if (LOAD_DICTIONARY) {
-            try {
-                await hyphenator.loadDefaultLibrary();
-                log('📚 Dictionary loaded');
-            } catch (error) {
-                log('⚠️ Dictionary unavailable');
-            }
-        }
-
-        let count = 0;
+        if (elements.length === 0) return;
 
         elements.forEach(el => {
             if (el.dataset.ghProcessed || el.isContentEditable) return;
-            
+
             const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null, false);
-            let node; 
+            let node;
             let hasGeorgian = false;
-            
+
             while (node = walker.nextNode()) {
-                if (/[ა-ჰ]{4,}/.test(node.nodeValue)) {
-                    node.nodeValue = hyphenator.hyphenateText(node.nodeValue);
+                const val = node.nodeValue;
+
+                // Use isGeorgian() + canHyphenate() (v2.2.7)
+                const hasHyphenatableWord = val.split(/\s+/).some(w => {
+                    const clean = w.replace(/[^ა-ჰ]/g, '');
+                    return hyphenator.isGeorgian(clean) && hyphenator.canHyphenate(clean);
+                });
+
+                if (hasHyphenatableWord) {
+                    node.nodeValue = hyphenator.hyphenateText(val);
                     hasGeorgian = true;
                 }
             }
 
             if (hasGeorgian) {
-                if (<?php echo $auto_justify; ?>) {
-                    el.style.textAlign = 'justify';
-                    el.style.hyphens = 'manual';
+                if (autoJustify) {
+                    el.style.textAlign  = 'justify';
+                    el.style.hyphens    = 'manual';
                     el.style.webkitHyphens = 'manual';
                 }
                 el.dataset.ghProcessed = 'true';
-                count++;
             }
         });
-        
-        if (count > 0) log('✅ Processed', count, 'elements');
     }
 
     // Run on load
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', processElements);
     } else {
-        processElements();
+        await processElements();
     }
-    
+
     // MutationObserver for dynamic content
     let timeout;
     new MutationObserver((mutations) => {
@@ -320,7 +343,7 @@ import GeorgianHyphenator from 'https://cdn.jsdelivr.net/npm/georgian-hyphenatio
             timeout = setTimeout(processElements, 500);
         }
     }).observe(document.body, { childList: true, subtree: true });
-    
+
     // Elementor Popup Support
     if (typeof jQuery !== 'undefined') {
         jQuery(document).on('elementor/popup/show', () => setTimeout(processElements, 200));
