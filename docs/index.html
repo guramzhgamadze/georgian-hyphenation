@@ -1020,7 +1020,7 @@
                     <li>🐙 <strong>GitHub:</strong> <a href="https://github.com/guramzhgamadze/georgian-hyphenation" target="_blank">github.com/guramzhgamadze/georgian-hyphenation</a></li>
                     <li>📦 <strong>NPM:</strong> <a href="https://www.npmjs.com/package/georgian-hyphenation" target="_blank">npmjs.com/package/georgian-hyphenation</a></li>
                     <li>🐍 <strong>PyPI:</strong> <a href="https://pypi.org/project/georgian-hyphenation/" target="_blank">pypi.org/project/georgian-hyphenation</a></li>
-                    <li>📧 <strong>Email:</strong> guramzhgamadze@gmail.com</li>
+                    <li>📧 <strong>Email:</strong> <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="91f6e4e3f0fcebf9f6f0fcf0f5ebf4d1f6fcf0f8fdbff2fefc">[email&#160;protected]</a></li>
                 </ul>
                 
                 <div style="margin-top: 30px; padding: 25px; background: var(--bg-light); border-radius: 12px; border-left: 5px solid var(--success);">
@@ -1049,7 +1049,7 @@
         </div>
     </footer>
 
-    <script type="module">
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script type="module">
         import GeorgianHyphenator from 'https://cdn.jsdelivr.net/npm/georgian-hyphenation@2.2.7/src/javascript/index.js';
         
         console.log('🇬🇪 Georgian Hyphenation v2.2.7 - Demo Site Loaded');
@@ -1067,31 +1067,21 @@
             } catch (error) {
                 console.warn('⚠️ Dictionary unavailable, using algorithm only');
             }
-        })();
-        
-        // Auto-hyphenate page content on load
-        window.addEventListener('DOMContentLoaded', () => {
             autoHyphenatePage();
-        });
+        })();
         
         function autoHyphenatePage() {
             const elements = document.querySelectorAll('p, li');
             let processed = 0;
             
             elements.forEach(element => {
-                const text = element.textContent;
-                if (!/[ა-ჰ]/.test(text)) return;
-                
-                const parts = text.split(/([^ა-ჰ]+)/);
-                const result = parts.map(part => {
-                    if (/[ა-ჰ]{4,}/.test(part)) {
-                        processed++;
-                        return window.softHyphenator.hyphenate(part);
-                    }
-                    return part;
-                }).join('');
-                
-                element.textContent = result;
+                if (!/[ა-ჰ]/.test(element.textContent)) return;
+                element.childNodes.forEach(node => {
+                    if (node.nodeType !== Node.TEXT_NODE) return;
+                    if (!/[ა-ჰ]/.test(node.textContent)) return;
+                    node.textContent = window.softHyphenator.hyphenateText(node.textContent);
+                    processed++;
+                });
             });
             
             console.log(`✅ Page auto-hyphenated: ${processed} words`);
@@ -1142,32 +1132,27 @@
                 return;
             }
 
-            const words = text.split(/\s+/).filter(w => w.length > 0 && /[ა-ჰ]/.test(w));
-            
-            let totalSyllables = 0;
-            let wordsHyphenated = 0;
-            const results = [];
+            const segments = text.split(/([ა-ჰ]+)/);
+            let totalSyllables = 0, wordsHyphenated = 0;
+            const results = [], allSegments = [];
 
-            words.forEach(word => {
-                const syllables = window.hardHyphenator.getSyllables(word);
-                totalSyllables += syllables.length;
-                
-                const hardHyph = window.hardHyphenator.hyphenate(word);
-                const softHyph = window.softHyphenator.hyphenate(word);
-                
-                if (hardHyph !== word) wordsHyphenated++;
-                
-                results.push({
-                    word: word,
-                    syllables: syllables,
-                    hyphenated: hardHyph,
-                    softHyphen: softHyph
-                });
+            segments.forEach(seg => {
+                if (/^[ა-ჰ]+$/.test(seg) && seg.length > 0) {
+                    const syllables = window.hardHyphenator.getSyllables(seg);
+                    totalSyllables += syllables.length;
+                    const hardHyph = window.hardHyphenator.hyphenate(seg);
+                    const softHyph = window.softHyphenator.hyphenate(seg);
+                    if (hardHyph !== seg) wordsHyphenated++;
+                    const entry = { word: seg, syllables, hyphenated: hardHyph, softHyphen: softHyph };
+                    results.push(entry); allSegments.push(entry);
+                } else {
+                    allSegments.push({ word: seg, syllables: [], hyphenated: seg, softHyphen: seg });
+                }
             });
 
-            const eligibleWords = words.filter(w => {
-                if (w.length < 4) return false;
-                const vowelCount = (w.match(/[აეიოუ]/g) || []).length;
+            const eligibleWords = results.filter(r => {
+                if (r.word.length < 4) return false;
+                const vowelCount = (r.word.match(/[აეიოუ]/g) || []).length;
                 return vowelCount >= 2;
             });
             
@@ -1177,23 +1162,23 @@
 
             // Update stats
             document.getElementById('stats').classList.add('show');
-            document.getElementById('wordsProcessed').textContent = words.length;
+            document.getElementById('wordsProcessed').textContent = results.length;
             document.getElementById('totalSyllables').textContent = totalSyllables;
             
-            const avgSyll = words.length > 0 ? (totalSyllables / words.length).toFixed(1) : 0;
+            const avgSyll = results.length > 0 ? (totalSyllables / results.length).toFixed(1) : 0;
             document.getElementById('avgSyllables').textContent = avgSyll;
             document.getElementById('successRate').textContent = successRate + '%';
 
             // Display results
-            document.getElementById('result-display').textContent = results.map(r => r.hyphenated).join(' ');
+            document.getElementById('result-display').textContent = allSegments.map(s => s.hyphenated).join('');
 
             const syllablesHtml = results.flatMap(r => 
                 r.syllables.map(s => `<span class="syllable">${s}</span>`)
             ).join('');
             document.getElementById('syllables-result').innerHTML = syllablesHtml;
 
-            document.getElementById('soft-result-display').textContent = results.map(r => r.softHyphen).join(' ');
-            document.getElementById('soft-hyphen-code').textContent = results.map(r => r.softHyphen).join(' ');
+            document.getElementById('soft-result-display').textContent = allSegments.map(s => s.softHyphen).join('');
+            document.getElementById('soft-hyphen-code').textContent = allSegments.map(s => s.softHyphen).join('');
 
             const texPatterns = results.map(r => '.' + r.syllables.join('1') + '.').join('\n');
             document.getElementById('tex-code').textContent = `\\patterns{\n${texPatterns}\n}`;
@@ -1216,7 +1201,7 @@
         };
 
         window.loadExample = function() {
-            const exampleText = `საქართველო უძველესი კულტურისა და ისტორიის მქონე ქვეყანაა, რომელიც კავკასიაში მდებარეობს. მისი მრავალფეროვანი ბუნება, უნიკალური დამწერლობა და ტრადიციები მსოფლიო ყურადღებას იქცევს. დედაქალაქი თბილისი აერთიანებს თანამედროვე არქიტექტურასა და ძველ უბნებს. ქვეყნის განვითარებისთვის განსაკუთრებით მნიშვნელოვანია განათლება, ეკონომიკა და საერთაშორისო ურთიერთობები.`;
+            const exampleText = `საქართველო უძველესი კულტურა, უნიკალური დამწერლობა და ტრადიციები მსოფლიო ყურადღებას იქცევს. დედაქალაქი თბილისი აერთიანებს თანამედროვე არქიტექტურასა და ძველ უბნებს. ქვეყნის განვითარებისთვის განსაკუთრებით მნიშვნელოვანია განათლება, ეკონომიკა და საერთაშორისო ურთიერთობები.`;
             document.getElementById('input-text').value = exampleText;
             window.hyphenateText();
         };
