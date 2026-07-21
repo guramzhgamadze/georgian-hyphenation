@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Georgian Hyphenation Library v2.2.7
+Georgian Hyphenation Library
 ქართული ენის დამარცვლის ბიბლიოთეკა
 
 Enhanced with 17+ utility functions
@@ -17,9 +17,12 @@ Author: Guram Zhgamadze
 """
 
 import json
+import logging
 import os
 import re
 from typing import List, Dict, Set, Optional
+
+logger = logging.getLogger(__name__)
 
 
 class GeorgianHyphenator:
@@ -33,8 +36,8 @@ class GeorgianHyphenator:
     - Gemination (double consonant) handling
     - Anti-orphan protection
     - Preserves compound word hyphens
-    - HTML-aware hyphenation (v2.2.7)
-    - 17+ utility functions (v2.2.7)
+    - HTML-aware hyphenation
+    - 17+ utility functions
     """
     
     def __init__(self, hyphen_char: str = '\u00AD'):
@@ -101,41 +104,33 @@ class GeorgianHyphenator:
     
     def load_default_library(self) -> None:
         """
-        Load default exceptions dictionary from data/exceptions.json
-        
-        Works in both development and installed package modes.
-        Tries multiple locations to find the data file.
+        Load the bundled exceptions dictionary (data/exceptions.json).
+
+        The dictionary ships inside the package; it is accessed via
+        importlib.resources (recommended by the packaging docs), with a
+        plain filesystem fallback for Python < 3.9.
         """
         try:
-            package_dir = os.path.dirname(__file__)
-            
-            # Try multiple possible locations
-            locations = [
-                # Development mode (root data/ folder)
-                os.path.join(package_dir, '..', '..', 'data', 'exceptions.json'),
-                # Installed via pip (data/ copied to site-packages)
-                os.path.join(os.path.dirname(package_dir), 'data', 'exceptions.json'),
-                # Alternative installed location
-                os.path.join(package_dir, 'data', 'exceptions.json'),
-            ]
-            
-            data_file = None
-            for loc in locations:
-                abs_loc = os.path.abspath(loc)
-                if os.path.exists(abs_loc):
-                    data_file = abs_loc
-                    break
-            
-            if data_file:
+            try:
+                from importlib.resources import files
+                resource = files(__package__ or 'georgian_hyphenation') \
+                    .joinpath('data').joinpath('exceptions.json')
+                data = json.loads(resource.read_text(encoding='utf-8'))
+            except ImportError:
+                # Python 3.7 / 3.8: importlib.resources.files not available
+                data_file = os.path.join(
+                    os.path.dirname(__file__), 'data', 'exceptions.json')
                 with open(data_file, 'r', encoding='utf-8') as f:
                     data = json.load(f)
-                    self.load_library(data)
-                    print(f"Georgian Hyphenation v2.2.7: Dictionary loaded ({len(self.dictionary)} words)")
-            else:
-                print("Georgian Hyphenation v2.2.7: Dictionary not found, using algorithm only")
-        
+
+            self.load_library(data)
+            logger.debug(
+                'Georgian hyphenation dictionary loaded (%d words)',
+                len(self.dictionary))
         except Exception as e:
-            print(f"Georgian Hyphenation v2.2.7: Could not load dictionary ({e}), using algorithm only")
+            logger.warning(
+                'Georgian hyphenation dictionary could not be loaded (%s); '
+                'using algorithm only', e)
     
     def hyphenate(self, word: str) -> str:
         """
@@ -151,14 +146,18 @@ class GeorgianHyphenator:
         """
         # Strip only soft hyphens and zero-width spaces
         sanitized_word = self._strip_hyphens(word)
-        
-        # Remove punctuation for dictionary lookup (but not hyphens)
-        clean_word = re.sub(r'[.,/#!$%^&*;:{}=_`~()]', '', sanitized_word)
-        
-        # Check dictionary first (if available)
-        if clean_word in self.dictionary:
-            return self.dictionary[clean_word].replace('-', self.hyphen_char)
-        
+        if not sanitized_word:
+            return ''
+
+        # Split into leading punctuation / core word / trailing punctuation
+        # so dictionary hits keep the surrounding characters intact
+        match = re.match(r'^([^ა-ჰ]*)(.*?)([^ა-ჰ]*)$', sanitized_word, re.DOTALL)
+        lead, core, trail = match.group(1), match.group(2), match.group(3)
+
+        # Check dictionary first (core word only, punctuation re-attached)
+        if core and core in self.dictionary:
+            return lead + self.dictionary[core].replace('-', self.hyphen_char) + trail
+
         # Fallback to algorithm
         return self.apply_algorithm(sanitized_word)
     
@@ -234,8 +233,13 @@ class GeorgianHyphenator:
                         # Default: split after first consonant
                         candidate_pos = v1 + 2
             
-            # Anti-orphan protection: ensure minimum chars on each side
-            if candidate_pos >= self.left_min and (len(word) - candidate_pos) >= self.right_min:
+            # Anti-orphan protection: ensure minimum chars on each side.
+            # Never break adjacent to an existing compound-word hyphen
+            # (it already acts as a break point).
+            if (candidate_pos >= self.left_min
+                    and (len(word) - candidate_pos) >= self.right_min
+                    and word[candidate_pos] != '-'
+                    and word[candidate_pos - 1] != '-'):
                 insert_points.append(candidate_pos)
         
         # Insert hyphens (from right to left to maintain positions)
@@ -296,7 +300,7 @@ class GeorgianHyphenator:
         return ''.join(result)
     
     # ========================================
-    # NEW UTILITY FUNCTIONS (v2.2.7)
+    # UTILITY FUNCTIONS
     # ========================================
     
     def unhyphenate(self, text: str) -> str:

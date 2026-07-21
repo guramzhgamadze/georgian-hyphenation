@@ -21,9 +21,7 @@
 
 Georgian Hyphenation is a comprehensive, linguistically accurate library for automatic syllabification of Georgian (ქართული) text. Built on academic phonological principles, it provides high-quality hyphenation for digital typography, text processing, and publishing across multiple platforms.
 
-**Version 2.2.7** – 🎉 **17+ NEW utility functions** for Python & JavaScript!  
-**Version 2.2.7** – Enhanced browser extensions with Meta platform optimization!  
-**Version 2.2.7** – Word add-in with advanced features!
+**Version 2.3.0 (Python & JavaScript)** – 🛠️ Critical packaging fixes: `require()` works again, the exception dictionary now ships correctly on npm and PyPI, and dictionary lookups preserve punctuation. See the [changelog](#changelog).
 
 ### Why Georgian Hyphenation?
 
@@ -31,9 +29,9 @@ Georgian Hyphenation is a comprehensive, linguistically accurate library for aut
 - **⚡ High Performance**: Optimized algorithms with O(1) cluster lookups, processes 1000+ words/second
 - **🌍 Multi-Platform**: Works in Python, JavaScript (Node.js & Browser), WordPress, Microsoft Word, and browser extensions
 - **🎨 Typography-Ready**: Generates soft hyphens, TeX patterns, and Hunspell formats
-- **📚 Dictionary Support**: 148 exception words for edge cases
+- **📚 Dictionary Support**: 142 exception words for edge cases
 - **🔧 Flexible**: Customizable hyphen characters, margins, and user dictionaries
-- **✨ NEW in v2.2.7**: HTML-aware hyphenation, method chaining, 17+ utility functions
+- **✨ Rich API**: HTML-aware hyphenation, method chaining, 17+ utility functions
 - **✨ Smart Features**: Context-aware justify, Meta platform optimization, dynamic content support
 - **📱 Social Media Ready**: Special handling for Facebook, Instagram, Threads with character-span obfuscation
 
@@ -63,8 +61,8 @@ Georgian Hyphenation is a comprehensive, linguistically accurate library for aut
 
 | Platform | Version | Status | Installation |
 |----------|---------|--------|--------------|
-| 🐍 **Python** | 2.2.7 | [![PyPI](https://img.shields.io/pypi/v/georgian-hyphenation)](https://pypi.org/project/georgian-hyphenation/) | `pip install georgian-hyphenation` |
-| 📦 **JavaScript/Node.js** | 2.2.7 | [![npm](https://img.shields.io/npm/v/georgian-hyphenation)](https://www.npmjs.com/package/georgian-hyphenation) | `npm install georgian-hyphenation` |
+| 🐍 **Python** | 2.3.0 | [![PyPI](https://img.shields.io/pypi/v/georgian-hyphenation)](https://pypi.org/project/georgian-hyphenation/) | `pip install georgian-hyphenation` |
+| 📦 **JavaScript/Node.js** | 2.3.0 | [![npm](https://img.shields.io/npm/v/georgian-hyphenation)](https://www.npmjs.com/package/georgian-hyphenation) | `npm install georgian-hyphenation` |
 | 🦊 **Firefox Extension** | 2.2.7 | [![Firefox](https://img.shields.io/amo/v/georgian-hyphenation)](https://addons.mozilla.org/firefox/addon/georgian-hyphenation/) | [Install from AMO](https://addons.mozilla.org/firefox/addon/georgian-hyphenation/) |
 | 🌐 **Chrome Extension** | 2.2.7 | Beta | [Manual install](#browser-extension) |
 | 🔌 **WordPress Plugin** | 2.2.6 | Stable | [Download](#wordpress-plugin) |
@@ -153,7 +151,7 @@ console.log(hyphenator.hyphenateText(text));
 ### Browser (CDN)
 ```html
 <script type="module">
-  import GeorgianHyphenator from 'https://cdn.jsdelivr.net/npm/georgian-hyphenation@2.2.7/src/javascript/index.js';
+  import GeorgianHyphenator from 'https://cdn.jsdelivr.net/npm/georgian-hyphenation@2.3.0/src/javascript/index.js';
   
   const hyphenator = new GeorgianHyphenator('\u00AD');
   await hyphenator.loadDefaultLibrary();
@@ -397,12 +395,12 @@ Get the number of words in the dictionary.
 ```python
 # Python
 hyphenator.load_default_library()
-print(hyphenator.get_dictionary_size())  # 148
+print(hyphenator.get_dictionary_size())  # 142
 ```
 ```javascript
 // JavaScript
 await hyphenator.loadDefaultLibrary();
-console.log(hyphenator.getDictionarySize());  // 148
+console.log(hyphenator.getDictionarySize());  // 142
 ```
 
 ### Advanced Features
@@ -454,7 +452,7 @@ console.log(clusters);  // ['ბლ', 'ბრ', 'ბღ', ...]
 - ✅ **Accurate Georgian syllabification** based on phonetic rules
 - ✅ **Harmonic consonant clusters** recognition (ბრ, გრ, კრ, etc.)
 - ✅ **Gemination handling** (double consonant splitting)
-- ✅ **Exception dictionary** for irregular words (148 words)
+- ✅ **Exception dictionary** for irregular words (142 words)
 - ✅ **HTML-aware hyphenation** - preserves tags and code blocks (new in v2.2.7)
 - ✅ **17+ utility functions** for advanced text processing (new in v2.2.7)
 - ✅ **Configurable settings** - adjust margins and hyphen character (new in v2.2.7)
@@ -791,7 +789,7 @@ print(processed)
   <div class="hyphenated" id="content"></div>
   
   <script type="module">
-    import GeorgianHyphenator from 'https://cdn.jsdelivr.net/npm/georgian-hyphenation@2.2.7/src/javascript/index.js';
+    import GeorgianHyphenator from 'https://cdn.jsdelivr.net/npm/georgian-hyphenation@2.3.0/src/javascript/index.js';
     
     const text = 'საქართველო არის ძალიან ლამაზი ქვეყანა, სადაც ბევრი ისტორიული ძეგლია.';
     
@@ -854,7 +852,7 @@ with open('georgian-patterns.tex', 'w', encoding='utf-8') as f:
 | Metric | Value |
 |--------|-------|
 | **Speed** | ~1000 words/second |
-| **Memory** | ~100KB with dictionary (148 words) |
+| **Memory** | ~100KB with dictionary (142 words) |
 | **HTML Processing** | ~2ms for 1000 words |
 | **Accuracy** | 98%+ (validated on 10,000+ words) |
 | **Cluster Lookup** | O(1) with Set structure |
@@ -864,6 +862,18 @@ with open('georgian-patterns.tex', 'w', encoding='utf-8') as f:
 ---
 
 ## 🆕 Changelog & What's New
+
+### Version 2.3.0 (July 21, 2026) 🛠️ — Python & JavaScript
+
+**Critical packaging fixes** — earlier versions had a broken dictionary path on both registries; this release makes the "hybrid engine" work as documented after install.
+
+- 🐛 **npm (CommonJS)**: `require('georgian-hyphenation')` crashed with `SyntaxError` — the published `index.cjs` was an ES module copy. It is now a real CommonJS build.
+- 🐛 **npm (Node 22+)**: the bundled dictionary silently failed to load (removed `assert { type: 'json' }` import syntax); now loaded via `fs` resolved from `import.meta.url`.
+- 🐛 **npm (browser/CDN)**: dictionary URL now resolves relative to the module, so it always matches the installed version (no more hard-coded version).
+- 🐛 **PyPI**: the exception dictionary was missing from published wheels (`package_data` pointed outside the package). It now ships inside the package and loads via `importlib.resources`.
+- 🐛 **Both**: dictionary lookups preserve surrounding punctuation; the algorithm no longer inserts a break next to a compound-word hyphen; `hyphenateHTML()` no longer corrupts `$&`-style sequences; regex-special custom hyphen characters are escaped.
+- ✨ TypeScript declarations added; `setDebug()` / `debug` option (success logs now opt-in); `loadDefaultLibrary(source)` accepts a custom URL or path.
+- 📦 Repository reorganized into self-contained `npm/` and `pypi/` package directories; Python packaging consolidated into `pyproject.toml`.
 
 ### Version 2.2.7 (February 13, 2025) 🎉
 
@@ -900,7 +910,7 @@ This release adds extensive new functionality to both Python and JavaScript pack
 - 🔧 All configuration methods support method chaining
 - 📚 Comprehensive documentation (JSDoc/Python docstrings)
 - ✅ 100% backwards compatible - zero breaking changes
-- 🎯 Built-in dictionary now includes 148 exception words
+- 🎯 Built-in dictionary now includes 142 exception words
 - ⚡ Performance optimizations
 
 #### **Browser Extensions (v2.2.7):**
@@ -927,7 +937,7 @@ This release adds extensive new functionality to both Python and JavaScript pack
 
 **Core Library:**
 - ✅ Compound word hyphen preservation (მაგ-რამ, ხელ-ფეხი)
-- ✅ Enhanced dictionary with 148+ exception words
+- ✅ Enhanced dictionary with 142+ exception words
 - 🐛 Fixed hyphen stripping to only remove soft hyphens
 
 **Word Add-in:**
@@ -1088,7 +1098,7 @@ If you use this library in academic work, please cite:
   year = {2026},
   publisher = {GitHub},
   url = {https://github.com/guramzhgamadze/georgian-hyphenation},
-  version = {2.2.7}
+  version = {2.3.0}
 }
 ```
 

@@ -12,7 +12,8 @@ Georgian Language Hyphenation Library - Fast, accurate syllabification for Georg
 - ✅ **Accurate Georgian syllabification** based on phonetic rules
 - ✅ **Harmonic consonant clusters** recognition (ბრ, გრ, კრ, etc.)
 - ✅ **Gemination handling** (double consonant splitting)
-- ✅ **Exception dictionary** for irregular words (148 words)
+- ✅ **Exception dictionary** for irregular words (142 words)
+- ✅ **TypeScript declarations** included (new in v2.3.0)
 - ✅ **HTML-aware hyphenation** - preserves tags and code blocks (new in v2.2.7)
 - ✅ **17+ utility functions** for advanced text processing (new in v2.2.7)
 - ✅ **Configurable settings** - adjust margins and hyphen character (new in v2.2.7)
@@ -66,7 +67,7 @@ console.log(hyphenator.hyphenate('კომპიუტერი'));
 
 ```html
 <script type="module">
-  import GeorgianHyphenator from 'https://cdn.jsdelivr.net/npm/georgian-hyphenation@2.2.7/src/javascript/index.js';
+  import GeorgianHyphenator from 'https://cdn.jsdelivr.net/npm/georgian-hyphenation@2.3.0/src/javascript/index.js';
   
   const hyphenator = new GeorgianHyphenator();
   console.log(hyphenator.hyphenate('პროგრამირება'));
@@ -78,11 +79,12 @@ console.log(hyphenator.hyphenate('კომპიუტერი'));
 ### Constructor
 
 ```javascript
-const hyphenator = new GeorgianHyphenator(hyphenChar = '\u00AD');
+const hyphenator = new GeorgianHyphenator(hyphenChar = '\u00AD', options = {});
 ```
 
 **Parameters:**
 - `hyphenChar` (optional): Character to use for hyphenation. Default is soft hyphen (`\u00AD`)
+- `options.debug` (optional): Log dictionary loading details to the console. Default is `false`
 
 ---
 
@@ -263,13 +265,19 @@ const customWords = {
 hyphenator.loadLibrary(customWords);
 ```
 
-### `async loadDefaultLibrary()`
+### `async loadDefaultLibrary(source?)`
 
-Load the built-in exception dictionary (148 words).
+Load the built-in exception dictionary (142 words). The dictionary is
+resolved relative to the module itself, so it always matches the installed
+package version — on a CDN, in a bundler, or in Node.js.
 
 ```javascript
 await hyphenator.loadDefaultLibrary();
 // Dictionary loaded with tech terms, places, political terms
+
+// Optional: load from a custom URL (browser) or file path (Node.js),
+// e.g. a locally hosted copy
+await hyphenator.loadDefaultLibrary('/assets/exceptions.json');
 ```
 
 ### `addException(word, hyphenated)`
@@ -309,7 +317,7 @@ Get the number of words in the dictionary.
 ```javascript
 await hyphenator.loadDefaultLibrary();
 console.log(hyphenator.getDictionarySize());
-// Output: 148
+// Output: 142
 ```
 
 ---
@@ -357,7 +365,7 @@ document.querySelector('.georgian-text').innerHTML =
 
 ## Built-in Dictionary
 
-The library includes 148 pre-hyphenated words including:
+The library includes 142 pre-hyphenated words including:
 
 **Tech Terms:** კომპიუტერი, ფეისბუქი, იუთუბი, ინსტაგრამი  
 **Places:** საქართველო, თბილისი  
@@ -466,7 +474,7 @@ syllables.forEach((syllable, i) => {
 - ✅ Chrome/Edge 90+
 - ✅ Firefox 88+
 - ✅ Safari 14+
-- ✅ Node.js 14+
+- ✅ Node.js 16+ (both `import` and `require`)
 
 ---
 
@@ -480,6 +488,22 @@ syllables.forEach((syllable, i) => {
 ---
 
 ## Changelog
+
+### v2.3.0 (2026-07-21) 🛠️
+
+**Fixes:**
+- 🐛 **CommonJS**: `require('georgian-hyphenation')` works again (the published `.cjs` file was accidentally an ES module)
+- 🐛 **Node.js 22+**: dictionary loading no longer fails (removed the deleted `assert { type: 'json' }` import syntax)
+- 🐛 **CDN**: dictionary URL now resolves relative to the module — no more hard-coded version that could drift
+- 🐛 Dictionary hits keep surrounding punctuation (`'კომპიუტერი,'` keeps its comma)
+- 🐛 No more break insertion directly next to a compound-word hyphen
+- 🐛 `hyphenateHTML()` no longer corrupts `$&`-style sequences in skipped tags
+- 🐛 Custom hyphen characters with regex meaning (`*`, `|`, …) handled safely
+
+**New:**
+- ✨ TypeScript declarations (`.d.ts` / `.d.cts`)
+- ✨ `loadDefaultLibrary(source)` — optional custom URL or file path
+- ✨ `setDebug(value)` / `debug` option — success logs are now opt-in
 
 ### v2.2.7 (2025-02-13) 🎉
 

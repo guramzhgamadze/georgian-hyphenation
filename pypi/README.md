@@ -12,7 +12,7 @@ Georgian Language Hyphenation Library - Fast, accurate syllabification for Georg
 - ✅ **Accurate Georgian syllabification** based on phonetic rules
 - ✅ **Harmonic consonant clusters** recognition (ბრ, გრ, კრ, etc.)
 - ✅ **Gemination handling** (double consonant splitting)
-- ✅ **Exception dictionary** for irregular words (148 words)
+- ✅ **Exception dictionary** for irregular words (142 words)
 - ✅ **HTML-aware hyphenation** - preserves tags and code blocks (new in v2.2.7)
 - ✅ **17+ utility functions** for advanced text processing (new in v2.2.7)
 - ✅ **Configurable settings** - adjust margins and hyphen character (new in v2.2.7)
@@ -242,7 +242,7 @@ hyphenator.load_library(custom_words)
 
 ### `load_default_library() -> None`
 
-Load the built-in exception dictionary (148 words).
+Load the built-in exception dictionary (142 words).
 
 ```python
 hyphenator.load_default_library()
@@ -286,7 +286,7 @@ Get the number of words in the dictionary.
 ```python
 hyphenator.load_default_library()
 print(hyphenator.get_dictionary_size())
-# Output: 148
+# Output: 142
 ```
 
 ---
@@ -330,7 +330,7 @@ print(hyphenator.hyphenate('საქართველო'))
 
 ## Built-in Dictionary
 
-The library includes 148 pre-hyphenated words including:
+The library includes 142 pre-hyphenated words including:
 
 **Tech Terms:** კომპიუტერი, ფეისბუქი, იუთუბი, ინსტაგრამი  
 **Places:** საქართველო, თბილისი  
@@ -569,6 +569,21 @@ to_hunspell_format(word: str) -> str
 ---
 
 ## Changelog
+
+### v2.3.0 (2026-07-21) 🛠️
+
+**Fixes:**
+- 🐛 **The exception dictionary now actually ships in the wheel.** Previous
+  versions were missing `exceptions.json` on PyPI, so `load_default_library()`
+  silently fell back to algorithm-only mode for every pip install.
+- 🐛 Dictionary hits keep surrounding punctuation (`'კომპიუტერი,'` keeps its comma)
+- 🐛 No more break insertion directly next to a compound-word hyphen
+
+**Changes:**
+- ✨ Dictionary is loaded via `importlib.resources` (works from zip imports too)
+- ✨ Status messages use the standard `logging` module instead of `print()` —
+  silent by default; failures are logged as warnings
+- 📦 Packaging consolidated into `pyproject.toml` (`setup.py` removed)
 
 ### v2.2.7 (2025-02-13) 🎉
 

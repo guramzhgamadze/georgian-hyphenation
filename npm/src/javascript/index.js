@@ -1,12 +1,14 @@
 /**
- * Georgian Hyphenation Library v2.2.7
+ * Georgian Hyphenation Library
  * Browser + Node.js Compatible (ES Module)
- * Enhanced with additional utility functions
+ *
+ * The single source of truth for the version is package.json.
  */
 
 export default class GeorgianHyphenator {
-  constructor(hyphenChar = '\u00AD') {
+  constructor(hyphenChar = '\u00AD', options = {}) {
     this.hyphenChar = hyphenChar;
+    this.debug = !!options.debug;
     this.vowels = 'აეიოუ';
     this.leftMin = 2;
     this.rightMin = 2;
@@ -14,10 +16,10 @@ export default class GeorgianHyphenator {
     // ოპტიმიზაცია: გამოყენებულია Set სწრაფი ძებნისთვის (O(1))
     this.harmonicClusters = new Set([
       'ბლ', 'ბრ', 'ბღ', 'ბზ', 'გდ', 'გლ', 'გმ', 'გნ', 'გვ', 'გზ', 'გრ',
-      'დრ', 'თლ', 'თრ', 'თღ', 'კლ', 'კმ', 'კნ', 'კრ', 'კვ', 'მტ', 'პლ', 
-      'პრ', 'ჟღ', 'რგ', 'რლ', 'რმ', 'სწ', 'სხ', 'ტკ', 'ტპ', 'ტრ', 'ფლ', 
-      'ფრ', 'ფქ', 'ფშ', 'ქლ', 'ქნ', 'ქვ', 'ქრ', 'ღლ', 'ღრ', 'ყლ', 'ყრ', 
-      'შთ', 'შპ', 'ჩქ', 'ჩრ', 'ცლ', 'ცნ', 'ცრ', 'ცვ', 'ძგ', 'ძვ', 'ძღ', 
+      'დრ', 'თლ', 'თრ', 'თღ', 'კლ', 'კმ', 'კნ', 'კრ', 'კვ', 'მტ', 'პლ',
+      'პრ', 'ჟღ', 'რგ', 'რლ', 'რმ', 'სწ', 'სხ', 'ტკ', 'ტპ', 'ტრ', 'ფლ',
+      'ფრ', 'ფქ', 'ფშ', 'ქლ', 'ქნ', 'ქვ', 'ქრ', 'ღლ', 'ღრ', 'ყლ', 'ყრ',
+      'შთ', 'შპ', 'ჩქ', 'ჩრ', 'ცლ', 'ცნ', 'ცრ', 'ცვ', 'ძგ', 'ძვ', 'ძღ',
       'წლ', 'წრ', 'წნ', 'წკ', 'ჭკ', 'ჭრ', 'ჭყ', 'ხლ', 'ხმ', 'ხნ', 'ხვ', 'ჯგ'
     ]);
 
@@ -27,11 +29,16 @@ export default class GeorgianHyphenator {
 
   /**
    * შლის არსებულ დამარცვლის სიმბოლოებს (Sanitization)
+   * Preserves regular hyphens (-) so compound words stay intact.
    */
   _stripHyphens(text) {
     if (!text) return '';
-    // Remove soft hyphens and zero-width spaces only
-    return text.replace(/[\u00AD\u200B]/g, '').replace(new RegExp(this.hyphenChar, 'g'), '');
+    let result = text.replace(/[\u00AD\u200B]/g, '');
+    if (this.hyphenChar !== '\u00AD' && this.hyphenChar !== '-') {
+      const escaped = this.hyphenChar.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      result = result.replace(new RegExp(escaped, 'g'), '');
+    }
+    return result;
   }
 
   /**
@@ -46,56 +53,77 @@ export default class GeorgianHyphenator {
   }
 
   /**
-   * ✅ ტვირთავს default dictionary-ს (Browser + Node.js compatible)
+   * ტვირთავს default dictionary-ს (Browser + Node.js compatible)
+   *
+   * The dictionary URL/path is resolved relative to this module via
+   * import.meta.url, so it always matches the installed package version —
+   * whether served from a CDN, a bundler, or the local filesystem.
+   *
+   * @param {string} [source] - Optional custom URL (browser) or file path (Node.js)
    */
-  async loadDefaultLibrary() {
+  async loadDefaultLibrary(source) {
     if (this.dictionaryLoaded) return;
 
     // Browser Environment
     if (typeof window !== 'undefined' && typeof fetch !== 'undefined') {
       try {
-        // ✅ სწორი CDN URL - jsdelivr უფრო სანდოა unpkg-ზე
-        const response = await fetch('https://cdn.jsdelivr.net/npm/georgian-hyphenation@2.2.7/data/exceptions.json');
-        
+        const url = source || new URL('../../data/exceptions.json', import.meta.url);
+        const response = await fetch(url);
+
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);
         }
-        
+
         const data = await response.json();
         this.loadLibrary(data);
         this.dictionaryLoaded = true;
-        
-        console.log(`Georgian Hyphenation v2.2.7: Dictionary loaded (${this.dictionary.size} words)`);
+
+        if (this.debug) {
+          console.log(`Georgian Hyphenation: dictionary loaded (${this.dictionary.size} words)`);
+        }
       } catch (error) {
-        console.warn('Georgian Hyphenation v2.2.7: Dictionary not available, using algorithm only');
+        console.warn('Georgian Hyphenation: dictionary not available, using algorithm only');
         console.warn('Error:', error.message);
       }
     }
-    // Node.js Environment (Dynamic Import for ESM)
+    // Node.js Environment (fs read — avoids JSON import attribute syntax,
+    // which changed between Node versions: `assert` was removed in Node 22)
     else if (typeof process !== 'undefined') {
       try {
-        // Import from ../../data/exceptions.json (from src/javascript/ to data/)
-        const module = await import('../../data/exceptions.json', { assert: { type: 'json' } });
-        const data = module.default;
+        const { readFile } = await import('node:fs/promises');
+        const { fileURLToPath } = await import('node:url');
+        const path = source || fileURLToPath(new URL('../../data/exceptions.json', import.meta.url));
+        const data = JSON.parse(await readFile(path, 'utf8'));
         this.loadLibrary(data);
         this.dictionaryLoaded = true;
-        console.log(`Georgian Hyphenation v2.2.7: Dictionary loaded (${this.dictionary.size} words)`);
+        if (this.debug) {
+          console.log(`Georgian Hyphenation: dictionary loaded (${this.dictionary.size} words)`);
+        }
       } catch (error) {
-        console.warn('Georgian Hyphenation v2.2.7: Local dictionary not found, using algorithm only');
+        console.warn('Georgian Hyphenation: local dictionary not found, using algorithm only');
       }
     }
   }
 
   /**
    * ამარცვლებს ერთ სიტყვას
+   *
+   * Leading/trailing non-Georgian characters (punctuation, digits) are
+   * preserved around dictionary matches.
    */
   hyphenate(word) {
     const sanitizedWord = this._stripHyphens(word);
-    const cleanWord = sanitizedWord.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
+    if (!sanitizedWord) return '';
 
-    // Dictionary check
-    if (this.dictionary.has(cleanWord)) {
-      return this.dictionary.get(cleanWord).replace(/-/g, this.hyphenChar);
+    // Split into leading punctuation / core word / trailing punctuation
+    const match = sanitizedWord.match(/^([^ა-ჰ]*)([\s\S]*?)([^ა-ჰ]*)$/);
+    const lead = match[1];
+    const core = match[2];
+    const trail = match[3];
+
+    // Dictionary check (core word only, punctuation re-attached)
+    if (core && this.dictionary.has(core)) {
+      return lead + this.dictionary.get(core).replace(/-/g, this.hyphenChar) + trail;
     }
 
     // Algorithm fallback
@@ -151,8 +179,10 @@ export default class GeorgianHyphenator {
         }
       }
 
-      // Anti-orphan protection
-      if (candidatePos >= this.leftMin && (word.length - candidatePos) >= this.rightMin) {
+      // Anti-orphan protection; never break adjacent to an existing
+      // compound-word hyphen (it already acts as a break point)
+      if (candidatePos >= this.leftMin && (word.length - candidatePos) >= this.rightMin &&
+          word[candidatePos] !== '-' && word[candidatePos - 1] !== '-') {
         insertPoints.push(candidatePos);
       }
     }
@@ -188,7 +218,7 @@ export default class GeorgianHyphenator {
   }
 
   // ========================================
-  // NEW UTILITY FUNCTIONS (v2.2.7)
+  // UTILITY FUNCTIONS
   // ========================================
 
   /**
@@ -216,8 +246,11 @@ export default class GeorgianHyphenator {
    */
   getHyphenationPoints(word) {
     const hyphenated = this.hyphenate(word);
-    const matches = hyphenated.match(new RegExp(this.hyphenChar, 'g'));
-    return matches ? matches.length : 0;
+    let count = 0;
+    for (const char of hyphenated) {
+      if (char === this.hyphenChar) count++;
+    }
+    return count;
   }
 
   /**
@@ -261,7 +294,7 @@ export default class GeorgianHyphenator {
     // Tags to skip entirely
     const skipTags = ['script', 'style', 'code', 'pre', 'textarea'];
     const skipPattern = new RegExp(`<(${skipTags.join('|')})[^>]*>.*?</\\1>`, 'gis');
-    
+
     // Store skipped content
     const skipped = [];
     let placeholder = html.replace(skipPattern, (match) => {
@@ -271,7 +304,7 @@ export default class GeorgianHyphenator {
 
     // Split by tags to preserve HTML structure
     const parts = placeholder.split(/(<[^>]+>)/);
-    
+
     const processed = parts.map(part => {
       // Skip HTML tags themselves
       if (part.startsWith('<')) {
@@ -281,10 +314,11 @@ export default class GeorgianHyphenator {
       return this.hyphenateText(part);
     });
 
-    // Restore skipped content
+    // Restore skipped content (function replacement so "$" sequences
+    // in the original content are not treated as replacement patterns)
     let result = processed.join('');
     skipped.forEach((content, index) => {
-      result = result.replace(`___SKIP_${index}___`, content);
+      result = result.replace(`___SKIP_${index}___`, () => content);
     });
 
     return result;
@@ -323,6 +357,16 @@ export default class GeorgianHyphenator {
     if (typeof char === 'string' && char.length > 0) {
       this.hyphenChar = char;
     }
+    return this;
+  }
+
+  /**
+   * Enables or disables debug logging
+   * @param {boolean} value - True to log dictionary loading details
+   * @returns {GeorgianHyphenator} Returns this for method chaining
+   */
+  setDebug(value) {
+    this.debug = !!value;
     return this;
   }
 

@@ -1,0 +1,2 @@
+# Development dependencies for the PyPI package
+pytest>=7.0

@@ -1,16 +1,17 @@
 # -*- coding: utf-8 -*-
 """
-Georgian Hyphenation v2.2.7 - Python Test Script
+Georgian Hyphenation - Python Test Script
 Tests all functions including 17 new utility functions
 """
+
+import os
+import sys
 
 # Import from the package (adjust path if testing locally)
 try:
     from georgian_hyphenation import GeorgianHyphenator
 except ImportError:
     # For local testing before installation
-    import sys
-    import os
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
     from georgian_hyphenation import GeorgianHyphenator
 
@@ -35,7 +36,7 @@ def test_core_functions():
 
 def test_new_utility_functions():
     """Test new utility functions"""
-    print_section('2. NEW UTILITY FUNCTIONS (v2.2.7)')
+    print_section('2. NEW UTILITY FUNCTIONS')
     
     h = GeorgianHyphenator()
     
@@ -55,7 +56,7 @@ def test_new_utility_functions():
 
 def test_configuration():
     """Test configuration methods"""
-    print_section('3. CONFIGURATION METHODS (v2.2.7)')
+    print_section('3. CONFIGURATION METHODS')
     
     h = GeorgianHyphenator()
     
@@ -74,7 +75,7 @@ def test_configuration():
 
 def test_dictionary_management():
     """Test dictionary management"""
-    print_section('4. DICTIONARY MANAGEMENT (v2.2.7)')
+    print_section('4. DICTIONARY MANAGEMENT')
     
     h = GeorgianHyphenator()
     
@@ -93,7 +94,7 @@ def test_dictionary_management():
 
 def test_html_hyphenation():
     """Test HTML hyphenation"""
-    print_section('5. HTML HYPHENATION (v2.2.7)')
+    print_section('5. HTML HYPHENATION')
     
     h = GeorgianHyphenator()
     
@@ -106,7 +107,7 @@ def test_html_hyphenation():
 
 def test_harmonic_clusters():
     """Test harmonic cluster management"""
-    print_section('6. HARMONIC CLUSTER MANAGEMENT (v2.2.7)')
+    print_section('6. HARMONIC CLUSTER MANAGEMENT')
     
     h = GeorgianHyphenator()
     
@@ -145,7 +146,7 @@ def test_comprehensive_analysis():
 
 def test_method_chaining():
     """Test method chaining"""
-    print_section('8. METHOD CHAINING (v2.2.7)')
+    print_section('8. METHOD CHAINING')
     
     h = (GeorgianHyphenator()
          .set_left_min(2)
@@ -179,11 +180,60 @@ def test_with_dictionary():
         print(f"{source}: {word} → {result}")
 
 
+def test_regressions():
+    """Assertion-based regression tests"""
+    print_section('10. REGRESSION TESTS (assertions)')
+
+    import json
+
+    # Dictionary must actually load from packaged data
+    h = GeorgianHyphenator('-')
+    h.load_default_library()
+    size = h.get_dictionary_size()
+    assert size > 0, 'bundled dictionary failed to load'
+    print(f'ok - dictionary loaded ({size} words)')
+
+    # Dictionary entry wins over algorithm
+    assert h.hyphenate('კომპიუტერი') == 'კომ-პიუ-ტე-რი'
+    print('ok - dictionary entry wins over algorithm')
+
+    # Punctuation preserved around dictionary hits
+    assert h.hyphenate('კომპიუტერი,') == 'კომ-პიუ-ტე-რი,'
+    assert h.hyphenate('(კომპიუტერი)') == '(კომ-პიუ-ტე-რი)'
+    print('ok - punctuation preserved around dictionary hits')
+
+    # Compound word keeps its hyphen, no adjacent break inserted
+    assert h.hyphenate('მაგ-რამ') == 'მაგ-რამ'
+    print('ok - no break adjacent to compound-word hyphen')
+
+    # hyphenate_text round-trips with unhyphenate (default soft hyphen only:
+    # unhyphenate() deliberately preserves '-' to protect compound words)
+    soft = GeorgianHyphenator()
+    text = 'საქართველო არის ლამაზი ქვეყანა'
+    assert soft.unhyphenate(soft.hyphenate_text(text)) == text
+    print('ok - hyphenate_text round-trips with unhyphenate')
+
+    # The dictionary is duplicated across the two package dirs (npm needs
+    # its own copy, pip needs one inside the package). When run from the
+    # monorepo, verify the sibling npm copy has not drifted from this one.
+    here = os.path.dirname(__file__)
+    pkg_data = os.path.join(here, 'src', 'georgian_hyphenation',
+                            'data', 'exceptions.json')
+    npm_data = os.path.join(here, '..', 'npm', 'data', 'exceptions.json')
+    if os.path.exists(npm_data) and os.path.exists(pkg_data):
+        with open(npm_data, encoding='utf-8') as f1, \
+                open(pkg_data, encoding='utf-8') as f2:
+            assert json.load(f1) == json.load(f2), \
+                'npm/data/exceptions.json and pypi/src/georgian_hyphenation/' \
+                'data/exceptions.json have drifted apart'
+        print('ok - npm and pypi dictionary copies are in sync')
+
+
 def main():
     """Run all tests"""
-    print('\n' + '🧪 Georgian Hyphenation Library v2.2.7 - Python Test'.center(70))
+    print('\n' + '🧪 Georgian Hyphenation Library - Python Test'.center(70))
     print('Testing all functions including 17 new utilities\n')
-    
+
     try:
         test_core_functions()
         test_new_utility_functions()
@@ -194,15 +244,17 @@ def main():
         test_comprehensive_analysis()
         test_method_chaining()
         test_with_dictionary()
-        
+        test_regressions()
+
         print('\n' + '='*70)
         print('✅ All tests completed successfully!'.center(70))
         print('='*70 + '\n')
-        
+
     except Exception as e:
         print(f'\n❌ Error during testing: {e}')
         import traceback
         traceback.print_exc()
+        sys.exit(1)
 
 
 if __name__ == '__main__':

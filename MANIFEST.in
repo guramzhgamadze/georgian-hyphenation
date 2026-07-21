@@ -1,4 +1,0 @@
-include data/exceptions.json
-include README.md
-include LICENSE.txt
-recursive-include data *.json

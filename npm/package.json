@@ -1,22 +1,30 @@
 {
   "name": "georgian-hyphenation",
-  "version": "2.2.7",
+  "version": "2.3.0",
   "description": "Georgian Language Hyphenation Library with 17+ utility functions - Browser + Node.js compatible",
   "main": "src/javascript/index.cjs",
   "module": "src/javascript/index.js",
+  "types": "src/javascript/index.d.ts",
   "type": "module",
   "exports": {
     ".": {
-      "import": "./src/javascript/index.js",
-      "require": "./src/javascript/index.cjs"
+      "import": {
+        "types": "./src/javascript/index.d.ts",
+        "default": "./src/javascript/index.js"
+      },
+      "require": {
+        "types": "./src/javascript/index.d.cts",
+        "default": "./src/javascript/index.cjs"
+      }
     },
-    "./data/exceptions.json": "./data/exceptions.json"
+    "./data/exceptions.json": "./data/exceptions.json",
+    "./package.json": "./package.json"
   },
   "files": [
     "src/javascript/",
     "data/",
     "README.md",
-    "LICENSE"
+    "LICENSE.txt"
   ],
   "scripts": {
     "test": "node test_javascript.js"
