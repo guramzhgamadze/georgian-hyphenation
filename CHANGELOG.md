@@ -1,5 +1,21 @@
 \# Changelog
 
+## [WordPress Plugin 3.0.0] - 2026-07-21
+
+### Changed
+
+- **Complete rebuild for the WordPress.org directory.** The v2.3.0 engine and the exception dictionary are now bundled inside the plugin and served locally — previously both were fetched from jsDelivr at runtime (a wp.org guideline violation and a single point of failure).
+- Proper plugin scaffold: `includes/` classes, `readme.txt`, `uninstall.php`, assets enqueued via the WordPress API (`wp_enqueue_script` with defer, `wp_add_inline_script` for config) instead of an inline footer `<script>`.
+- New `geohyph_` prefix and a single `geohyph_options` array (Settings API with sanitize callback); pre-3.0 `gh_*` options migrate automatically on first load and are deleted.
+- Settings screen moved to **Settings → Georgian Hyphenation**; admin styles enqueued, i18n-ready English source strings.
+
+### Fixed
+
+- Dynamically added content inside already-processed containers is now hyphenated (processed state tracked per text node, not per container).
+- Code blocks (`code`/`pre`), forms, and `contenteditable` regions are skipped.
+- Justification applied via the `geohyph-justify` CSS class instead of inline styles.
+- The plugin stands aside in the Elementor editor/preview and the Customizer.
+
 ## [2.3.0] - 2026-07-21
 
 ### Fixed

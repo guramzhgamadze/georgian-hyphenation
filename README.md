@@ -65,7 +65,7 @@ Georgian Hyphenation is a comprehensive, linguistically accurate library for aut
 | 📦 **JavaScript/Node.js** | 2.3.0 | [![npm](https://img.shields.io/npm/v/georgian-hyphenation)](https://www.npmjs.com/package/georgian-hyphenation) | `npm install georgian-hyphenation` |
 | 🦊 **Firefox Extension** | 2.2.7 | [![Firefox](https://img.shields.io/amo/v/georgian-hyphenation)](https://addons.mozilla.org/firefox/addon/georgian-hyphenation/) | [Install from AMO](https://addons.mozilla.org/firefox/addon/georgian-hyphenation/) |
 | 🌐 **Chrome Extension** | 2.2.7 | Beta | [Manual install](#browser-extension) |
-| 🔌 **WordPress Plugin** | 2.2.6 | Stable | [Download](#wordpress-plugin) |
+| 🔌 **WordPress Plugin** | 3.0.0 | Stable | [Download](#wordpress-plugin) |
 | 📝 **MS Word Add-in** | 2.2.7 | Beta | [Installation guide](#microsoft-word-add-in) |
 
 ---
@@ -545,17 +545,20 @@ const GeorgianHyphenator = require('georgian-hyphenation');
 <details>
 <summary><b>WordPress Plugin</b></summary>
 
-1. Download **georgian-hyphenation.zip**
+1. Download **georgian-hyphenation.zip** (from `wordpress-plugin/`)
 2. WordPress Admin → Plugins → Add New → Upload Plugin
 3. Install and activate
-4. Configure at **Settings → Geo Hyphenation**
+4. Configure at **Settings → Georgian Hyphenation**
 
-**Features:**
-- ✅ Full Elementor support
+**Features (v3.0.0):**
+- ✅ Engine + dictionary **bundled with the plugin** — no CDN / external requests
+- ✅ Full Elementor support (widget presets; Elementor optional)
 - ✅ Custom CSS selectors
-- ✅ Auto-justify option
-- ✅ Dictionary support
-- ✅ Real-time preview
+- ✅ Auto-justify option (via CSS class, theme-overridable)
+- ✅ Dynamic content support (AJAX, popups, infinite scroll)
+- ✅ Settings migrate automatically from v2.x; clean uninstall
+
+Requires WordPress 6.3+ / PHP 7.4+. Passes Plugin Check 2.0.0 with zero findings.
 
 </details>
 
