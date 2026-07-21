@@ -1,5 +1,15 @@
 \# Changelog
 
+## [Browser Extensions 2.2.8] - 2026-07-22
+
+### Fixed
+
+- **Visible soft-hyphen dashes inside words.** Some display/decorative webfonts incorrectly render the soft hyphen (U+00AD) as a visible dash instead of hiding it except at line breaks, which showed up as dashes scattered through headings and large text.
+  - **Chrome**: `shouldSkipElement` now skips headings (`h1`–`h6`), structural chrome (`header`/`footer`/`aside`/`nav`), `role="heading"`, and any element with computed `font-size > 20px` — matching the Firefox build, which already had these guards. Previously Chrome hyphenated headings and display text.
+  - **Firefox**: already skipped these (this bump republishes the fix for anyone still on an older installed build).
+
+Note: on a site whose font maps U+00AD to a visible glyph on *normal-sized* body text, the extension cannot detect that from the outside — use the per-site on/off toggle there. The bundled engine (v2.2.7) and CDN-loaded dictionary are unchanged in this release; modernizing them to the local v2.3.0 engine is tracked separately.
+
 ## [WordPress Plugin 3.0.0] - 2026-07-21
 
 ### Changed

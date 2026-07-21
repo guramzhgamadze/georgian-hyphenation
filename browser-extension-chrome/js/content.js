@@ -1,4 +1,5 @@
-// Content Script v2.2.7 - Smart Justify only for Georgian text
+// Content Script v2.2.8 - skips headings + large display text (fixes
+// visible soft-hyphen dashes from display fonts)
 (function() {
   'use strict';
 
@@ -40,28 +41,43 @@
 
   function shouldSkipElement(element) {
     if (!element) return true;
-    
+
     const tagName = element.tagName.toLowerCase();
-    
+
+    // Headings and structural chrome (header/footer/aside/nav) are skipped:
+    // they are conventionally not hyphenated, and they typically use display
+    // fonts — some of which map the soft hyphen (U+00AD) to a VISIBLE glyph,
+    // producing dashes scattered inside words.
     const skipTags = [
       'script', 'style', 'noscript', 'iframe', 'object', 'embed',
       'input', 'textarea', 'select', 'code', 'pre',
-      'nav', 'button'
+      'nav', 'header', 'footer', 'aside',
+      'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+      'button'
     ];
-    
+
     if (skipTags.includes(tagName)) return true;
-    
+
     if (element.isContentEditable || element.contentEditable === 'true') {
       return true;
     }
-    
+
     const role = element.getAttribute('role');
-    if (role === 'button' || role === 'textbox' || role === 'combobox') {
+    if (role === 'heading' || role === 'button' || role === 'textbox' || role === 'combobox') {
       return true;
     }
-    
+
+    // General defense against display fonts that render U+00AD visibly:
+    // skip large text (headings, hero/display copy), where hyphenation is
+    // both unwanted and most likely to expose a bad soft-hyphen glyph.
+    try {
+      if ( parseFloat( window.getComputedStyle( element ).fontSize ) > 20 ) {
+        return true;
+      }
+    } catch ( e ) {}
+
     // Don't skip aria-hidden or aria-label - Facebook posts use these!
-    
+
     return false;
   }
 

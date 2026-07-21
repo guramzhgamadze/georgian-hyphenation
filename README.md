@@ -63,8 +63,8 @@ Georgian Hyphenation is a comprehensive, linguistically accurate library for aut
 |----------|---------|--------|--------------|
 | 🐍 **Python** | 2.3.0 | [![PyPI](https://img.shields.io/pypi/v/georgian-hyphenation)](https://pypi.org/project/georgian-hyphenation/) | `pip install georgian-hyphenation` |
 | 📦 **JavaScript/Node.js** | 2.3.0 | [![npm](https://img.shields.io/npm/v/georgian-hyphenation)](https://www.npmjs.com/package/georgian-hyphenation) | `npm install georgian-hyphenation` |
-| 🦊 **Firefox Extension** | 2.2.7 | [![Firefox](https://img.shields.io/amo/v/georgian-hyphenation)](https://addons.mozilla.org/firefox/addon/georgian-hyphenation/) | [Install from AMO](https://addons.mozilla.org/firefox/addon/georgian-hyphenation/) |
-| 🌐 **Chrome Extension** | 2.2.7 | Beta | [Manual install](#browser-extension) |
+| 🦊 **Firefox Extension** | 2.2.8 | [![Firefox](https://img.shields.io/amo/v/georgian-hyphenation)](https://addons.mozilla.org/firefox/addon/georgian-hyphenation/) | [Install from AMO](https://addons.mozilla.org/firefox/addon/georgian-hyphenation/) |
+| 🌐 **Chrome Extension** | 2.2.8 | Beta | [Manual install](#browser-extension) |
 | 🔌 **WordPress Plugin** | 3.0.0 | Stable | [Download](#wordpress-plugin) |
 | 📝 **MS Word Add-in** | 2.2.7 | Beta | [Installation guide](#microsoft-word-add-in) |
 
