@@ -42,8 +42,9 @@ class Geohyph_Plugin {
 			'left_min'               => 2,
 			'right_min'              => 2,
 			'auto_justify'           => true,
+			'skip_headings'          => true,
 			'elementor_text_editor'  => true,
-			'elementor_heading'      => true,
+			'elementor_heading'      => false,
 			'elementor_icon_box'     => true,
 			'elementor_testimonial'  => true,
 			'elementor_accordion'    => true,
@@ -114,6 +115,33 @@ class Geohyph_Plugin {
 		}
 
 		return implode( ', ', $selectors );
+	}
+
+	/**
+	 * CSS selector list of heading elements the frontend must NOT process,
+	 * or an empty string when heading skipping is disabled.
+	 *
+	 * Some display webfonts incorrectly map the soft hyphen (U+00AD) to a
+	 * visible hyphen glyph, which shows up as dashes inside heading words.
+	 * Headings are therefore skipped by default. When the Elementor Heading
+	 * preset is explicitly enabled, it overrides the skip for those widgets.
+	 */
+	public static function get_heading_skip_selector(): string {
+		$options = self::get_options();
+
+		if ( empty( $options['skip_headings'] ) ) {
+			return '';
+		}
+
+		$tags = array( 'h1', 'h2', 'h3', 'h4', 'h5', 'h6' );
+
+		if ( ! empty( $options['elementor_heading'] ) ) {
+			foreach ( $tags as $i => $tag ) {
+				$tags[ $i ] = $tag . ':not(.elementor-heading-title)';
+			}
+		}
+
+		return implode( ',', $tags );
 	}
 
 	/**

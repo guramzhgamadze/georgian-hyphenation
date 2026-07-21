@@ -12,6 +12,7 @@
 ### Fixed
 
 - Dynamically added content inside already-processed containers is now hyphenated (processed state tracked per text node, not per container).
+- Headings (h1–h6) are skipped by default via a new "Skip headings" toggle — some display webfonts draw the soft hyphen (U+00AD) as a visible dash inside heading words. The Elementor Heading preset (now off by default) overrides the skip when enabled.
 - Code blocks (`code`/`pre`), forms, and `contenteditable` regions are skipped.
 - Justification applied via the `geohyph-justify` CSS class instead of inline styles.
 - The plugin stands aside in the Elementor editor/preview and the Customizer.

@@ -65,12 +65,13 @@ class Geohyph_Frontend {
 
 		$script_data = wp_json_encode(
 			array(
-				'selectors'      => Geohyph_Plugin::get_active_selectors(),
-				'autoJustify'    => ! empty( $options['auto_justify'] ),
-				'loadDictionary' => ! empty( $options['load_dictionary'] ),
-				'leftMin'        => (int) $options['left_min'],
-				'rightMin'       => (int) $options['right_min'],
-				'dictionaryUrl'  => $dictionary_url,
+				'selectors'           => Geohyph_Plugin::get_active_selectors(),
+				'autoJustify'         => ! empty( $options['auto_justify'] ),
+				'loadDictionary'      => ! empty( $options['load_dictionary'] ),
+				'leftMin'             => (int) $options['left_min'],
+				'rightMin'            => (int) $options['right_min'],
+				'headingSkipSelector' => Geohyph_Plugin::get_heading_skip_selector(),
+				'dictionaryUrl'       => $dictionary_url,
 			)
 		);
 

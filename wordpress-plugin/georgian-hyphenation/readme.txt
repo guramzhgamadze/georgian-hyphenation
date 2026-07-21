@@ -52,6 +52,14 @@ No. Elementor widget presets are provided for convenience, but the plugin works 
 
 No. Hyphenation happens in the visitor's browser at render time. Your posts and pages in the database are never modified, and the plugin stands aside inside the Elementor editor and the Customizer.
 
+= Why don't headings get hyphenated? =
+
+Headings (h1–h6) are skipped by default, for two reasons: headings are conventionally not hyphenated, and some display webfonts incorrectly map the soft hyphen (U+00AD) to a visible glyph, which shows up as dashes inside heading words. If your heading font renders soft hyphens correctly, disable "Skip headings" or enable the Elementor Heading preset (which overrides the skip for those widgets).
+
+= I saw dashes inside words that are not at line ends. Why? =
+
+That means the active font draws the soft hyphen as a visible glyph instead of hiding it — a font issue, most common in decorative display fonts used for headings. The plugin skips headings by default for exactly this reason. If it happens in body text, switch to a font with correct U+00AD handling.
+
 = Why do copied texts sometimes contain invisible characters? =
 
 Soft hyphens (U+00AD) are invisible break hints. Some applications preserve them when text is copied from a page. The engine strips its own hyphens before re-processing, and search engines handle soft hyphens correctly.
@@ -66,6 +74,7 @@ Soft hyphens (U+00AD) are invisible break hints. Some applications preserve them
 * Justification applied via a CSS class instead of inline styles, so themes can override it.
 * Code blocks, forms, and editable regions are skipped.
 * Old settings are migrated automatically; options are removed on uninstall.
+* Headings (h1–h6) are skipped by default — some display fonts draw soft hyphens as visible dashes inside heading words. A new "Skip headings" toggle controls this; the Elementor Heading preset (now off by default) overrides it.
 * Engine fixes: punctuation is preserved around dictionary matches; no break is inserted next to a compound-word hyphen.
 
 = 2.2.7 =

@@ -27,6 +27,14 @@
 	var GEORGIAN = /[ა-ჰ]/;
 	var SKIP_CLOSEST = 'script,style,code,pre,textarea,[contenteditable="true"]';
 
+	// Headings are excluded by default: some display webfonts draw the soft
+	// hyphen (U+00AD) as a visible dash inside words. The selector arrives
+	// pre-built from PHP (empty string = headings allowed; the Elementor
+	// Heading preset punches through via :not(.elementor-heading-title)).
+	if ( settings.headingSkipSelector ) {
+		SKIP_CLOSEST += ',' + settings.headingSkipSelector;
+	}
+
 	var selectorsValid = true;
 
 	function collectContainers( root ) {

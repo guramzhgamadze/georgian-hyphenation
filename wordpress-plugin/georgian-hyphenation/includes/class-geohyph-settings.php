@@ -111,6 +111,19 @@ class Geohyph_Settings {
 			)
 		);
 
+		add_settings_field(
+			'geohyph_skip_headings',
+			__( 'Headings', 'georgian-hyphenation' ),
+			array( $this, 'field_toggle' ),
+			self::PAGE_SLUG,
+			'geohyph_main',
+			array(
+				'key'         => 'skip_headings',
+				'label'       => __( 'Skip headings (h1–h6) — recommended', 'georgian-hyphenation' ),
+				'description' => __( 'Headings are usually not hyphenated, and some display fonts incorrectly draw the invisible break character as a dash inside heading words. The Elementor Heading preset below overrides this when enabled.', 'georgian-hyphenation' ),
+			)
+		);
+
 		add_settings_section(
 			'geohyph_elementor',
 			__( 'Elementor widgets', 'georgian-hyphenation' ),
@@ -119,17 +132,21 @@ class Geohyph_Settings {
 		);
 
 		foreach ( Geohyph_Plugin::elementor_widgets() as $key => $widget ) {
+			$field_args = array(
+				'key'      => $key,
+				'label'    => __( 'Process this widget', 'georgian-hyphenation' ),
+				'selector' => $widget['selector'],
+			);
+			if ( 'elementor_heading' === $key ) {
+				$field_args['description'] = __( 'Overrides "Skip headings" for Elementor Heading widgets. Off by default — enable only if your heading font renders soft hyphens correctly.', 'georgian-hyphenation' );
+			}
 			add_settings_field(
 				'geohyph_' . $key,
 				$widget['label'],
 				array( $this, 'field_toggle' ),
 				self::PAGE_SLUG,
 				'geohyph_elementor',
-				array(
-					'key'      => $key,
-					'label'    => __( 'Process this widget', 'georgian-hyphenation' ),
-					'selector' => $widget['selector'],
-				)
+				$field_args
 			);
 		}
 
@@ -165,6 +182,7 @@ class Geohyph_Settings {
 			'enabled',
 			'load_dictionary',
 			'auto_justify',
+			'skip_headings',
 		);
 		$boolean_keys = array_merge( $boolean_keys, array_keys( Geohyph_Plugin::elementor_widgets() ) );
 
