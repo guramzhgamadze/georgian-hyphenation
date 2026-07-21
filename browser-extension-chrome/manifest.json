@@ -1,10 +1,14 @@
 {
   "manifest_version": 3,
   "name": "Georgian Hyphenation",
-  "version": "2.2.8",
-  "description": "Automatic hyphenation for Georgian text",
-  "permissions": ["storage", "scripting"],
-  "host_permissions": ["<all_urls>"],
+  "version": "2.3.0",
+  "description": "Automatic hyphenation for Georgian text — fully offline, no external requests.",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
@@ -19,10 +23,18 @@
   "background": {
     "service_worker": "js/background.js"
   },
-  "content_scripts": [{
-    "matches": ["<all_urls>"],
-    "js": ["js/hyphenator.js", "js/content.js"],
-    "run_at": "document_idle",
-    "all_frames": false
-  }]
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "js/georgian-hyphenator.js",
+        "js/dictionary.js",
+        "js/content.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ]
 }

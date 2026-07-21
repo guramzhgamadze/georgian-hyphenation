@@ -1,5 +1,22 @@
 \# Changelog
 
+## [Browser Extensions 2.3.0] - 2026-07-22
+
+### Changed
+
+- **Fully offline.** The v2.3.0 hybrid engine and the 142-word exception dictionary are now bundled inside each extension (`js/georgian-hyphenator.js` + `js/dictionary.js`); previously the dictionary was fetched from a jsDelivr CDN at runtime. No external requests.
+- **One shared codebase.** Chrome and Firefox now build from a single source in `browser-extension-shared/` via `build.mjs` (generates the engine + dictionary from the npm package and assembles both browser folders). The two content scripts had drifted apart; they are now identical.
+- **Firefox migrated Manifest V2 → V3** (background `scripts`, `action`); Chrome remains MV3 (service worker). Permissions trimmed to `storage` + `<all_urls>` host access; the redundant background re-injection and `scripting`/`tabs` permissions were removed (content scripts are declared in the manifest).
+
+### Fixed
+
+- Punctuation is preserved around dictionary words, and compound-word hyphens are respected (v2.3.0 engine).
+- Processed state is tracked per text node, so dynamically added content inside an already-processed container is hyphenated.
+
+### Removed
+
+- The fragile Facebook character-span redistribution hack (a source of the very visible-dash problem it tried to work around) and the per-page `console.log` debug output.
+
 ## [Browser Extensions 2.2.8] - 2026-07-22
 
 ### Fixed

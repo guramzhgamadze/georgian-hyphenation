@@ -1,269 +1,337 @@
-// Georgian Hyphenation Extension v2.2.7 - Content Script (Firefox) - FIXED & VALIDATED
-(function() {
-  'use strict';
+/**
+ * Georgian Hyphenation — content script (shared by Chrome and Firefox).
+ *
+ * SHARED SOURCE — do not edit the generated copies under each extension's
+ * js/ folder. Edit this file, then run: node browser-extension-shared/build.mjs
+ *
+ * Loaded after georgian-hyphenator.js (window.GeorgianHyphenator) and
+ * dictionary.js (window.GEORGIAN_HYPHENATION_DICT), both bundled locally —
+ * no external/CDN requests.
+ */
+( function () {
+	'use strict';
 
-  if (window.georgianHyphenationExtensionLoaded) {
-    console.log('Georgian Hyphenation Extension: Already loaded');
-    return;
-  }
-  window.georgianHyphenationExtensionLoaded = true;
+	if ( window.georgianHyphenationExtensionLoaded ) {
+		return;
+	}
+	window.georgianHyphenationExtensionLoaded = true;
 
-  console.log('🇬🇪 Georgian Hyphenation v2.2.7: Initializing...');
+	if ( typeof window.GeorgianHyphenator !== 'function' ) {
+		return;
+	}
 
-  function waitForLibrary() {
-    if (typeof GeorgianHyphenator === 'undefined') {
-      setTimeout(waitForLibrary, 100);
-      return;
-    }
-    initializeHyphenation();
-  }
+	var DEBUG = false;
+	function log() {
+		if ( DEBUG && window.console ) {
+			window.console.log.apply( window.console, [ '[GeoHyph]' ].concat( [].slice.call( arguments ) ) );
+		}
+	}
 
-  function initializeHyphenation() {
-    const DEBUG = false;
-    
-    function log(msg, ...args) {
-      if(DEBUG) console.log('🇬🇪 GH v2.2.7:', msg, ...args);
-    }
+	// Sites where hyphenating the DOM is unwanted or interferes with the app.
+	var BLACKLIST = [ 'claude.ai', 'chat.openai.com', 'gemini.google.com' ];
+	if ( BLACKLIST.some( function ( host ) { return window.location.hostname.indexOf( host ) !== -1; } ) ) {
+		return;
+	}
 
-    const blacklistedHosts = ['claude.ai', 'chat.openai.com', 'gemini.google.com'];
-    if (blacklistedHosts.some(host => window.location.hostname.includes(host))) {
-      console.log('Georgian Hyphenation v2.2.7: Skipping blacklisted site');
-      return;
-    }
+	var hyphenator = new window.GeorgianHyphenator( '\u00AD' );
+	if ( window.GEORGIAN_HYPHENATION_DICT ) {
+		hyphenator.loadLibrary( window.GEORGIAN_HYPHENATION_DICT );
+	}
 
-    let isEnabled = true;
-    let smartJustifyEnabled = true;
-    
-    // ✅ FIX 1: Use double backslash to avoid escape sequence error
-    let hyphenator = new GeorgianHyphenator('\u00AD'); 
-    let stats = { processed: 0, hyphenated: 0 };
-    let processedNodes = new WeakSet();
-    let isProcessing = false;
+	var isEnabled = true;
+	var smartJustify = true;
+	var stats = { processed: 0, hyphenated: 0 };
 
-    function injectStyles() {
-      if (document.getElementById('georgian-hyphenation-css')) return;
-      
-      const style = document.createElement('style');
-      style.id = 'georgian-hyphenation-css';
-      
-      // ✅ FIX 2: Removed backticks (Template Literals) or handled them safely
-      // Firefox validation fails when it sees "\" inside backticks if it's not a valid escape
-      style.textContent = "body, p, div, span, article, section, li, td, th, blockquote, figcaption {" +
-          "hyphens: manual !important;" +
-          "-webkit-hyphens: manual !important;" +
-          "-moz-hyphens: manual !important;" +
-          "-ms-hyphens: manual !important;" +
-        "}" +
-        "body, p, div, span, article, section, li, td, th, blockquote, figcaption {" +
-          "overflow-wrap: break-word !important;" +
-          "word-wrap: break-word !important;" +
-        "}" +
-        "* {" +
-          "font-feature-settings: normal !important;" +
-        "}";
-        
-      document.head.appendChild(style);
-      log('🎨 CSS injected');
-    }
+	// Processed state is tracked per TEXT NODE, so content added later inside
+	// an already-processed container is still picked up.
+	var processedNodes = new WeakSet();
 
-    function removeStyles() {
-      const styleElement = document.getElementById('georgian-hyphenation-css');
-      if (styleElement) {
-        styleElement.remove();
-        log('🎨 CSS removed');
-      }
-    }
+	var GEORGIAN = /[ა-ჰ]/;
+	var GEORGIAN_WORD = /[ა-ჰ]{4,}/;
 
-    browser.storage.sync.get(['enabled', 'smartJustify']).then(data => {
-      isEnabled = data.enabled !== false;
-      smartJustifyEnabled = data.smartJustify !== false;
-      console.log('Georgian Hyphenation v2.2.7: Initial state loaded');
-      
-      if (isEnabled) {
-        injectStyles();
-      }
-    }).catch(err => {
-      console.error('Georgian Hyphenation v2.2.7: Storage error', err);
-    });
+	// -- element/node filtering ------------------------------------------------
 
-    function saveStats() {
-      if (stats.processed > 0) {
-        browser.storage.sync.set({ stats: stats }).catch(err => {
-          log('Error saving stats:', err);
-        });
-      }
-    }
+	function shouldSkipElement( element ) {
+		if ( ! element || ! element.tagName ) {
+			return true;
+		}
+		var tag = element.tagName.toLowerCase();
 
-    browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
-      if (request.action === 'toggleHyphenation' || request.action === 'toggle') {
-        isEnabled = request.enabled;
-        if (isEnabled) {
-          injectStyles();
-          processPage();
-          startObserving();
-        } else {
-          removeStyles();
-          stopObserving();
-          location.reload();
-        }
-        sendResponse({ success: true, enabled: isEnabled });
-      } else if (request.action === 'toggleSmartJustify') {
-        smartJustifyEnabled = request.smartJustify;
-        sendResponse({ success: true, smartJustify: smartJustifyEnabled });
-      } else if (request.action === 'getStats') {
-        sendResponse({ stats: stats });
-      }
-      return true;
-    });
+		// Headings and structural chrome are skipped: conventionally not
+		// hyphenated, and they typically use display fonts — some of which
+		// render the soft hyphen (U+00AD) as a VISIBLE dash inside words.
+		var skipTags = [
+			'script', 'style', 'noscript', 'iframe', 'object', 'embed',
+			'input', 'textarea', 'select', 'code', 'pre',
+			'nav', 'header', 'footer', 'aside',
+			'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+			'button'
+		];
+		if ( skipTags.indexOf( tag ) !== -1 ) {
+			return true;
+		}
 
-    function isGeorgianText(text) {
-      return /[ა-ჰ]/.test(text);
-    }
+		if ( element.isContentEditable ) {
+			return true;
+		}
 
-    function shouldSkipElement(element) {
-      if (!element) return true;
-      const tagName = element.tagName.toLowerCase();
-      const skipTags = ['script', 'style', 'noscript', 'iframe', 'object', 'embed', 'input', 'textarea', 'select', 'code', 'pre', 'nav', 'header', 'footer', 'aside', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'button'];
-      if (skipTags.includes(tagName)) return true;
-      if (element.isContentEditable || element.contentEditable === 'true') return true;
-      const role = element.getAttribute('role');
-      if (role === 'heading' || role === 'navigation' || role === 'button' || role === 'textbox') return true;
-      try {
-        const fontSize = parseFloat(window.getComputedStyle(element).fontSize);
-        if (fontSize > 20) return true;
-      } catch (e) {}
-      return false;
-    }
+		var role = element.getAttribute && element.getAttribute( 'role' );
+		if ( role === 'heading' || role === 'button' || role === 'textbox' || role === 'combobox' ) {
+			return true;
+		}
 
-    function shouldSkipNode(node) {
-      let currentElement = node.parentElement;
-      let depth = 0;
-      while (currentElement && depth < 5) {
-        if (shouldSkipElement(currentElement)) return true;
-        currentElement = currentElement.parentElement;
-        depth++;
-      }
-      return false;
-    }
+		// General defense against display fonts that expose a bad U+00AD
+		// glyph: skip large text, where hyphenation is unwanted anyway.
+		try {
+			if ( parseFloat( window.getComputedStyle( element ).fontSize ) > 20 ) {
+				return true;
+			}
+		} catch ( e ) {}
 
-    function applySmartJustify(element) {
-      if (!element || !smartJustifyEnabled) return;
-      try {
-        const computedStyle = window.getComputedStyle(element);
-        if (computedStyle.textAlign === 'center' || computedStyle.textAlign === 'right') return;
-        element.style.textAlign = 'justify';
-      } catch (e) {}
-    }
+		return false;
+	}
 
-    function processTextNode(node) {
-      if (!isEnabled || !node.textContent || !node.textContent.trim()) return;
-      if (processedNodes.has(node)) return;
-      if (!isGeorgianText(node.textContent) || shouldSkipNode(node)) return;
-      if (!/[ა-ჰ]{4,}/.test(node.textContent)) return;
+	function shouldSkipNode( node ) {
+		var el = node.parentElement;
+		var depth = 0;
+		while ( el && depth < 8 ) {
+			if ( shouldSkipElement( el ) ) {
+				return true;
+			}
+			el = el.parentElement;
+			depth++;
+		}
+		return false;
+	}
 
-      try {
-        const words = node.textContent.split(/(\s+)/);
-        let hasChanges = false;
-        const processedWords = words.map(word => {
-          if (!word.trim() || word.length < 4 || !isGeorgianText(word)) return word;
-          stats.processed++;
-          const hyphenated = hyphenator.hyphenate(word);
-          if (hyphenated !== word) {
-            stats.hyphenated++;
-            hasChanges = true;
-          }
-          return hyphenated;
-        });
+	// -- processing ------------------------------------------------------------
 
-        if (hasChanges) {
-          node.textContent = processedWords.join('');
-          processedNodes.add(node);
-          applySmartJustify(node.parentElement);
-        }
-      } catch (error) {}
-    }
+	function processTextNode( node ) {
+		if ( processedNodes.has( node ) ) {
+			return;
+		}
+		var text = node.nodeValue;
+		if ( ! text || ! GEORGIAN_WORD.test( text ) || shouldSkipNode( node ) ) {
+			return;
+		}
 
-    function processNode(node, depth = 0) {
-      if (!isEnabled || depth > 30) return;
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        if (shouldSkipElement(node) || processedNodes.has(node)) return;
-        processedNodes.add(node);
-      }
-      if (node.nodeType === Node.TEXT_NODE) {
-        processTextNode(node);
-      } else if (node.nodeType === Node.ELEMENT_NODE) {
-        const children = Array.from(node.childNodes).slice(0, 100);
-        for (let child of children) processNode(child, depth + 1);
-      }
-    }
+		var hyphenated = hyphenator.hyphenateText( text );
+		processedNodes.add( node );
 
-    let lastProcessTime = 0;
-    async function processPage() {
-      if (!isEnabled || isProcessing) return;
-      const now = Date.now();
-      if (now - lastProcessTime < 1000) return;
-      lastProcessTime = now;
-      isProcessing = true;
-      try {
-        await hyphenator.loadDefaultLibrary();
-      } catch (error) {}
-      
-      const process = () => {
-        try {
-          processNode(document.body);
-          saveStats();
-        } finally {
-          isProcessing = false;
-        }
-      };
-      if (window.requestIdleCallback) requestIdleCallback(process, { timeout: 2000 });
-      else setTimeout(process, 100);
-    }
+		if ( hyphenated !== text ) {
+			node.nodeValue = hyphenated;
+			stats.processed++;
+			stats.hyphenated++;
+			if ( smartJustify ) {
+				markForJustify( node.parentElement );
+			}
+		}
+	}
 
-    let mutationTimeout;
-    const observer = new MutationObserver((mutations) => {
-      if (!isEnabled || isProcessing) return;
-      clearTimeout(mutationTimeout);
-      mutationTimeout = setTimeout(() => {
-        let hasNewContent = false;
-        for (let mutation of mutations) {
-          for (let node of mutation.addedNodes) {
-            if (!processedNodes.has(node)) {
-              processNode(node);
-              hasNewContent = true;
-            }
-          }
-        }
-        if (hasNewContent && stats.processed > 0) saveStats();
-      }, 500);
-    });
+	function markForJustify( element ) {
+		if ( ! element ) {
+			return;
+		}
+		try {
+			var align = window.getComputedStyle( element ).textAlign;
+			if ( align === 'center' || align === 'right' ) {
+				return;
+			}
+		} catch ( e ) {}
+		element.classList.add( 'georgian-text-content' );
+	}
 
-    function startObserving() {
-      if (!document.body) return;
-      observer.observe(document.body, { childList: true, subtree: true });
-    }
+	function walk( root ) {
+		if ( ! root ) {
+			return;
+		}
+		if ( root.nodeType === Node.TEXT_NODE ) {
+			processTextNode( root );
+			return;
+		}
+		if ( root.nodeType !== Node.ELEMENT_NODE ) {
+			return;
+		}
+		if ( shouldSkipElement( root ) ) {
+			return;
+		}
+		var walker = document.createTreeWalker( root, NodeFilter.SHOW_TEXT, {
+			acceptNode: function ( node ) {
+				return ( ! processedNodes.has( node ) && GEORGIAN.test( node.nodeValue ) )
+					? NodeFilter.FILTER_ACCEPT
+					: NodeFilter.FILTER_REJECT;
+			}
+		} );
+		var node;
+		var batch = [];
+		while ( ( node = walker.nextNode() ) ) {
+			batch.push( node );
+			if ( batch.length > 5000 ) {
+				break;
+			}
+		}
+		batch.forEach( processTextNode );
+	}
 
-    function stopObserving() {
-      observer.disconnect();
-    }
+	function processPage() {
+		if ( ! isEnabled ) {
+			return;
+		}
+		var run = function () {
+			var before = stats.processed;
+			walk( document.body );
+			if ( stats.processed > before ) {
+				saveStats();
+				log( 'processed', stats.processed - before, 'new nodes' );
+			}
+		};
+		if ( window.requestIdleCallback ) {
+			window.requestIdleCallback( run, { timeout: 2000 } );
+		} else {
+			setTimeout( run, 100 );
+		}
+	}
 
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => {
-        setTimeout(() => { if (isEnabled) { processPage(); startObserving(); } }, 100);
-      });
-    } else {
-      setTimeout(() => { if (isEnabled) { processPage(); startObserving(); } }, 100);
-    }
+	// -- observers -------------------------------------------------------------
 
-    let lastUrl = location.href;
-    new MutationObserver(() => {
-      if (location.href !== lastUrl) {
-        lastUrl = location.href;
-        processedNodes = new WeakSet();
-        setTimeout(processPage, 500);
-      }
-    }).observe(document, { subtree: true, childList: true });
-  }
+	var debounce;
+	var observer = new MutationObserver( function ( mutations ) {
+		if ( ! isEnabled ) {
+			return;
+		}
+		var added = false;
+		for ( var i = 0; i < mutations.length; i++ ) {
+			if ( mutations[ i ].addedNodes.length ) {
+				added = true;
+				break;
+			}
+		}
+		if ( ! added ) {
+			return;
+		}
+		clearTimeout( debounce );
+		debounce = setTimeout( processPage, 400 );
+	} );
 
-  waitForLibrary();
-})();
+	function startObserving() {
+		if ( document.body ) {
+			observer.observe( document.body, { childList: true, subtree: true } );
+		}
+	}
+
+	function stopObserving() {
+		observer.disconnect();
+	}
+
+	// SPA navigation: re-process after a client-side route change.
+	var lastUrl = window.location.href;
+	function watchUrl() {
+		if ( window.location.href !== lastUrl ) {
+			lastUrl = window.location.href;
+			processedNodes = new WeakSet();
+			setTimeout( processPage, 600 );
+		}
+	}
+	new MutationObserver( watchUrl ).observe( document, { subtree: true, childList: true } );
+	window.addEventListener( 'popstate', function () { setTimeout( watchUrl, 0 ); } );
+
+	// -- injected CSS ----------------------------------------------------------
+
+	function injectStyles() {
+		if ( document.getElementById( 'georgian-hyphenation-css' ) ) {
+			return;
+		}
+		var style = document.createElement( 'style' );
+		style.id = 'georgian-hyphenation-css';
+		style.textContent =
+			'body,p,div,span,article,section,li,td,th,blockquote,figcaption{' +
+				'-webkit-hyphens:manual;hyphens:manual;overflow-wrap:break-word;' +
+			'}' +
+			'.georgian-text-content{text-align:justify;}' +
+			// Never justify headings/editors even if the class lands on them.
+			'h1.georgian-text-content,h2.georgian-text-content,h3.georgian-text-content,' +
+			'h4.georgian-text-content,h5.georgian-text-content,h6.georgian-text-content,' +
+			'[contenteditable="true"] .georgian-text-content{text-align:inherit;}';
+		( document.head || document.documentElement ).appendChild( style );
+	}
+
+	function removeStyles() {
+		var style = document.getElementById( 'georgian-hyphenation-css' );
+		if ( style ) {
+			style.remove();
+		}
+	}
+
+	// -- storage / messaging ---------------------------------------------------
+
+	function saveStats() {
+		try {
+			chrome.storage.sync.set( { stats: stats } );
+		} catch ( e ) {}
+	}
+
+	function enable() {
+		isEnabled = true;
+		injectStyles();
+		processPage();
+		startObserving();
+	}
+
+	function disable() {
+		isEnabled = false;
+		stopObserving();
+		removeStyles();
+		// Reload to drop the injected soft hyphens from the current page.
+		window.location.reload();
+	}
+
+	chrome.runtime.onMessage.addListener( function ( message, sender, sendResponse ) {
+		if ( ! message || ! message.action ) {
+			return false;
+		}
+		if ( message.action === 'toggleHyphenation' || message.action === 'toggle' ) {
+			if ( message.enabled ) {
+				enable();
+			} else {
+				disable();
+			}
+			sendResponse( { success: true, enabled: isEnabled } );
+		} else if ( message.action === 'toggleSmartJustify' ) {
+			smartJustify = message.smartJustify;
+			if ( smartJustify ) {
+				processPage();
+			}
+			sendResponse( { success: true, smartJustify: smartJustify } );
+		} else if ( message.action === 'getStats' ) {
+			sendResponse( { stats: stats } );
+		}
+		return true;
+	} );
+
+	// -- init ------------------------------------------------------------------
+
+	function init() {
+		chrome.storage.sync.get( [ 'enabled', 'smartJustify', 'stats' ], function ( result ) {
+			isEnabled = result.enabled !== false;
+			smartJustify = result.smartJustify !== false;
+			if ( result.stats ) {
+				stats = result.stats;
+			}
+			if ( ! isEnabled ) {
+				return;
+			}
+			injectStyles();
+			var go = function () {
+				processPage();
+				startObserving();
+			};
+			if ( document.readyState === 'loading' ) {
+				document.addEventListener( 'DOMContentLoaded', function () { setTimeout( go, 100 ); } );
+			} else {
+				setTimeout( go, 100 );
+			}
+		} );
+	}
+
+	init();
+} )();

@@ -63,8 +63,8 @@ Georgian Hyphenation is a comprehensive, linguistically accurate library for aut
 |----------|---------|--------|--------------|
 | 🐍 **Python** | 2.3.0 | [![PyPI](https://img.shields.io/pypi/v/georgian-hyphenation)](https://pypi.org/project/georgian-hyphenation/) | `pip install georgian-hyphenation` |
 | 📦 **JavaScript/Node.js** | 2.3.0 | [![npm](https://img.shields.io/npm/v/georgian-hyphenation)](https://www.npmjs.com/package/georgian-hyphenation) | `npm install georgian-hyphenation` |
-| 🦊 **Firefox Extension** | 2.2.8 | [![Firefox](https://img.shields.io/amo/v/georgian-hyphenation)](https://addons.mozilla.org/firefox/addon/georgian-hyphenation/) | [Install from AMO](https://addons.mozilla.org/firefox/addon/georgian-hyphenation/) |
-| 🌐 **Chrome Extension** | 2.2.8 | Beta | [Manual install](#browser-extension) |
+| 🦊 **Firefox Extension** | 2.3.0 | [![Firefox](https://img.shields.io/amo/v/georgian-hyphenation)](https://addons.mozilla.org/firefox/addon/georgian-hyphenation/) | [Install from AMO](https://addons.mozilla.org/firefox/addon/georgian-hyphenation/) |
+| 🌐 **Chrome Extension** | 2.3.0 | Beta | [Manual install](#browser-extension) |
 | 🔌 **WordPress Plugin** | 3.0.0 | Stable | [Download](#wordpress-plugin) |
 | 📝 **MS Word Add-in** | 2.2.7 | Beta | [Installation guide](#microsoft-word-add-in) |
 
@@ -519,26 +519,22 @@ const GeorgianHyphenator = require('georgian-hyphenation');
 4. Enable "Developer mode"
 5. Click "Load unpacked" → select extracted folder
 
-**Features (v2.2.7):**
-- ✅ **Meta Platform Optimized**: Special handling for Facebook, Instagram, Threads
-- ✅ **Smart Justify**: Only applies to Georgian text (not English!)
-- ✅ **Dynamic Content Support**: Works with SPAs and live updates
-- ✅ **Character-Data Observer**: Catches Facebook's content replacements
-- ✅ **Facebook Char-Span Handler**: Processes obfuscated ad/link text
+**Features (v2.3.0):**
+- ✅ **Fully offline** — the v2.3.0 engine and dictionary are bundled; no CDN or external requests
 - ✅ **Auto-hyphenation on all Georgian websites**
-- ✅ **Smart skip logic** (navigation, headers, buttons)
-- ✅ **Toggle on/off per site**
-- ✅ **Real-time statistics**
-- ✅ **Works with React, Vue, Angular**
+- ✅ **Smart Justify**: justifies only containers with Georgian text
+- ✅ **Dynamic content support**: SPAs, live updates, and infinite scroll (per-text-node tracking)
+- ✅ **Heading & display-text safe**: skips headings and large text, where display fonts can render soft hyphens as visible dashes
+- ✅ **Skips code, forms, and editable regions**
+- ✅ **Toggle on/off**, real-time statistics
+- ✅ **One shared codebase** builds both Chrome (MV3) and Firefox (MV3)
 
-**What's New in v2.2.7:**
-- **Fixed**: Facebook partial hyphenation bug
-- **Fixed**: Smart Justify applying to non-Georgian text (eBay, Amazon)
-- **Added**: CharacterData mutation observer for persistent hyphenation
-- **Added**: Class-based CSS targeting (.georgian-text-content)
-- **Added**: Meta platform detection and special handling
-- **Added**: Batched processing queue for better performance
-- **Improved**: Memory management with WeakSet verification
+**What's New in v2.3.0:**
+- **Changed**: bundled the v2.3.0 hybrid engine + 142-word dictionary locally — no more CDN dependency
+- **Fixed**: visible soft-hyphen dashes on headings/display text (skip headings, `header`/`footer`/`aside`, `role="heading"`, and text > 20px)
+- **Fixed**: punctuation preserved around dictionary words; compound-word hyphens respected
+- **Changed**: Firefox migrated Manifest V2 → V3; Chrome and Firefox now share one content script (see `browser-extension-shared/`)
+- **Removed**: fragile Facebook character-span hack and console-log noise
 
 </details>
 
