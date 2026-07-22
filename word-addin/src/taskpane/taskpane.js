@@ -315,7 +315,7 @@ async function hyphenateBody() {
     timerStart('fullDoc');
     await Word.run(async (context) => {
         logActivity("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", LOG.SEP);
-        logActivity("Full-document hyphenation started (smart pass v2)");
+        logActivity("Full-document hyphenation started (smart pass v3)");
         
         const body = context.document.body;
         const stats = await processRangeSmart(context, body, "document");
@@ -502,6 +502,10 @@ async function removeHyphensFromRange(context, range) {
                 const ooxml = paraRange.getOoxml();
                 await context.sync();
 
+                if (checkProblematicOOXMLElements(ooxml.value).length > 0) {
+                    paraRange.untrack();
+                    continue; // fields / tracked changes / content controls
+                }
                 const cleanedOOXML = removeAllHyphensFromOOXML(ooxml.value);
                 if (cleanedOOXML.changed) {
                     paraRange.insertOoxml(cleanedOOXML.ooxml, Word.InsertLocation.replace);
@@ -569,6 +573,7 @@ async function processRangeSmart(context, range, rangeType) {
         const CHUNK_SIZE = 4;
         let hadOldHyphens = 0;
         let skippedUnchanged = 0;
+        let skippedProblematic = 0;
         const errors = [];
 
         for (let i = 0; i < validParagraphs.length; i += CHUNK_SIZE) {
@@ -607,11 +612,21 @@ async function processRangeSmart(context, range, rangeType) {
                 }
             }
 
-            let wroteInChunk = false;
+            const chunkWrites = [];
             for (const item of batch) {
                 const paraText = validParagraphs[item.j].text;
                 try {
                     const original = item.ooxml.value;
+
+                    // Protective skip (restored from the old Pass 2): never
+                    // rewrite paragraphs containing fields, content controls,
+                    // tracked changes, permissions or custom XML - inserting
+                    // OOXML over them fails or corrupts them.
+                    const problematic = checkProblematicOOXMLElements(original);
+                    if (problematic.length > 0) {
+                        skippedProblematic++;
+                        continue;
+                    }
 
                     // Strip only when old hyphens actually exist
                     let working = original;
@@ -633,8 +648,7 @@ async function processRangeSmart(context, range, rangeType) {
                     }
 
                     item.range.insertOoxml(result.ooxml, Word.InsertLocation.replace);
-                    totalWritten++;
-                    wroteInChunk = true;
+                    chunkWrites.push({ range: item.range, ooxml: result.ooxml, j: item.j, text: paraText });
                 } catch (err) {
                     errors.push(`para ${item.j}: ${err.message} | text: "${paraText.substring(0, 50)}${paraText.length > 50 ? '...' : ''}"`);
                     try {
@@ -645,8 +659,30 @@ async function processRangeSmart(context, range, rangeType) {
                 }
             }
 
-            if (wroteInChunk) {
-                await context.sync();
+            // Flush the chunk's writes together; if the batch is rejected,
+            // re-apply each write individually so one bad paragraph is
+            // logged + highlighted instead of aborting the whole run.
+            if (chunkWrites.length) {
+                try {
+                    await context.sync();
+                    totalWritten += chunkWrites.length;
+                } catch (flushErr) {
+                    logActivity(`Chunk write failed (${flushErr.message}) - retrying writes individually`, LOG.WARN);
+                    for (const cw of chunkWrites) {
+                        try {
+                            cw.range.insertOoxml(cw.ooxml, Word.InsertLocation.replace);
+                            await context.sync();
+                            totalWritten++;
+                        } catch (werr) {
+                            errors.push(`para ${cw.j} (write): ${werr.message} | text: "${cw.text.substring(0, 50)}${cw.text.length > 50 ? '...' : ''}"`);
+                            try {
+                                await highlightErrorParagraph(context, cw.text);
+                            } catch (highlightErr) {
+                                logActivity(`Highlight failed: ${highlightErr.message}`, LOG.WARN);
+                            }
+                        }
+                    }
+                }
             }
 
             // Release the range proxies (docs: untrack() "should yield a
@@ -659,7 +695,7 @@ async function processRangeSmart(context, range, rangeType) {
         }
 
         logActivity(`Smart pass done in ${timerEnd('smartPass')} ms`);
-        logActivity(`Scanned ${validParagraphs.length} | had old hyphens (stripped+reapplied): ${hadOldHyphens} | already correct (untouched): ${skippedUnchanged} | written: ${totalWritten}`);
+        logActivity(`Scanned ${validParagraphs.length} | had old hyphens (stripped+reapplied): ${hadOldHyphens} | already correct (untouched): ${skippedUnchanged} | skipped (fields/track-changes/controls): ${skippedProblematic} | written: ${totalWritten}`);
         if (errors.length) {
             logActivity(`Errors (${errors.length}): ${errors.join(' | ')}`, LOG.ERROR);
         }
