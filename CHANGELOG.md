@@ -10,6 +10,8 @@
 
 ### Fixed (after real-Word testing)
 
+- **`GeneralException` on documents containing fields/TOC (smart pass v3)**: the smart-pass rewrite had dropped the old protective skip for paragraphs containing fields (`w:fldChar` — TOC entries, page references), content controls, tracked changes, permissions and custom XML; writing OOXML over such paragraphs throws, and the failure escaped per-paragraph error handling via the chunk write-flush. `checkProblematicOOXMLElements()` is now called for every paragraph again (such paragraphs are skipped and counted in the summary line), and a rejected chunk write-flush retries each write individually, highlighting only the failing paragraph. Reproduced and verified end-to-end in real Word on a 583-paragraph document with 144 field characters: previously crashed in 2 s, now completes with 46 field paragraphs skipped and 403 written.
+
 - **`GeneralException` on full-document hyphenation**: OOXML reads were batched 10 per sync; each paragraph's `getOoxml()` returns a full package with embedded styles, and large documents exceeded the host payload limit. Reads are now one per round-trip inside per-paragraph error handling, so a single bad paragraph is logged + highlighted instead of aborting the run.
 - **Selection hyphenation toggling (remove on first click, re-add on second)**: real Word splits words across multiple runs (spell-check markers, revision ids), so after stripping, the in-memory re-hyphenation saw 2–3-letter fragments and produced nothing. The removal pass now deletes `w:proofErr` markers and merges consecutive same-formatting runs before merging text fragments — verified against Word-realistic multi-run OOXML (correct re-hyphenation on first pass, no-op on second, formatting boundaries preserved).
 
