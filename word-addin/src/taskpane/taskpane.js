@@ -253,6 +253,8 @@ Office.onReady((info) => {
         
         document.getElementById('hyphenate-document').onclick = () => runSafe(hyphenateBody);
         document.getElementById('hyphenate-selection').onclick = () => runSafe(hyphenateSelection);
+        document.getElementById('remove-hyphenation-document').onclick = () => runSafe(removeHyphenationBody);
+        document.getElementById('remove-hyphenation-selection').onclick = () => runSafe(removeHyphenationSelection);
         document.getElementById('clear-log').onclick = clearLog;
         document.getElementById('download-log').onclick = downloadLog;
         
@@ -284,6 +286,8 @@ function setButtonsEnabled(enabled) {
     const btns = [
         document.getElementById('hyphenate-document'),
         document.getElementById('hyphenate-selection'),
+        document.getElementById('remove-hyphenation-document'),
+        document.getElementById('remove-hyphenation-selection'),
         document.getElementById('clear-highlighting')
     ];
     btns.forEach(btn => {
@@ -439,6 +443,131 @@ async function hyphenateSelection() {
     });
     
     setTimeout(hideProgress, 1000);
+}
+
+/**
+ * ✅ REMOVE HYPHENATION FROM FULL DOCUMENT
+ * Runs only the removal pass (soft hyphens / <w:softHyphen/>), no re-add.
+ */
+async function removeHyphenationBody() {
+    showProgress();
+    timerStart('removeDoc');
+    await Word.run(async (context) => {
+        logActivity("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", LOG.SEP);
+        logActivity("Full-document hyphen removal started");
+
+        const stats = await removeHyphensFromRange(context, context.document.body);
+
+        logActivity("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", LOG.SEP);
+        logActivity(`Completed in ${timerEnd('removeDoc')} ms — ${stats.cleaned} of ${stats.total} paragraphs cleaned`);
+    });
+    hideProgress();
+}
+
+/**
+ * ✅ REMOVE HYPHENATION FROM SELECTION
+ * Runs only the removal pass on the current selection range.
+ */
+async function removeHyphenationSelection() {
+    showProgress();
+    timerStart('removeSel');
+
+    await Word.run(async (context) => {
+        logActivity("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", LOG.SEP);
+        logActivity("Selection hyphen removal started");
+
+        const selection = context.document.getSelection();
+        selection.load("text");
+        await context.sync();
+
+        if (!selection.text || selection.text.trim().length === 0) {
+            logActivity("Selection is empty", LOG.WARN);
+            hideProgress();
+            return;
+        }
+
+        const range = selection.getRange();
+        updateProgress(30, '🧽 დამარცვლის მოშორება...');
+
+        try {
+            const ooxml = range.getOoxml();
+            await context.sync();
+
+            const cleanedOOXML = removeAllHyphensFromOOXML(ooxml.value);
+
+            if (cleanedOOXML.changed) {
+                range.insertOoxml(cleanedOOXML.ooxml, Word.InsertLocation.replace);
+                await context.sync();
+                updateProgress(100, '✅ დასრულდა');
+                logActivity(`Selection cleaned in ${timerEnd('removeSel')} ms`);
+            } else {
+                updateProgress(100, '✅ დასრულდა');
+                logActivity(`No hyphens found in selection`, LOG.WARN);
+            }
+        } catch (err) {
+            logActivity(`Selection removal failed: ${err.message}`, LOG.ERROR);
+        }
+    });
+
+    setTimeout(hideProgress, 800);
+}
+
+/**
+ * 🔧 Remove soft hyphens from every Georgian paragraph in a range.
+ * Reuses removeAllHyphensFromOOXML (the two-pass Pass 1) per paragraph,
+ * chunked and synced like the hyphenation path.
+ */
+async function removeHyphensFromRange(context, range) {
+    let cleaned = 0;
+
+    const paragraphs = range.paragraphs;
+    paragraphs.load("items");
+    await context.sync();
+
+    for (let i = 0; i < paragraphs.items.length; i++) {
+        paragraphs.items[i].load("text");
+    }
+    await context.sync();
+
+    // Only Georgian paragraphs can carry hyphens this add-in inserted.
+    const valid = [];
+    for (const para of paragraphs.items) {
+        if (para.text && para.text.trim().length >= 4 && /[ა-ჰ]/.test(para.text)) {
+            valid.push(para);
+        }
+    }
+
+    logActivity(`${valid.length} Georgian paragraphs to scan`);
+    if (valid.length === 0) {
+        return { cleaned: 0, total: 0 };
+    }
+
+    const CHUNK_SIZE = 10;
+    for (let i = 0; i < valid.length; i += CHUNK_SIZE) {
+        const endIdx = Math.min(i + CHUNK_SIZE, valid.length);
+
+        for (let j = i; j < endIdx; j++) {
+            try {
+                const paraRange = valid[j].getRange();
+                const ooxml = paraRange.getOoxml();
+                await context.sync();
+
+                const cleanedOOXML = removeAllHyphensFromOOXML(ooxml.value);
+                if (cleanedOOXML.changed) {
+                    paraRange.insertOoxml(cleanedOOXML.ooxml, Word.InsertLocation.replace);
+                    cleaned++;
+                }
+            } catch (err) {
+                logActivity(`Removal failed on paragraph ${j}: ${err.message}`, LOG.WARN);
+            }
+        }
+
+        const progress = 10 + ((i + CHUNK_SIZE) / valid.length) * 90;
+        updateProgress(progress, `🧽 მოშორება: ${Math.min(i + CHUNK_SIZE, valid.length)}/${valid.length}`);
+        await context.sync();
+    }
+
+    return { cleaned, total: valid.length };
 }
 
 /**

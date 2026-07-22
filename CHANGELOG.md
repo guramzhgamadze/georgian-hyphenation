@@ -2,6 +2,10 @@
 
 ## [Word Add-in 2.3.0] - 2026-07-22
 
+### Added
+
+- **Remove hyphenation** — two new buttons: "დამარცვლის მოშორება" (strip soft hyphens from the whole document) and "მონიშნული ტექსტიდან დამარცვლის მოშორება" (from the selection only). Both reuse the existing OOXML removal pass, so `<w:softHyphen/>` elements and stray U+00AD characters are cleared without re-hyphenating.
+
 ### Changed
 
 - **No more CDN dependency.** The add-in previously fetched the dictionary from jsDelivr (`georgian-hyphenation@2.2.7`) at runtime and carried a hand-maintained copy of the algorithm. It now loads the same generated v2.3.0 engine + dictionary as the browser extensions (`georgian-hyphenator.js` + `dictionary.js`), served same-origin from GitHub Pages. The `cdn.jsdelivr.net` AppDomain was removed from the manifest. (An Office add-in is still a hosted web app — Office.js and the Fabric CSS load from Microsoft as required — but the one avoidable third-party dependency is gone.)
