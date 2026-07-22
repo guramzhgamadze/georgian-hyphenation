@@ -2,6 +2,11 @@
 
 ## [Word Add-in 2.3.0] - 2026-07-22
 
+### Changed (performance)
+
+- **Document/selection hyphenation is now a single smart pass** instead of the old two-pass "remove everything, then re-add everything". Per paragraph: the removal step runs only if the paragraph actually contains hyphens; strip-and-reapply is computed in memory; and the document is written back only when the resulting hyphenation differs from the current state (position-exact comparison). Wrong hyphenation still gets corrected; already-correct paragraphs are untouched — re-running on a fully hyphenated document performs zero writes. OOXML reads are batched per chunk, cutting sync round-trips roughly 20×.
+- The removal pass now merges adjacent text fragments left behind by removed soft hyphens, so re-hyphenation always sees whole words (the old flow depended on a Word write+read round-trip for this).
+
 ### Fixed
 
 - Error-paragraph highlighting now uses the capitalized highlight-color names Microsoft documents for Office Desktop (`"Yellow"`, `"Red"`) instead of lowercase, so it maps to the intended color reliably. Clear highlighting ("მარკირების მოშორება") was already correct — it sets `body.font.highlightColor = null`, the documented way to remove highlight.

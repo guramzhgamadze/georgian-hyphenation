@@ -318,7 +318,7 @@ async function hyphenateBody() {
         logActivity("Full-document hyphenation started (two-pass)");
         
         const body = context.document.body;
-        const stats = await processRangeWithTwoPass(context, body, "document");
+        const stats = await processRangeSmart(context, body, "document");
         
         logActivity("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", LOG.SEP);
         logActivity(`Completed in ${timerEnd('fullDoc')} ms — words processed: ${stats.processed}, hyphenated: ${stats.success}, paragraphs: ${stats.paragraphs}`);
@@ -327,123 +327,73 @@ async function hyphenateBody() {
 }
 
 /**
- * ✅ HYPHENATE SELECTION using TWO-PASS OOXML method
- * Works directly on the selection range, not on paragraphs
+ * ✅ HYPHENATE SELECTION — smart pass
+ * Strip-and-reapply computed in memory; the document is written only if the
+ * resulting hyphenation differs from the current state.
  */
 async function hyphenateSelection() {
     showProgress();
     timerStart('selection');
-    
+
     await Word.run(async (context) => {
         logActivity("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", LOG.SEP);
-        logActivity("Selection hyphenation started (two-pass)");
-        
+        logActivity("Selection hyphenation started (smart pass)");
+
         const selection = context.document.getSelection();
         selection.load("text");
         await context.sync();
-        
+
         if (!selection.text || selection.text.trim().length < 4) {
             logActivity("Selection is too short or empty", LOG.WARN);
             hideProgress();
             return;
         }
-        
         if (!/[ა-ჰ]/.test(selection.text)) {
             logActivity("Selection contains no Georgian text", LOG.WARN);
             hideProgress();
             return;
         }
-        
-        logActivity(`Selection: ${selection.text.length} chars`);
-        const originalText = selection.text;
-        
-        // ═══════════════════════════════════════════════════════
-        // PASS 1: REMOVE ALL EXISTING HYPHENS FROM SELECTION
-        // ═══════════════════════════════════════════════════════
-        updateProgress(10, '🗑️ მოძველებული ნიშნების წაშლა...');
-        timerStart('selPass1');
-        logActivity("Pass 1 — removing existing hyphens…");
-        
-        let range = selection.getRange();
-        
-        try {
-            const ooxml1 = range.getOoxml();
-            await context.sync();
-            
-            updateProgress(30, '🗑️ მოძველებული ნიშნების წაშლა...');
-            const cleanedOOXML = removeAllHyphensFromOOXML(ooxml1.value);
-            
-            if (cleanedOOXML.changed) {
-                range.insertOoxml(cleanedOOXML.ooxml, Word.InsertLocation.replace);
-                await context.sync();
-                logActivity(`Pass 1 done in ${timerEnd('selPass1')} ms — hyphens removed`);
-                
-                // After insertOoxml, we need to get the range again
-                // The range object becomes stale after modification
-                range = range.getRange();
-                await context.sync();
-            } else {
-                logActivity(`Pass 1 done in ${timerEnd('selPass1')} ms — nothing to remove`);
-            }
-        } catch (err) {
-            logActivity(`Pass 1 failed: ${err.message}`, LOG.ERROR);
-            try {
-                if (originalText && originalText.length > 10) {
-                    await highlightErrorParagraph(context, originalText);
-                }
-            } catch (highlightErr) {
-                logActivity(`Highlighting failed: ${highlightErr.message}`, LOG.WARN);
-            }
-            hideProgress();
-            return;
-        }
-        
-        // ═══════════════════════════════════════════════════════
-        // PASS 2: ADD NEW HYPHENS TO CLEAN SELECTION
-        // ═══════════════════════════════════════════════════════
-        updateProgress(60, '➕ ახალი ნიშნების დამატება...');
-        timerStart('selPass2');
-        logActivity("Pass 2 — adding new hyphens…");
-        
-        // Load the current text after Pass 1
-        range.load('text');
-        await context.sync();
-        const currentText = range.text;
-        
-        try {
-            const ooxml2 = range.getOoxml();
-            await context.sync();
-            
-            updateProgress(80, '➕ ახალი ნიშნების დამატება...');
-            const hyphenatedOOXML = addHyphensToOOXML(ooxml2.value);
-            
-            if (hyphenatedOOXML.changed) {
-                range.insertOoxml(hyphenatedOOXML.ooxml, Word.InsertLocation.replace);
-                await context.sync();
-                
-                updateProgress(100, '✅ დასრულდა');
-                logActivity(`Pass 2 done in ${timerEnd('selPass2')} ms — ${hyphenatedOOXML.wordsHyphenated} of ${hyphenatedOOXML.wordsProcessed} words hyphenated`);
-            } else {
-                updateProgress(100, '✅ დასრულდა');
-                logActivity(`Pass 2 done in ${timerEnd('selPass2')} ms — no words needed hyphenation`, LOG.WARN);
-            }
-        } catch (err) {
-            logActivity(`Pass 2 failed: ${err.message}`, LOG.ERROR);
-            try {
-                if (currentText && currentText.length > 10) {
-                    await highlightErrorParagraph(context, currentText);
-                }
-            } catch (highlightErr) {
-                logActivity(`Highlighting failed: ${highlightErr.message}`, LOG.WARN);
-            }
-        }
 
-        logActivity("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", LOG.SEP);
-        logActivity(`Completed in ${timerEnd('selection')} ms`);
+        const range = selection.getRange();
+        updateProgress(20, '📥 ტექსტის წაკითხვა...');
+
+        try {
+            const ooxml = range.getOoxml();
+            await context.sync();
+            const original = ooxml.value;
+
+            // Strip only when old hyphens actually exist; wrong positions are
+            // corrected because the final comparison is position-exact.
+            let working = original;
+            if (ooxmlHasHyphens(original)) {
+                logActivity("Existing hyphens found — stripping before reapply");
+                working = removeAllHyphensFromOOXML(original).ooxml;
+            }
+
+            updateProgress(60, '➕ დამარცვლა...');
+            const result = addHyphensToOOXML(working);
+
+            const sigBefore = getHyphenationSignature(original);
+            const sigAfter = getHyphenationSignature(result.ooxml);
+
+            if (sigBefore !== null && sigBefore === sigAfter) {
+                updateProgress(100, '✅ უკვე დამარცვლულია');
+                logActivity(`Selection already correctly hyphenated — nothing to change (${timerEnd('selection')} ms)`);
+            } else {
+                range.insertOoxml(result.ooxml, Word.InsertLocation.replace);
+                await context.sync();
+                updateProgress(100, '✅ დასრულდა');
+                logActivity(`Selection hyphenated in ${timerEnd('selection')} ms — ${result.wordsHyphenated} words`);
+            }
+        } catch (err) {
+            logActivity(`Selection error: ${err.message}`, LOG.ERROR);
+            logActivity(`This may be due to tracked changes, content controls, or fields in the selection`, LOG.WARN);
+        }
     });
-    
+
     setTimeout(hideProgress, 1000);
 }
+
 
 /**
  * ✅ REMOVE HYPHENATION FROM FULL DOCUMENT
@@ -571,377 +521,173 @@ async function removeHyphensFromRange(context, range) {
 }
 
 /**
- * 🔧 TWO-PASS APPROACH: First remove ALL hyphens, then add NEW ones
- * This prevents mixing old and new hyphen positions
+ * 🔧 SMART PASS: strip-and-reapply per paragraph, computed in memory, with
+ * the document written back only where hyphenation actually changes.
+ *
+ * - Paragraphs with NO existing hyphens skip the removal step entirely.
+ * - Paragraphs WITH hyphens (correct or wrong) are stripped and re-hyphenated
+ *   in memory; the result is written only if it differs from the current
+ *   state, so wrong positions get corrected and correct ones stay untouched.
+ * - OOXML reads are batched per chunk: one sync per chunk instead of one or
+ *   more per paragraph.
  */
-async function processRangeWithTwoPass(context, range, rangeType) {
-    let totalProcessed = 0;
-    let totalSuccess = 0;
-    let paragraphsProcessed = 0;
-    
+async function processRangeSmart(context, range, rangeType) {
+    let totalWords = 0;
+    let totalHyphenated = 0;
+    let totalWritten = 0;
+
     try {
-        // Get all paragraphs
         const paragraphs = range.paragraphs;
         paragraphs.load("items");
         await context.sync();
-        
+
         logActivity(`Found ${paragraphs.items.length} paragraphs`);
         updateProgress(5, 'პარაგრაფების მომზადება...');
-        
-        // Filter paragraphs that need processing
-        const validParagraphs = [];
-        
+
         for (let i = 0; i < paragraphs.items.length; i++) {
-            const para = paragraphs.items[i];
-            para.load("text");
+            paragraphs.items[i].load("text");
         }
         await context.sync();
-        
+
+        const validParagraphs = [];
         for (let i = 0; i < paragraphs.items.length; i++) {
             const para = paragraphs.items[i];
-            
-            // Skip empty paragraphs (nothing to hyphenate)
             if (!para.text || para.text.trim().length < 4) continue;
-            
-            // Skip if no Georgian text (only hyphenate Georgian)
             if (!/[ა-ჰ]/.test(para.text)) continue;
-            
-            validParagraphs.push(para);
+            validParagraphs.push({ para: para, text: para.text });
         }
-        
+
         logActivity(`${validParagraphs.length} paragraphs contain Georgian text`);
-        updateProgress(10, `${validParagraphs.length} პარაგრამი მოიძებნა`);
-        
+        updateProgress(10, `${validParagraphs.length} პარაგრაფი მოიძებნა`);
+
         if (validParagraphs.length === 0) {
             logActivity("No valid paragraphs to process", LOG.WARN);
             return { processed: 0, success: 0, paragraphs: 0 };
         }
-        
-        // ═══════════════════════════════════════════════════════
-        // PASS 1: REMOVE ALL EXISTING HYPHENS
-        // ═══════════════════════════════════════════════════════
-        timerStart('pass1');
-        logActivity("Pass 1 — removing existing hyphens…");
-        updateProgress(15, '🗑️ ძველი ნიშნების წაშლა...');
-        
+
+        timerStart('smartPass');
         const CHUNK_SIZE = 10;
-        let removedCount = 0;
-        const pass1Errors = [];
-        
+        let hadOldHyphens = 0;
+        let skippedUnchanged = 0;
+        const errors = [];
+
         for (let i = 0; i < validParagraphs.length; i += CHUNK_SIZE) {
             const endIdx = Math.min(i + CHUNK_SIZE, validParagraphs.length);
-            
+
+            // Batch all OOXML reads for this chunk into a single round-trip
+            const chunk = [];
             for (let j = i; j < endIdx; j++) {
-                // Pre-capture text for potential highlighting
-                const para = validParagraphs[j];
-                let paraText = '';
-                
                 try {
-                    para.load('text');
-                    await context.sync();
-                    paraText = para.text || '';
-                } catch (preloadErr) {
-                    // Continue even if pre-load fails
-                }
-                
-                try {
-                    const paraRange = para.getRange();
-                    const ooxml = paraRange.getOoxml();
-                    await context.sync();
-                    
-                    const cleanedOOXML = removeAllHyphensFromOOXML(ooxml.value);
-                    
-                    if (cleanedOOXML.changed) {
-                        paraRange.insertOoxml(cleanedOOXML.ooxml, Word.InsertLocation.replace);
-                        removedCount++;
-                    }
-                    
+                    const paraRange = validParagraphs[j].para.getRange();
+                    chunk.push({ index: j, range: paraRange, ooxml: paraRange.getOoxml() });
                 } catch (err) {
-                    // Capture detailed error information
-                    try {
-                        if (!paraText) {
-                            para.load('text,style,styleBuiltIn');
-                            await context.sync();
-                            paraText = para.text || '';
-                        }
-                        
-                        const errorDetails = {
-                            paraNum: j,
-                            textPreview: paraText.substring(0, 50) + (paraText.length > 50 ? '...' : ''),
-                            style: para.style || 'unknown'
-                        };
-                        
-                        pass1Errors.push(`para ${j}: ${err.message} | text: "${errorDetails.textPreview}" | style: ${errorDetails.style}`);
-                    } catch (loadErr) {
-                        pass1Errors.push(`para ${j}: ${err.message}`);
+                    errors.push(`para ${j}: getRange failed: ${err.message}`);
+                }
+            }
+            await context.sync();
+
+            let wroteInChunk = false;
+            for (const item of chunk) {
+                const paraText = validParagraphs[item.index].text;
+                try {
+                    const original = item.ooxml.value;
+
+                    // Strip only when old hyphens actually exist
+                    let working = original;
+                    if (ooxmlHasHyphens(original)) {
+                        hadOldHyphens++;
+                        working = removeAllHyphensFromOOXML(original).ooxml;
                     }
-                    
-                    // Highlight the problematic paragraph using search
+
+                    const result = addHyphensToOOXML(working);
+                    totalWords += result.wordsProcessed || 0;
+                    totalHyphenated += result.wordsHyphenated || 0;
+
+                    // Position-exact comparison: identical hyphenation → no write
+                    const sigBefore = getHyphenationSignature(original);
+                    const sigAfter = getHyphenationSignature(result.ooxml);
+                    if (sigBefore !== null && sigBefore === sigAfter) {
+                        skippedUnchanged++;
+                        continue;
+                    }
+
+                    item.range.insertOoxml(result.ooxml, Word.InsertLocation.replace);
+                    totalWritten++;
+                    wroteInChunk = true;
+                } catch (err) {
+                    errors.push(`para ${item.index}: ${err.message} | text: "${paraText.substring(0, 50)}${paraText.length > 50 ? '...' : ''}"`);
                     try {
-                        if (paraText) {
-                            await highlightErrorParagraph(context, paraText);
-                        }
+                        await highlightErrorParagraph(context, paraText);
                     } catch (highlightErr) {
                         logActivity(`Highlight failed: ${highlightErr.message}`, LOG.WARN);
                     }
                 }
             }
-            
-            // Update progress
-            const progress = 15 + ((i + CHUNK_SIZE) / validParagraphs.length) * 35; // 15% to 50%
-            updateProgress(progress, `🗑️ წაშლა: ${Math.min(i + CHUNK_SIZE, validParagraphs.length)}/${validParagraphs.length}`);
-            
-            // Sync after each chunk
-            await context.sync();
-        }
-        
-        logActivity(`Pass 1 done in ${timerEnd('pass1')} ms — ${removedCount} paragraphs cleaned`);
-        if (pass1Errors.length) {
-            logActivity(`Pass 1 errors (${pass1Errors.length}): ${pass1Errors.join(' | ')}`, LOG.ERROR);
-        }
-        updateProgress(50, '✓ ძველი ნიშნები წაშლილია');
-        
-        // ═══════════════════════════════════════════════════════
-        // PASS 2: ADD NEW HYPHENS TO CLEAN TEXT
-        // ═══════════════════════════════════════════════════════
-        timerStart('pass2');
-        logActivity("Pass 2 — adding new hyphens…");
-        updateProgress(55, '➕ ახალი ნიშნების დამატება...');
-        
-        // Need to reload paragraphs after Pass 1 changes
-        const paragraphs2 = range.paragraphs;
-        paragraphs2.load("items");
-        await context.sync();
-        
-        // Re-filter valid paragraphs (indices may have changed)
-        const validParagraphs2 = [];
-        
-        for (let i = 0; i < paragraphs2.items.length; i++) {
-            const para = paragraphs2.items[i];
-            para.load("text");
-        }
-        await context.sync();
-        
-        for (let i = 0; i < paragraphs2.items.length; i++) {
-            const para = paragraphs2.items[i];
-            
-            // Skip empty paragraphs (nothing to hyphenate)
-            if (!para.text || para.text.trim().length < 4) continue;
-            
-            // Skip if no Georgian text (only hyphenate Georgian)
-            if (!/[ა-ჰ]/.test(para.text)) continue;
-            
-            validParagraphs2.push(para);
-        }
-        
-        const pass2Errors = [];
-        const skippedParagraphs = [];
-        
-        for (let i = 0; i < validParagraphs2.length; i += CHUNK_SIZE) {
-            const endIdx = Math.min(i + CHUNK_SIZE, validParagraphs2.length);
-            
-            for (let j = i; j < endIdx; j++) {
-                // Pre-load paragraph text and properties BEFORE attempting OOXML operations
-                // This ensures we have the data even if the paragraph becomes invalid
-                const para = validParagraphs2[j];
-                let paraText = '';
-                let paraStyle = 'unknown';
-                let paraAlignment = 'unknown';
-                let paraLength = 0;
-                
-                try {
-                    para.load('text,style,alignment');
-                    await context.sync();
-                    paraText = para.text || '';
-                    paraStyle = para.style || 'unknown';
-                    paraAlignment = para.alignment || 'unknown';
-                    paraLength = paraText.length;
-                } catch (preLoadErr) {
-                    // Best-effort recovery of the text so the paragraph can still
-                    // be highlighted for the user; then log concisely.
-                    try {
-                        para.load('text');
-                        await context.sync();
-                        paraText = para.text || '';
-                        paraLength = paraText.length;
-                    } catch (e) { /* text unavailable */ }
-                    logActivity(`Paragraph ${j} pre-load failed: ${preLoadErr.message}`, LOG.ERROR);
-                }
-                
-                try {
-                    const paraRange = para.getRange();
-                    const ooxml = paraRange.getOoxml();
-                    await context.sync();
-                    
-                    // Check if OOXML contains problematic elements BEFORE attempting modification
-                    const problematicElements = checkProblematicOOXMLElements(ooxml.value);
-                    
-                    // Only skip elements that are PROVEN to cause errors:
-                    // 1. Track changes - causes GeneralException (confirmed)
-                    // 2. Content controls - causes errors (confirmed)
-                    // 3. Complex fields (TOC/Index) - causes errors when combined with track changes (confirmed)
-                    // 4. Permissions - causes access denied (confirmed)
-                    
-                    const hasTrackChanges = problematicElements.some(elem => 
-                        elem.includes('ins(') || 
-                        elem.includes('del(') || 
-                        elem.includes('moveFrom(') || 
-                        elem.includes('moveTo(') ||
-                        elem.includes('moveFromRangeStart(') ||
-                        elem.includes('moveFromRangeEnd(') ||
-                        elem.includes('moveToRangeStart(') ||
-                        elem.includes('moveToRangeEnd(')
-                    );
-                    
-                    const hasContentControls = problematicElements.some(elem => 
-                        elem.includes('contentControl(')
-                    );
-                    
-                    const hasComplexFields = problematicElements.some(elem => 
-                        elem.includes('fldChar(') || 
-                        elem.includes('fldSimple(') ||
-                        elem.includes('fldData(')
-                    );
-                    
-                    const hasPermissions = problematicElements.some(elem => 
-                        elem.includes('permStart(') || 
-                        elem.includes('permEnd(')
-                    );
-                    
-                    // Skip only if it has CONFIRMED error-causing elements
-                    const shouldSkip = hasTrackChanges || hasContentControls || hasComplexFields || hasPermissions;
-                    
-                    if (shouldSkip) {
-                        const reason = [];
-                        if (hasTrackChanges) reason.push('track changes');
-                        if (hasContentControls) reason.push('content controls');
-                        if (hasComplexFields) reason.push('fields (TOC/Index)');
-                        if (hasPermissions) reason.push('protected content');
 
-                        
-                        skippedParagraphs.push({
-                            index: j,
-                            text: paraText.substring(0, 50),
-                            reason: reason.join(', '),
-                            elements: problematicElements.join(', ')
-                        });
-                        
-                        logActivity(`⏭️  SKIPPED paragraph ${j}: ${reason.join(', ')}`, LOG.INFO);
-                        logActivity(`   Text: "${paraText.substring(0, 50)}${paraText.length > 50 ? '...' : ''}"`, LOG.INFO);
-                        logActivity(`   Elements: ${problematicElements.join(', ')}`, LOG.INFO);
-                        
-                        continue; // Skip this paragraph
-                    }
-                    
-                    const hyphenatedOOXML = addHyphensToOOXML(ooxml.value);
-                    
-                    if (hyphenatedOOXML.changed) {
-                        // Validate OOXML before attempting insertion
-                        const ooxmlValid = validateOOXML(hyphenatedOOXML.ooxml);
-                        if (!ooxmlValid.valid) {
-                            throw new Error(`Invalid OOXML generated: ${ooxmlValid.reason}`);
-                        }
-                        
-                        // Try to insert the OOXML
-                        try {
-                            paraRange.insertOoxml(hyphenatedOOXML.ooxml, Word.InsertLocation.replace);
-                            await context.sync();
-                            
-                            totalSuccess += hyphenatedOOXML.wordsHyphenated;
-                            totalProcessed += hyphenatedOOXML.wordsProcessed;
-                            paragraphsProcessed++;
-                        } catch (insertErr) {
-                            // OOXML insertion failed - log details
-                            logActivity(`═══════════════════════════════════════════════`, LOG.SEP);
-                            logActivity(`OOXML INSERTION FAILED on paragraph ${j}`, LOG.ERROR);
-                            logActivity(`Error: ${insertErr.message}`, LOG.ERROR);
-                            logActivity(`Error code: ${insertErr.code || 'N/A'}`, LOG.ERROR);
-                            logActivity(`Original OOXML length: ${ooxml.value.length}`, LOG.INFO);
-                            logActivity(`Modified OOXML length: ${hyphenatedOOXML.ooxml.length}`, LOG.INFO);
-                            logActivity(`Words to hyphenate: ${hyphenatedOOXML.wordsHyphenated}`, LOG.INFO);
-                            
-                            // Check if original and modified OOXML differ significantly
-                            const sizeDiff = Math.abs(hyphenatedOOXML.ooxml.length - ooxml.value.length);
-                            const sizeDiffPercent = (sizeDiff / ooxml.value.length * 100).toFixed(2);
-                            logActivity(`Size difference: ${sizeDiff} chars (${sizeDiffPercent}%)`, LOG.INFO);
-                            
-                            // Try to identify what changed
-                            const originalSoftHyphens = (ooxml.value.match(/w:softHyphen/g) || []).length;
-                            const modifiedSoftHyphens = (hyphenatedOOXML.ooxml.match(/w:softHyphen/g) || []).length;
-                            logActivity(`Soft hyphens: ${originalSoftHyphens} → ${modifiedSoftHyphens} (${modifiedSoftHyphens - originalSoftHyphens > 0 ? '+' : ''}${modifiedSoftHyphens - originalSoftHyphens})`, LOG.INFO);
-                            
-                            // Save both OOXMLs to log for comparison
-                            if (paraText.length < 200) {
-                                logActivity(`Paragraph text: "${paraText}"`, LOG.INFO);
-                            }
-                            
-                            // Check for problematic OOXML elements
-                            const problematicElements = checkProblematicOOXMLElements(ooxml.value);
-                            if (problematicElements.length > 0) {
-                                logActivity(`⚠️  Original OOXML contains: ${problematicElements.join(', ')}`, LOG.WARN);
-                            }
-                            
-                            logActivity(`═══════════════════════════════════════════════`, LOG.SEP);
-                            
-                            throw insertErr; // Re-throw to be caught by outer catch
-                        }
-                    }
-                    
-                } catch (err) {
-                    // We have the text from pre-loading above
-                    const textPreview = paraText.substring(0, 50) + (paraText.length > 50 ? '...' : '');
-                    
-                    pass2Errors.push(`para ${j}: ${err.message} | text: "${textPreview}" | style: ${paraStyle}`);
-                    logActivity(`Error details: Length=${paraLength}, Style=${paraStyle}, Alignment=${paraAlignment}`, LOG.WARN);
-                    
-                    // Highlight the problematic paragraph using search-based method
-                    try {
-                        if (paraText && paraText.length > 10) {
-                            await highlightErrorParagraph(context, paraText);
-                        } else {
-                            logActivity(`Paragraph text too short for highlighting`, LOG.WARN);
-                        }
-                    } catch (highlightErr) {
-                        logActivity(`Highlighting failed: ${highlightErr.message}`, LOG.WARN);
-                    }
-                }
+            if (wroteInChunk) {
+                await context.sync();
             }
-            
-            // Update progress
-            const progress = 55 + ((i + CHUNK_SIZE) / validParagraphs2.length) * 40; // 55% to 95%
-            updateProgress(progress, `➕ დამატება: ${Math.min(i + CHUNK_SIZE, validParagraphs2.length)}/${validParagraphs2.length}`);
-            
-            // Sync after each chunk
-            await context.sync();
+
+            const progress = 10 + (endIdx / validParagraphs.length) * 85;
+            updateProgress(progress, `📝 დამუშავება: ${endIdx}/${validParagraphs.length}`);
         }
-        
-        logActivity(`Pass 2 done in ${timerEnd('pass2')} ms — ${paragraphsProcessed} paragraphs hyphenated`);
-        if (pass2Errors.length) {
-            logActivity(`Pass 2 errors (${pass2Errors.length}): ${pass2Errors.join(' | ')}`, LOG.ERROR);
+
+        logActivity(`Smart pass done in ${timerEnd('smartPass')} ms`);
+        logActivity(`Scanned ${validParagraphs.length} | had old hyphens (stripped+reapplied): ${hadOldHyphens} | already correct (untouched): ${skippedUnchanged} | written: ${totalWritten}`);
+        if (errors.length) {
+            logActivity(`Errors (${errors.length}): ${errors.join(' | ')}`, LOG.ERROR);
         }
-        if (skippedParagraphs.length > 0) {
-            logActivity(`═══════════════════════════════════════════════`, LOG.SEP);
-            logActivity(`SKIPPED PARAGRAPHS SUMMARY (${skippedParagraphs.length} total)`, LOG.INFO);
-            logActivity(`These paragraphs were intentionally skipped to avoid errors:`, LOG.INFO);
-            skippedParagraphs.forEach(skip => {
-                logActivity(`  • Para ${skip.index}: ${skip.reason}`, LOG.INFO);
-                logActivity(`    Text: "${skip.text}..."`, LOG.INFO);
-                logActivity(`    Elements: ${skip.elements}`, LOG.INFO);
-            });
-            logActivity(`═══════════════════════════════════════════════`, LOG.SEP);
-        }
-        updateProgress(100, '✅ დასრულდა');
-        
+
+        return { processed: totalWords, success: totalHyphenated, paragraphs: totalWritten };
+
     } catch (err) {
         logActivity(`Processing error: ${err.message}`, LOG.ERROR);
+        throw err;
     }
-    
-    return {
-        processed: totalProcessed,
-        success: totalSuccess,
-        paragraphs: paragraphsProcessed
-    };
 }
+
+/**
+ * Fast check: does this OOXML contain any optional hyphens?
+ * (<w:softHyphen/> elements or literal U+00AD characters)
+ */
+function ooxmlHasHyphens(ooxmlString) {
+    return ooxmlString.indexOf('softHyphen') !== -1 || ooxmlString.indexOf('\u00AD') !== -1;
+}
+
+/**
+ * Canonical "text + hyphen positions" signature of a paragraph's OOXML.
+ * Both storage forms of an optional hyphen (<w:softHyphen/> element and
+ * literal U+00AD character) map to the same marker, so two signatures are
+ * equal exactly when the visible hyphenation state is identical.
+ * Returns null on parse failure (callers must then assume "different").
+ */
+function getHyphenationSignature(ooxmlString) {
+    try {
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(ooxmlString, "text/xml");
+        const ns = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+        const runs = xmlDoc.getElementsByTagNameNS(ns, 'r');
+        let sig = '';
+        for (let i = 0; i < runs.length; i++) {
+            const children = runs[i].childNodes;
+            for (let k = 0; k < children.length; k++) {
+                const node = children[k];
+                if (node.nodeType !== 1) continue;
+                if (node.localName === 't') {
+                    sig += node.textContent;
+                } else if (node.localName === 'softHyphen') {
+                    sig += '\u00AD';
+                } else if (node.localName === 'br' || node.localName === 'cr' || node.localName === 'tab') {
+                    sig += '\n';
+                }
+            }
+        }
+        return sig;
+    } catch (e) {
+        return null;
+    }
+}
+
 
 /**
  * 🔍 Highlight error paragraph using search (avoids stale reference issues)
@@ -1322,13 +1068,43 @@ function removeAllHyphensFromOOXML(ooxmlString) {
             const textNode = textNodes[i];
             const originalText = textNode.textContent;
             const cleanedText = originalText.replace(/\u00AD/g, '');
-            
+
             if (cleanedText !== originalText) {
                 textNode.textContent = cleanedText;
                 changed = true;
             }
         }
-        
+
+        // Merge adjacent <w:t> fragments left behind by the removed soft
+        // hyphens so re-hyphenation sees whole words again. (The old
+        // two-pass flow got this merge for free from Word's write+read
+        // round-trip; the in-memory pipeline must do it itself.)
+        const runs = xmlDoc.getElementsByTagNameNS(ns, 'r');
+        for (let i = 0; i < runs.length; i++) {
+            let child = runs[i].firstChild;
+            while (child) {
+                if (child.nodeType === 1 && child.localName === 't') {
+                    let next = child.nextSibling;
+                    // Skip whitespace-only text nodes between elements
+                    while (next && next.nodeType === 3 && !next.textContent.trim()) {
+                        next = next.nextSibling;
+                    }
+                    if (next && next.nodeType === 1 && next.localName === 't') {
+                        child.textContent += next.textContent;
+                        if (next.getAttribute('xml:space') === 'preserve') {
+                            child.setAttribute('xml:space', 'preserve');
+                        }
+                        while (child.nextSibling && child.nextSibling !== next) {
+                            runs[i].removeChild(child.nextSibling);
+                        }
+                        runs[i].removeChild(next);
+                        continue; // try to merge further fragments into child
+                    }
+                }
+                child = child.nextSibling;
+            }
+        }
+
         const serializer = new XMLSerializer();
         return {
             ooxml: serializer.serializeToString(xmlDoc),
