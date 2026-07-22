@@ -315,7 +315,7 @@ async function hyphenateBody() {
     timerStart('fullDoc');
     await Word.run(async (context) => {
         logActivity("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", LOG.SEP);
-        logActivity("Full-document hyphenation started (two-pass)");
+        logActivity("Full-document hyphenation started (smart pass v2)");
         
         const body = context.document.body;
         const stats = await processRangeSmart(context, body, "document");
@@ -573,24 +573,20 @@ async function processRangeSmart(context, range, rangeType) {
 
         for (let i = 0; i < validParagraphs.length; i += CHUNK_SIZE) {
             const endIdx = Math.min(i + CHUNK_SIZE, validParagraphs.length);
-
-            // Batch all OOXML reads for this chunk into a single round-trip
-            const chunk = [];
-            for (let j = i; j < endIdx; j++) {
-                try {
-                    const paraRange = validParagraphs[j].para.getRange();
-                    chunk.push({ index: j, range: paraRange, ooxml: paraRange.getOoxml() });
-                } catch (err) {
-                    errors.push(`para ${j}: getRange failed: ${err.message}`);
-                }
-            }
-            await context.sync();
-
             let wroteInChunk = false;
-            for (const item of chunk) {
-                const paraText = validParagraphs[item.index].text;
+
+            for (let j = i; j < endIdx; j++) {
+                const paraText = validParagraphs[j].text;
                 try {
-                    const original = item.ooxml.value;
+                    // One paragraph per read round-trip: each getOoxml()
+                    // returns a full OOXML package (styles included), so
+                    // batching several reads into one sync can exceed the
+                    // host's payload limit and throw GeneralException.
+                    const paraRange = validParagraphs[j].para.getRange();
+                    const ooxml = paraRange.getOoxml();
+                    await context.sync();
+
+                    const original = ooxml.value;
 
                     // Strip only when old hyphens actually exist
                     let working = original;
@@ -603,7 +599,7 @@ async function processRangeSmart(context, range, rangeType) {
                     totalWords += result.wordsProcessed || 0;
                     totalHyphenated += result.wordsHyphenated || 0;
 
-                    // Position-exact comparison: identical hyphenation → no write
+                    // Position-exact comparison: identical hyphenation, no write
                     const sigBefore = getHyphenationSignature(original);
                     const sigAfter = getHyphenationSignature(result.ooxml);
                     if (sigBefore !== null && sigBefore === sigAfter) {
@@ -611,11 +607,11 @@ async function processRangeSmart(context, range, rangeType) {
                         continue;
                     }
 
-                    item.range.insertOoxml(result.ooxml, Word.InsertLocation.replace);
+                    paraRange.insertOoxml(result.ooxml, Word.InsertLocation.replace);
                     totalWritten++;
                     wroteInChunk = true;
                 } catch (err) {
-                    errors.push(`para ${item.index}: ${err.message} | text: "${paraText.substring(0, 50)}${paraText.length > 50 ? '...' : ''}"`);
+                    errors.push(`para ${j}: ${err.message} | text: "${paraText.substring(0, 50)}${paraText.length > 50 ? '...' : ''}"`);
                     try {
                         await highlightErrorParagraph(context, paraText);
                     } catch (highlightErr) {
@@ -1072,6 +1068,55 @@ function removeAllHyphensFromOOXML(ooxmlString) {
             if (cleanedText !== originalText) {
                 textNode.textContent = cleanedText;
                 changed = true;
+            }
+        }
+
+        // Word routinely splits one word across several runs (spell-check
+        // markers, revision ids). Remove spell-check markers and merge
+        // consecutive runs with identical formatting so that, after the
+        // strip, the hyphenation regex sees whole words again.
+        const proofErrs = xmlDoc.getElementsByTagNameNS(ns, 'proofErr');
+        while (proofErrs.length > 0) {
+            proofErrs[0].parentNode.removeChild(proofErrs[0]);
+        }
+
+        const rPrSerializer = new XMLSerializer();
+        const runProps = function (run) {
+            for (let c = run.firstChild; c; c = c.nextSibling) {
+                if (c.nodeType === 1 && c.localName === 'rPr') {
+                    return rPrSerializer.serializeToString(c);
+                }
+            }
+            return '';
+        };
+
+        const mergeParas = xmlDoc.getElementsByTagNameNS(ns, 'p');
+        for (let i = 0; i < mergeParas.length; i++) {
+            let child = mergeParas[i].firstChild;
+            while (child) {
+                if (child.nodeType === 1 && child.localName === 'r') {
+                    let next = child.nextSibling;
+                    while (next && next.nodeType === 3 && !next.textContent.trim()) {
+                        next = next.nextSibling;
+                    }
+                    if (next && next.nodeType === 1 && next.localName === 'r' &&
+                            runProps(child) === runProps(next)) {
+                        let moving = next.firstChild;
+                        while (moving) {
+                            const after = moving.nextSibling;
+                            if (!(moving.nodeType === 1 && moving.localName === 'rPr')) {
+                                child.appendChild(moving);
+                            }
+                            moving = after;
+                        }
+                        while (child.nextSibling && child.nextSibling !== next) {
+                            mergeParas[i].removeChild(child.nextSibling);
+                        }
+                        mergeParas[i].removeChild(next);
+                        continue; // child may now merge with the following run
+                    }
+                }
+                child = child.nextSibling;
             }
         }
 

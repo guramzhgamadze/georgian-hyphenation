@@ -8,6 +8,11 @@
 
 ## [Word Add-in 2.3.0] - 2026-07-22
 
+### Fixed (after real-Word testing)
+
+- **`GeneralException` on full-document hyphenation**: OOXML reads were batched 10 per sync; each paragraph's `getOoxml()` returns a full package with embedded styles, and large documents exceeded the host payload limit. Reads are now one per round-trip inside per-paragraph error handling, so a single bad paragraph is logged + highlighted instead of aborting the run.
+- **Selection hyphenation toggling (remove on first click, re-add on second)**: real Word splits words across multiple runs (spell-check markers, revision ids), so after stripping, the in-memory re-hyphenation saw 2–3-letter fragments and produced nothing. The removal pass now deletes `w:proofErr` markers and merges consecutive same-formatting runs before merging text fragments — verified against Word-realistic multi-run OOXML (correct re-hyphenation on first pass, no-op on second, formatting boundaries preserved).
+
 ### Changed (performance)
 
 - **Document/selection hyphenation is now a single smart pass** instead of the old two-pass "remove everything, then re-add everything". Per paragraph: the removal step runs only if the paragraph actually contains hyphens; strip-and-reapply is computed in memory; and the document is written back only when the resulting hyphenation differs from the current state (position-exact comparison). Wrong hyphenation still gets corrected; already-correct paragraphs are untouched — re-running on a fully hyphenated document performs zero writes. OOXML reads are batched per chunk, cutting sync round-trips roughly 20×.
