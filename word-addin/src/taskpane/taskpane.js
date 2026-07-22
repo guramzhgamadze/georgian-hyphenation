@@ -507,6 +507,7 @@ async function removeHyphensFromRange(context, range) {
                     paraRange.insertOoxml(cleanedOOXML.ooxml, Word.InsertLocation.replace);
                     cleaned++;
                 }
+                paraRange.untrack();
             } catch (err) {
                 logActivity(`Removal failed on paragraph ${j}: ${err.message}`, LOG.WARN);
             }
@@ -538,16 +539,15 @@ async function processRangeSmart(context, range, rangeType) {
 
     try {
         const paragraphs = range.paragraphs;
-        paragraphs.load("items");
+        // Collection-level load: one queued command loads "text" for every
+        // paragraph (docs: "use load on the collection to load properties
+        // for every object in the collection"), instead of queueing one
+        // load per item plus an extra round-trip.
+        paragraphs.load("text");
         await context.sync();
 
         logActivity(`Found ${paragraphs.items.length} paragraphs`);
         updateProgress(5, 'პარაგრაფების მომზადება...');
-
-        for (let i = 0; i < paragraphs.items.length; i++) {
-            paragraphs.items[i].load("text");
-        }
-        await context.sync();
 
         const validParagraphs = [];
         for (let i = 0; i < paragraphs.items.length; i++) {
@@ -566,27 +566,52 @@ async function processRangeSmart(context, range, rangeType) {
         }
 
         timerStart('smartPass');
-        const CHUNK_SIZE = 10;
+        const CHUNK_SIZE = 4;
         let hadOldHyphens = 0;
         let skippedUnchanged = 0;
         const errors = [];
 
         for (let i = 0; i < validParagraphs.length; i += CHUNK_SIZE) {
             const endIdx = Math.min(i + CHUNK_SIZE, validParagraphs.length);
-            let wroteInChunk = false;
 
-            for (let j = i; j < endIdx; j++) {
-                const paraText = validParagraphs[j].text;
-                try {
-                    // One paragraph per read round-trip: each getOoxml()
-                    // returns a full OOXML package (styles included), so
-                    // batching several reads into one sync can exceed the
-                    // host's payload limit and throw GeneralException.
+            // Read a small batch of OOXML packages per round-trip. getOoxml()
+            // responses are large (each embeds document styles), so the batch
+            // is kept small; if the host still rejects it (payload limit),
+            // fall back to reading that batch one paragraph at a time.
+            let batch = [];
+            try {
+                for (let j = i; j < endIdx; j++) {
                     const paraRange = validParagraphs[j].para.getRange();
-                    const ooxml = paraRange.getOoxml();
-                    await context.sync();
+                    batch.push({ j: j, range: paraRange, ooxml: paraRange.getOoxml() });
+                }
+                await context.sync();
+            } catch (batchErr) {
+                batch.forEach(function (it) { try { it.range.untrack(); } catch (e) {} });
+                batch = [];
+                logActivity(`Batch read failed (${batchErr.message}) — retrying paragraphs individually`, LOG.WARN);
+                for (let j = i; j < endIdx; j++) {
+                    try {
+                        const paraRange = validParagraphs[j].para.getRange();
+                        const ooxml = paraRange.getOoxml();
+                        await context.sync();
+                        batch.push({ j: j, range: paraRange, ooxml: ooxml });
+                    } catch (err) {
+                        const failText = validParagraphs[j].text;
+                        errors.push(`para ${j}: ${err.message} | text: "${failText.substring(0, 50)}${failText.length > 50 ? '...' : ''}"`);
+                        try {
+                            await highlightErrorParagraph(context, failText);
+                        } catch (highlightErr) {
+                            logActivity(`Highlight failed: ${highlightErr.message}`, LOG.WARN);
+                        }
+                    }
+                }
+            }
 
-                    const original = ooxml.value;
+            let wroteInChunk = false;
+            for (const item of batch) {
+                const paraText = validParagraphs[item.j].text;
+                try {
+                    const original = item.ooxml.value;
 
                     // Strip only when old hyphens actually exist
                     let working = original;
@@ -607,11 +632,11 @@ async function processRangeSmart(context, range, rangeType) {
                         continue;
                     }
 
-                    paraRange.insertOoxml(result.ooxml, Word.InsertLocation.replace);
+                    item.range.insertOoxml(result.ooxml, Word.InsertLocation.replace);
                     totalWritten++;
                     wroteInChunk = true;
                 } catch (err) {
-                    errors.push(`para ${j}: ${err.message} | text: "${paraText.substring(0, 50)}${paraText.length > 50 ? '...' : ''}"`);
+                    errors.push(`para ${item.j}: ${err.message} | text: "${paraText.substring(0, 50)}${paraText.length > 50 ? '...' : ''}"`);
                     try {
                         await highlightErrorParagraph(context, paraText);
                     } catch (highlightErr) {
@@ -623,6 +648,11 @@ async function processRangeSmart(context, range, rangeType) {
             if (wroteInChunk) {
                 await context.sync();
             }
+
+            // Release the range proxies (docs: untrack() "should yield a
+            // noticeable performance benefit when using large numbers of
+            // proxy objects"); flushed with the next chunk's sync.
+            batch.forEach(function (it) { try { it.range.untrack(); } catch (e) {} });
 
             const progress = 10 + (endIdx / validParagraphs.length) * 85;
             updateProgress(progress, `📝 დამუშავება: ${endIdx}/${validParagraphs.length}`);

@@ -15,6 +15,7 @@
 
 ### Changed (performance)
 
+- Applied Microsoft's documented Office.js optimizations: paragraph texts are loaded with one collection-level `load("text")` (one round-trip instead of two with 583 queued commands); OOXML reads go in small batches of 4 per sync with automatic per-paragraph fallback if the host rejects the payload; and range proxies are released with `untrack()` after use (documented as "a noticeable performance benefit when using large numbers of proxy objects").
 - **Document/selection hyphenation is now a single smart pass** instead of the old two-pass "remove everything, then re-add everything". Per paragraph: the removal step runs only if the paragraph actually contains hyphens; strip-and-reapply is computed in memory; and the document is written back only when the resulting hyphenation differs from the current state (position-exact comparison). Wrong hyphenation still gets corrected; already-correct paragraphs are untouched — re-running on a fully hyphenated document performs zero writes. OOXML reads are batched per chunk, cutting sync round-trips roughly 20×.
 - The removal pass now merges adjacent text fragments left behind by removed soft hyphens, so re-hyphenation always sees whole words (the old flow depended on a Word write+read round-trip for this).
 
