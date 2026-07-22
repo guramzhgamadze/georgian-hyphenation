@@ -2,6 +2,10 @@
 
 ## [Word Add-in 2.3.0] - 2026-07-22
 
+### Fixed
+
+- Error-paragraph highlighting now uses the capitalized highlight-color names Microsoft documents for Office Desktop (`"Yellow"`, `"Red"`) instead of lowercase, so it maps to the intended color reliably. Clear highlighting ("მარკირების მოშორება") was already correct — it sets `body.font.highlightColor = null`, the documented way to remove highlight.
+
 ### Added
 
 - **Remove hyphenation** — two new buttons: "დამარცვლის მოშორება" (strip soft hyphens from the whole document) and "მონიშნული ტექსტიდან დამარცვლის მოშორება" (from the selection only). Both reuse the existing OOXML removal pass, so `<w:softHyphen/>` elements and stray U+00AD characters are cleared without re-hyphenating.

@@ -989,8 +989,10 @@ async function highlightErrorParagraph(context, paraText) {
             logActivity(`Expected length: ${paraText.length}, Found: ${foundPara.text.length}`, LOG.WARN);
         }
         
-        // Highlight the paragraph in yellow
-        foundPara.font.highlightColor = "yellow";
+        // Highlight the paragraph in yellow.
+        // Capitalized name = one of the documented Office Desktop highlight
+        // colors (lowercase gets remapped to the nearest one).
+        foundPara.font.highlightColor = "Yellow";
         await context.sync();
         
         logActivity(`✅ Successfully highlighted paragraph in yellow`, LOG.INFO);
@@ -1121,7 +1123,7 @@ async function analyzeAndHighlightProblematicCharacters(context, para, text) {
                         await context.sync();
                         
                         for (let i = 0; i < wordResults.items.length; i++) {
-                            wordResults.items[i].font.highlightColor = "red";
+                            wordResults.items[i].font.highlightColor = "Red";
                             highlightedCount++;
                         }
                         
