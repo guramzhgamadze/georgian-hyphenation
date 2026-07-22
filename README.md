@@ -32,8 +32,8 @@ Georgian Hyphenation is a comprehensive, linguistically accurate library for aut
 - **📚 Dictionary Support**: 142 exception words for edge cases
 - **🔧 Flexible**: Customizable hyphen characters, margins, and user dictionaries
 - **✨ Rich API**: HTML-aware hyphenation, method chaining, 17+ utility functions
-- **✨ Smart Features**: Context-aware justify, Meta platform optimization, dynamic content support
-- **📱 Social Media Ready**: Special handling for Facebook, Instagram, Threads with character-span obfuscation
+- **✨ Smart Features**: Context-aware justify, heading/display-text safe, dynamic content support
+- **🔌 Offline Everywhere**: WordPress, both browser extensions, and the Word add-in bundle the engine + dictionary locally — no CDN calls at runtime
 
 ---
 
@@ -66,7 +66,7 @@ Georgian Hyphenation is a comprehensive, linguistically accurate library for aut
 | 🦊 **Firefox Extension** | 2.3.0 | [![Firefox](https://img.shields.io/amo/v/georgian-hyphenation)](https://addons.mozilla.org/firefox/addon/georgian-hyphenation/) | [Install from AMO](https://addons.mozilla.org/firefox/addon/georgian-hyphenation/) |
 | 🌐 **Chrome Extension** | 2.3.0 | Beta | [Manual install](#browser-extension) |
 | 🔌 **WordPress Plugin** | 3.0.0 | Stable | [Download](#wordpress-plugin) |
-| 📝 **MS Word Add-in** | 2.2.7 | Beta | [Installation guide](#microsoft-word-add-in) |
+| 📝 **MS Word Add-in** | 2.3.0 | Beta | [Installation guide](#microsoft-word-add-in) |
 
 ---
 

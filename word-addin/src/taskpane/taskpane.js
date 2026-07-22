@@ -210,108 +210,26 @@ function updateProgress(percent, label) {
     if (textLabel && label) textLabel.textContent = label;
 }
 
-const Hyphenator = {
-    hyphenChar: '\u00AD', 
-    vowels: 'აეიოუ',
-    leftMin: 2,
-    rightMin: 2,
-    harmonicClusters: new Set([
-        'ბლ', 'ბრ', 'ბღ', 'ბზ', 'გდ', 'გლ', 'გმ', 'გნ', 'გვ', 'გზ', 'გრ',
-        'დრ', 'თლ', 'თრ', 'თღ', 'კლ', 'კმ', 'კნ', 'კრ', 'კვ', 'მტ', 'პლ', 
-        'პრ', 'ჟღ', 'რგ', 'რლ', 'რმ', 'სწ', 'სხ', 'ტკ', 'ტპ', 'ტრ', 'ფლ', 
-        'ფრ', 'ფქ', 'ფშ', 'ქლ', 'ქნ', 'ქვ', 'ქრ', 'ღლ', 'ღრ', 'ყლ', 'ყრ', 
-        'შთ', 'შპ', 'ჩქ', 'ჩრ', 'ცლ', 'ცნ', 'ცრ', 'ცვ', 'ძგ', 'ძვ', 'ძღ', 
-        'წლ', 'წრ', 'წნ', 'წკ', 'ჭკ', 'ჭრ', 'ჭყ', 'ხლ', 'ხმ', 'ხნ', 'ხვ', 'ჯგ'
-    ]),
-    dictionary: new Map(),
+// Hyphenation engine — the shared v2.3.0 build, loaded from
+// georgian-hyphenator.js + dictionary.js (bundled same-origin, no CDN).
+// Regenerate those two files with: node browser-extension-shared/build.mjs
+let hyphenator = null;
 
-    async init() {
-        try {
-            // გამოყენებულია v2.2.7-ის შესაბამისი CDN
-            const req = await fetch('https://cdn.jsdelivr.net/npm/georgian-hyphenation@2.2.7/data/exceptions.json');
-            if (req.ok) {
-                const data = await req.json();
-                Object.entries(data).forEach(([key, val]) => {
-                    // ლექსიკონში ტირეებს ვცვლით Word-ის Soft Hyphen-ით
-                    this.dictionary.set(key, val.replace(/-/g, this.hyphenChar));
-                });
-                logActivity(`Dictionary loaded: ${this.dictionary.size} entries`);
-            }
-        } catch (e) { 
-            logActivity("Dictionary load failed — algorithm-only mode", LOG.WARN);
-        }
-    },
-
-    getHyphenatedWord(word) {
-        // ლექსიკონის შემოწმება
-        if (this.dictionary.has(word)) return this.dictionary.get(word);
-        
-        // ალგორითმის გამოყენება
-        return this.applyAlgorithm(word);
-    },
-
-    applyAlgorithm(word) {
-        // მინიმალური სიგრძის შემოწმება (leftMin + rightMin = 4)
-        if (word.length < (this.leftMin + this.rightMin)) return word;
-
-        const vowelIndices = [];
-        for (let i = 0; i < word.length; i++) {
-            if (this.vowels.includes(word[i])) vowelIndices.push(i);
-        }
-
-        if (vowelIndices.length < 2) return word;
-
-        const insertPoints = [];
-        for (let i = 0; i < vowelIndices.length - 1; i++) {
-            const v1 = vowelIndices[i];
-            const v2 = vowelIndices[i + 1];
-            const distance = v2 - v1 - 1;
-            const betweenSubstring = word.substring(v1 + 1, v2);
-
-            let candidatePos = -1;
-
-            if (distance === 0 || distance === 1) {
-                // ორი ხმოვანი გვერდიგვერდ ან ერთი თანხმოვანი მათ შორის
-                candidatePos = v1 + 1;
-            } else {
-                // Gemination (ორმაგი თანხმოვანი) შემოწმება
-                let doubleConsonantIndex = -1;
-                for (let j = 0; j < betweenSubstring.length - 1; j++) {
-                    if (betweenSubstring[j] === betweenSubstring[j + 1]) {
-                        doubleConsonantIndex = j;
-                        break;
-                    }
-                }
-
-                if (doubleConsonantIndex !== -1) {
-                    candidatePos = v1 + 1 + doubleConsonantIndex + 1;
-                } else {
-                    // Harmonic cluster (ჰარმონიული ჯგუფის) შემოწმება
-                    let breakIndex = -1;
-                    if (distance >= 2) {
-                        const lastTwo = betweenSubstring.substring(distance - 2, distance);
-                        if (this.harmonicClusters.has(lastTwo)) {
-                            breakIndex = distance - 2;
-                        }
-                    }
-                    candidatePos = (breakIndex !== -1) ? v1 + 1 + breakIndex : v1 + 2;
-                }
-            }
-
-            // Anti-orphan protection: არ ვუშვებთ ობოლ ასოებს სიტყვის დასაწყისში ან ბოლოში
-            if (candidatePos >= this.leftMin && (word.length - candidatePos) >= this.rightMin) {
-                insertPoints.push(candidatePos);
-            }
-        }
-
-        // სიმბოლოების ჩასმა უკუპროპორციული მიმდევრობით (რომ ინდექსები არ აირიოს)
-        let result = word.split('');
-        for (let i = insertPoints.length - 1; i >= 0; i--) {
-            result.splice(insertPoints[i], 0, this.hyphenChar);
-        }
-        return result.join('');
+function initHyphenator() {
+    if (typeof window.GeorgianHyphenator !== 'function') {
+        logActivity('Hyphenation engine failed to load', LOG.ERROR);
+        return;
     }
-};
+    // The engine emits U+00AD; addHyphensToOOXML converts each into a
+    // <w:softHyphen/> element for Word.
+    hyphenator = new window.GeorgianHyphenator('\u00AD');
+    if (window.GEORGIAN_HYPHENATION_DICT) {
+        hyphenator.loadLibrary(window.GEORGIAN_HYPHENATION_DICT);
+        logActivity(`Dictionary loaded: ${hyphenator.getDictionarySize()} entries`);
+    } else {
+        logActivity('Dictionary not bundled — algorithm-only mode', LOG.WARN);
+    }
+}
 
 Office.onReady((info) => {
     if (info.host === Office.HostType.Word) {
@@ -328,10 +246,10 @@ Office.onReady((info) => {
             // Office.js doesn't provide a direct theme change event
             setInterval(() => {
                 applyOfficeTheme();
-            }, 1000); // Check every second for theme changes
+            }, 4000); // Poll for theme changes (Office.js has no theme-change event)
         }
         
-        Hyphenator.init();
+        initHyphenator();
         
         document.getElementById('hyphenate-document').onclick = () => runSafe(hyphenateBody);
         document.getElementById('hyphenate-selection').onclick = () => runSafe(hyphenateSelection);
@@ -701,7 +619,6 @@ async function processRangeWithTwoPass(context, range, rangeType) {
                 let paraStyle = 'unknown';
                 let paraAlignment = 'unknown';
                 let paraLength = 0;
-                let preLoadFailed = false;
                 
                 try {
                     para.load('text,style,alignment');
@@ -711,130 +628,15 @@ async function processRangeWithTwoPass(context, range, rangeType) {
                     paraAlignment = para.alignment || 'unknown';
                     paraLength = paraText.length;
                 } catch (preLoadErr) {
-                    preLoadFailed = true;
-                    logActivity(`═══════════════════════════════════════════════`, LOG.SEP);
-                    logActivity(`PRE-LOAD ERROR on paragraph ${j}`, LOG.ERROR);
-                    logActivity(`Error type: ${preLoadErr.name || 'unknown'}`, LOG.ERROR);
-                    logActivity(`Error message: ${preLoadErr.message}`, LOG.ERROR);
-                    logActivity(`Error code: ${preLoadErr.code || 'N/A'}`, LOG.ERROR);
-                    
-                    // Try to get ANY information we can about this paragraph
+                    // Best-effort recovery of the text so the paragraph can still
+                    // be highlighted for the user; then log concisely.
                     try {
-                        logActivity(`Attempting to load minimal paragraph info...`, LOG.INFO);
-                        
-                        // Try loading just text first
-                        try {
-                            const textOnlyPara = validParagraphs2[j];
-                            textOnlyPara.load('text');
-                            await context.sync();
-                            paraText = textOnlyPara.text || '';
-                            paraLength = paraText.length;
-                            logActivity(`✓ Got text: length=${paraLength}`, LOG.INFO);
-                            logActivity(`✓ Text preview: "${paraText.substring(0, 100)}${paraText.length > 100 ? '...' : ''}"`, LOG.INFO);
-                        } catch (textErr) {
-                            logActivity(`✗ Cannot load text: ${textErr.message}`, LOG.ERROR);
-                        }
-                        
-                        // Try loading style separately
-                        try {
-                            const stylePara = validParagraphs2[j];
-                            stylePara.load('style');
-                            await context.sync();
-                            paraStyle = stylePara.style || 'unknown';
-                            logActivity(`✓ Got style: ${paraStyle}`, LOG.INFO);
-                        } catch (styleErr) {
-                            logActivity(`✗ Cannot load style: ${styleErr.message}`, LOG.ERROR);
-                        }
-                        
-                        // Try loading other properties one by one
-                        const propertiesToTest = [
-                            'isListItem',
-                            'leftIndent',
-                            'rightIndent',
-                            'firstLineIndent',
-                            'alignment',
-                            'lineSpacing',
-                            'spaceAfter',
-                            'spaceBefore',
-                            'outlineLevel'
-                        ];
-                        
-                        logActivity(`Testing individual properties...`, LOG.INFO);
-                        for (const prop of propertiesToTest) {
-                            try {
-                                const testPara = validParagraphs2[j];
-                                testPara.load(prop);
-                                await context.sync();
-                                logActivity(`  ✓ ${prop}: ${testPara[prop]}`, LOG.INFO);
-                            } catch (propErr) {
-                                logActivity(`  ✗ ${prop}: FAILED - ${propErr.message}`, LOG.WARN);
-                            }
-                        }
-                        
-                        // Try to get the paragraph's range
-                        try {
-                            const rangePara = validParagraphs2[j];
-                            const testRange = rangePara.getRange();
-                            testRange.load('text');
-                            await context.sync();
-                            logActivity(`✓ Can get range, range text length: ${testRange.text.length}`, LOG.INFO);
-                        } catch (rangeErr) {
-                            logActivity(`✗ Cannot get range: ${rangeErr.message}`, LOG.ERROR);
-                        }
-                        
-                        // Try to get OOXML
-                        try {
-                            const ooxmlPara = validParagraphs2[j];
-                            const testOoxml = ooxmlPara.getRange().getOoxml();
-                            await context.sync();
-                            const ooxmlLength = testOoxml.value.length;
-                            logActivity(`✓ Can get OOXML, length: ${ooxmlLength} chars`, LOG.INFO);
-                            
-                            // Check if OOXML contains any suspicious elements
-                            const ooxmlStr = testOoxml.value;
-                            const suspiciousElements = [
-                                'contentControl',
-                                'sdt',
-                                'permStart',
-                                'permEnd',
-                                'proofErr',
-                                'bookmarkStart',
-                                'bookmarkEnd',
-                                'commentRangeStart',
-                                'commentRangeEnd',
-                                'moveFrom',
-                                'moveTo',
-                                'del',
-                                'ins',
-                                'smartTag',
-                                'fldSimple',
-                                'fldChar',
-                                'hyperlink'
-                            ];
-                            
-                            const foundElements = [];
-                            for (const elem of suspiciousElements) {
-                                if (ooxmlStr.includes(`w:${elem}`)) {
-                                    const count = (ooxmlStr.match(new RegExp(`w:${elem}`, 'g')) || []).length;
-                                    foundElements.push(`${elem}(${count})`);
-                                }
-                            }
-                            
-                            if (foundElements.length > 0) {
-                                logActivity(`⚠️  OOXML contains: ${foundElements.join(', ')}`, LOG.WARN);
-                            } else {
-                                logActivity(`✓ OOXML looks clean (no special elements)`, LOG.INFO);
-                            }
-                            
-                        } catch (ooxmlErr) {
-                            logActivity(`✗ Cannot get OOXML: ${ooxmlErr.message}`, LOG.ERROR);
-                        }
-                        
-                    } catch (diagErr) {
-                        logActivity(`Diagnostic analysis failed: ${diagErr.message}`, LOG.ERROR);
-                    }
-                    
-                    logActivity(`═══════════════════════════════════════════════`, LOG.SEP);
+                        para.load('text');
+                        await context.sync();
+                        paraText = para.text || '';
+                        paraLength = paraText.length;
+                    } catch (e) { /* text unavailable */ }
+                    logActivity(`Paragraph ${j} pre-load failed: ${preLoadErr.message}`, LOG.ERROR);
                 }
                 
                 try {
@@ -1413,6 +1215,7 @@ function removeAllHyphensFromOOXML(ooxmlString) {
  * Expects OOXML with NO existing hyphens (from Pass 1)
  */
 function addHyphensToOOXML(ooxmlString) {
+    if (!hyphenator) return { ooxml: ooxmlString, changed: false, wordsProcessed: 0, wordsHyphenated: 0 };
     let changed = false;
     let wordsProcessed = 0;
     let wordsHyphenated = 0;
@@ -1432,7 +1235,7 @@ function addHyphensToOOXML(ooxmlString) {
             // Apply hyphenation algorithm to Georgian words
             const hyphenatedText = originalText.replace(/[ა-ჰ]{4,}/g, (word) => {
                 wordsProcessed++;
-                const result = Hyphenator.getHyphenatedWord(word).replace(/\u00AD/g, marker);
+                const result = hyphenator.hyphenate(word).replace(/\u00AD/g, marker);
                 if (result.includes(marker)) wordsHyphenated++;
                 return result;
             });

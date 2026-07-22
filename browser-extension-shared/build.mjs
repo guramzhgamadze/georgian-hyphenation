@@ -1,12 +1,16 @@
 /**
- * Builds the Chrome and Firefox extensions from the shared source.
+ * Builds the browser-context bundles from a single source:
+ *   - Chrome and Firefox extensions (from browser-extension-shared/)
+ *   - the Word add-in's engine + dictionary (word-addin/src/taskpane/)
  *
  *   node browser-extension-shared/build.mjs
  *
  * Generates the local engine (georgian-hyphenator.js) and dictionary
- * (dictionary.js) from the npm package, copies the shared content/popup/
- * background scripts + popup.html into each browser folder, and writes each
- * browser's manifest. Icons are left untouched. No CDN / external requests.
+ * (dictionary.js) from the npm package once, then distributes them. For the
+ * extensions it also copies the shared content/popup/background scripts +
+ * popup.html and writes each browser's manifest. The Word add-in serves the
+ * same two files same-origin from GitHub Pages. Icons are left untouched.
+ * No CDN / external requests.
  */
 
 import { copyFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
@@ -143,5 +147,11 @@ for ( const [ name, target ] of Object.entries( targets ) ) {
 
 	console.log( `${ name }: built v${ VERSION } (${ target.manifest.manifest_version === 3 ? 'MV3' : 'MV2' })` );
 }
+
+// Word add-in: same engine + dictionary, served same-origin (no CDN).
+const wordDir = new URL( 'word-addin/src/taskpane/', root );
+await writeFile( fileURLToPath( new URL( 'georgian-hyphenator.js', wordDir ) ), engine );
+await writeFile( fileURLToPath( new URL( 'dictionary.js', wordDir ) ), dictionary );
+console.log( `word-addin: engine + dictionary provisioned (v${ VERSION })` );
 
 console.log( 'done' );
