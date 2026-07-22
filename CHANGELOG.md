@@ -1,5 +1,11 @@
 \# Changelog
 
+## [Demo Site] - 2026-07-22
+
+### Fixed
+
+- The GitHub Pages demo (`docs/index.html`) now loads the v2.3.0 engine and dictionary **from the repository itself** instead of a jsDelivr CDN pinned to 2.2.7 — it always matches the published source and picks up the punctuation/compound fixes. Repaired a `words is not defined` error thrown on every hyphenate click, removed baked-in Cloudflare artifacts (a `/cdn-cgi/` script and an email-protection link that rendered as "[email protected]" on GitHub Pages), and refreshed all version labels (dictionary count now reported live instead of the hardcoded "148 words").
+
 ## [Word Add-in 2.3.0] - 2026-07-22
 
 ### Changed (performance)
