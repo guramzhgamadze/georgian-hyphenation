@@ -1,9 +1,0 @@
-/* Georgian Hyphenation — frontend styles.
-   Applied to containers where Georgian text was hyphenated and the
-   "Auto Justify" option is enabled. Kept as a class (not inline styles)
-   so themes can override it. */
-.geohyph-justify {
-	text-align: justify;
-	-webkit-hyphens: manual;
-	hyphens: manual;
-}
