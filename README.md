@@ -65,7 +65,7 @@ Georgian Hyphenation is a comprehensive, linguistically accurate library for aut
 | 📦 **JavaScript/Node.js** | 2.3.0 | [![npm](https://img.shields.io/npm/v/georgian-hyphenation)](https://www.npmjs.com/package/georgian-hyphenation) | `npm install georgian-hyphenation` |
 | 🦊 **Firefox Extension** | 2.3.0 | [![Firefox](https://img.shields.io/amo/v/georgian-hyphenation)](https://addons.mozilla.org/firefox/addon/georgian-hyphenation/) | [Install from AMO](https://addons.mozilla.org/firefox/addon/georgian-hyphenation/) |
 | 🌐 **Chrome Extension** | 2.3.0 | Beta | [Manual install](#browser-extension) |
-| 🔌 **WordPress Plugin** | 3.0.0 | Stable | [Download](#wordpress-plugin) |
+| 🔌 **WordPress Plugin** | 3.0.0 | Stable | [Download](https://downloads.wordpress.org/plugin/georgian-hyphenation.3.0.0.zip) |
 | 📝 **MS Word Add-in** | 2.3.0 | Beta | [Installation guide](#microsoft-word-add-in) |
 
 ---
