@@ -544,11 +544,17 @@ const GeorgianHyphenator = require('georgian-hyphenation');
 1. Download **georgian-hyphenation.zip** (from `wordpress-plugin/`)
 2. WordPress Admin → Plugins → Add New → Upload Plugin
 3. Install and activate
-4. Configure at **Settings → Georgian Hyphenation**
+4. Configure from the **Georgian Hyphenation** menu in the admin sidebar
 
-**Features (v3.0.0):**
+> [!IMPORTANT]
+> **Hyphenation is an allow list.** The plugin only processes text inside containers you have selected — it does not sweep the whole page.
+>
+> **If some text is not hyphenated, its container is not on the list.** Themes, custom widgets and third-party plugins use class names no plugin can know in advance (a common case: a widget that renders its excerpt in a `div` instead of a `p`). Inspect the element, then add its class under **Custom CSS selectors**. The settings screen shows the active selector list so you can confirm.
+
+**Features (v3.1.0):**
 - ✅ Engine + dictionary **bundled with the plugin** — no CDN / external requests
-- ✅ Full Elementor support (widget presets; Elementor optional)
+- ✅ Presets for **Gutenberg, Elementor, Divi, Beaver Builder, WPBakery, Bricks, Oxygen** + lists/quotes/tables/captions (all optional; unused ones match nothing)
+- ✅ **Heading/title hyphenation is a single toggle** (off by default) — also covers headings nested inside other content
 - ✅ Custom CSS selectors
 - ✅ Auto-justify option (via CSS class, theme-overridable)
 - ✅ Dynamic content support (AJAX, popups, infinite scroll)

@@ -62,3 +62,6 @@ htmlcov/
 *.tmp
 *.bak
 *.log
+
+# ---- Wordpress Plugin ----
+wordpress-plugin/
